@@ -94,7 +94,7 @@
     "deploy_contracts_network_staging": "yarn compile && env CHAIN_CONFIG=staging yarn --silent hardhat --network staging deploy-contracts > ./deployment/deploys/staging.json && yarn test_deploy_network_staging",
 
     "deploy_local_hardhat": "concurrently -r -k --success last \"yarn hardhat node > nul\" \"wait-on http://127.0.0.1:8545 && yarn typechain-ethers-v5 && yarn typechain-truffle-v5 && yarn deploy_local_hardhat_commands\"",
-    "deploy_local_hardhat_commands": "yarn deploy_contracts_local_hardhat && yarn daemonize_contracts_local_hardhat && yarn activate_managers_local_hardhat && yarn transfer_governance_local_hardhat && yarn inflation_contracts_fix_network_hardhat",
+    "deploy_local_hardhat_commands": "yarn deploy_contracts_local_hardhat && yarn daemonize_contracts_local_hardhat && yarn activate_managers_local_hardhat && yarn transfer_governance_local_hardhat",
     "transfer_gov_working_balance_local_hardhat": "env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost transfer-gov-working-balance && yarn test_transfer_gov_working_balance_hardhat",
     "transfer_governance_local_hardhat": "cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost transfer-governance && yarn test_transfer_governance_hardhat",
     "claim_governance_local_hardhat": "cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost claim-governance",
@@ -103,14 +103,13 @@
     "daemonize_contracts_local_hardhat": "cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost daemonize-contracts && yarn test_daemonize_hardhat",
     "deploy_contracts_local_hardhat": "env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost deploy-contracts > ./deployment/deploys/hardhat.json && yarn test_deploy_hardhat",
     
-    "---------FIX---SCRIPTS": "",
+    "---------INFLATION---FIX---SCRIPTS": "",
     "inflation_contracts_fix_network_scdev": "yarn compile && cat deployment/deploys/scdev.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network scdev inflation-contracts-fix > ./deployment/deploys/scdev_fix.json && yarn test_inflation_fix_network_scdev",
     "test_inflation_fix_network_scdev": "cat deployment/deploys/scdev_fix.json | env CHAIN_CONFIG=scdev TEST_PATH=./deployment/test yarn --silent hardhat test --no-compile --network scdev ./deployment/test/inflation-contracts-fix.ts",
     "inflation_contracts_fix_network_songbird": "yarn compile && cat deployment/deploys/songbird.json | env CHAIN_CONFIG=songbird yarn --silent hardhat --network songbird inflation-contracts-fix > ./deployment/deploys/songbird_fix.json && yarn test_inflation_fix_network_songbird",
     "test_inflation_fix_network_songbird": "cat deployment/deploys/songbird_fix.json | env CHAIN_CONFIG=songbird TEST_PATH=./deployment/test yarn --silent hardhat test --no-compile --network songbird ./deployment/test/inflation-contracts-fix.ts",
-    "inflation_contracts_fix_network_hardhat": "yarn compile && cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost inflation-contracts-fix > ./deployment/deploys/hardhat_fix.json && yarn test_inflation_fix_network_hardhat",
-    "test_inflation_fix_network_hardhat": "cat deployment/deploys/hardhat_fix.json | env CHAIN_CONFIG=scdev TEST_PATH=./deployment/test yarn --silent hardhat test --no-compile --network localhost ./deployment/test/inflation-contracts-fix.ts",
-
+    "inflation_contracts_fix_local_hardhat": "yarn compile && cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network localhost inflation-contracts-fix > ./deployment/deploys/hardhat_fix.json && yarn test_inflation_fix_local_hardhat",
+    "test_inflation_fix_local_hardhat": "cat deployment/deploys/hardhat_fix.json | env CHAIN_CONFIG=scdev TEST_PATH=./deployment/test yarn --silent hardhat test --no-compile --network localhost ./deployment/test/inflation-contracts-fix.ts",
 
     "---------FAST---SCRIPTS---SKIP---DEPLOY---TESTS": "",
     "deploy_local_hardhat_commands_fast": "yarn deploy_contracts_local_hardhat_fast && yarn daemonize_contracts_local_hardhat_fast && yarn activate_managers_local_hardhat_fast",
