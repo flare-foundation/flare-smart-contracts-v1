@@ -1,0 +1,42 @@
+[
+  {
+    "name": "StateConnector",
+    "contractName": "StateConnector.sol",
+    "address": "0x1000000000000000000000000000000000000001"
+  },
+  {
+    "name": "FlareDaemon",
+    "contractName": "FlareDaemon.sol",
+    "address": "0x1000000000000000000000000000000000000002"
+  },
+  {
+    "name": "FtsoManager",
+    "contractName": "FtsoManager.sol",
+    "address": "0xbfA12e4E1411B62EdA8B035d71735667422A6A9e"
+  },
+  {
+    "name": "WNat",
+    "contractName": "WNat.sol",
+    "address": "0x02f0826ef6aD107Cfc861152B32B52fD11BaB9ED"
+  },
+  {
+    "name": "InflationAllocation",
+    "contractName": "InflationAllocation.sol",
+    "address": "0x9224128D8BB13D19adC14d9A70260e545Ba8cE01"
+  },
+  {
+    "name": "Inflation",
+    "contractName": "Inflation.sol",
+    "address": "0x8004432D24AfD71C8749CC80969B99601aC15A31"
+  },
+  {
+    "name": "Supply",
+    "contractName": "Supply.sol",
+    "address": "0x1032F2a0Efa3559692c28EF4Cb40eA6FBE6DEF12"
+  },
+  {
+    "name": "FtsoRewardManager",
+    "contractName": "FtsoRewardManager.sol",
+    "address": "0xC8579Dc7bc5bf6EE0A7ce4Fe92d80F527d1978EC"
+  }
+]
