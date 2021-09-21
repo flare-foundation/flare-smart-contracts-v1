@@ -114,6 +114,14 @@ contract(`inflation-contracts-fix.ts system tests`, async accounts => {
       assert(percentage.gt(BN(0)));
     });
 
+    it("Should know about the Inflation", async () => {
+      // Assemble
+      // Act
+      const inflation = await inflationAllocation.inflation();
+      // Assert
+      assert.equal(inflation, contracts.getContractAddress(Contracts.INFLATION));
+    });
+
     it("Should new annual inflation percentage equal 10%", async () => {
       // Assemble
       // Act
@@ -176,12 +184,28 @@ contract(`inflation-contracts-fix.ts system tests`, async accounts => {
       ftsoRewardManager = await FtsoRewardManager.at(contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER));
     });
 
+    it("Should know about the Inflation", async () => {
+      // Assemble
+      // Act
+      const inflation = await ftsoRewardManager.getInflationAddress();
+      // Assert
+      assert.equal(inflation, contracts.getContractAddress(Contracts.INFLATION));
+    });
+
     it("Should know about the FTSO manager", async () => {
       // Assemble
       // Act
       const ftsoManager = await ftsoRewardManager.ftsoManager();
       // Assert
       assert.equal(ftsoManager, contracts.getContractAddress(Contracts.FTSO_MANAGER));
+    });
+
+    it("Should know about the wNat", async () => {
+      // Assemble
+      // Act
+      const wNat = await ftsoRewardManager.wNat();
+      // Assert
+      assert.equal(wNat, contracts.getContractAddress(Contracts.WNAT));
     });
 
     it("Should be activated", async () => {
@@ -196,6 +220,34 @@ contract(`inflation-contracts-fix.ts system tests`, async accounts => {
 
     it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.INFLATION_ALLOCATION);
+    });
+  });
+
+  describe(Contracts.DATA_AVAILABILITY_REWARD_MANAGER, async () => {
+    it("Should be activated", async function() {
+      if (!parameters.dataAvailabilityRewardManagerDeployed) return this.skip();
+      // Assemble
+      const DataAvailabilityRewardManager = artifacts.require("DataAvailabilityRewardManager");
+      const dataAvailabilityRewardManager = await DataAvailabilityRewardManager.at(contracts.getContractAddress(Contracts.DATA_AVAILABILITY_REWARD_MANAGER));
+      // Act
+      const active = await dataAvailabilityRewardManager.active();
+      // Assert
+      assert(active);
+    });
+
+    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async function () {
+      if (!parameters.dataAvailabilityRewardManagerDeployed) return this.skip();
+      await checkGovernance(Contracts.DATA_AVAILABILITY_REWARD_MANAGER);
+    });
+
+    it("Should not have deployed", async function () {
+      if (parameters.dataAvailabilityRewardManagerDeployed) return this.skip();
+      try {
+        await checkGovernance(Contracts.DATA_AVAILABILITY_REWARD_MANAGER);
+        assert.fail('The expected Error was not thrown.');
+      } catch (err: any) {
+        assert.include(err.message, `${Contracts.DATA_AVAILABILITY_REWARD_MANAGER} not found`);
+      }
     });
   });
 });

@@ -44,24 +44,24 @@ export async function inflationContractsFix(hre: HardhatRuntimeEnvironment, oldC
   web3.eth.defaultAccount = deployerAccount.address;
 
   // Contract definitions
+  const StateConnector = artifacts.require("StateConnector");
   const FlareDaemon = artifacts.require("FlareDaemon");
   const FtsoManager = artifacts.require("FtsoManager");
   const WNAT = artifacts.require("WNat");
-  const StateConnector = artifacts.require("StateConnector");
   const InflationAllocation = artifacts.require("InflationAllocation");
   const Inflation = artifacts.require("Inflation");
   const FtsoRewardManager = artifacts.require("FtsoRewardManager");
   const DataAvailabilityRewardManager = artifacts.require("DataAvailabilityRewardManager");
   const Supply = artifacts.require("Supply");
   
+  const stateConnector = await StateConnector.at(oldContracts.getContractAddress(Contracts.STATE_CONNECTOR));
+  spewNewContractInfo(contracts, StateConnector.contractName, `StateConnector.sol`, stateConnector.address, quiet);
   const flareDaemon = await FlareDaemon.at(oldContracts.getContractAddress(Contracts.FLARE_DAEMON));
   spewNewContractInfo(contracts, FlareDaemon.contractName, `FlareDaemon.sol`, flareDaemon.address, quiet);
   const ftsoManager = await FtsoManager.at(oldContracts.getContractAddress(Contracts.FTSO_MANAGER));
   spewNewContractInfo(contracts, FtsoManager.contractName, `FtsoManager.sol`, ftsoManager.address, quiet);
   const wnat = await WNAT.at(oldContracts.getContractAddress(Contracts.WNAT));
   spewNewContractInfo(contracts, WNAT.contractName, `WNat.sol`, wnat.address, quiet);
-  const stateConnector = await StateConnector.at(oldContracts.getContractAddress(Contracts.STATE_CONNECTOR));
-  spewNewContractInfo(contracts, StateConnector.contractName, `StateConnector.sol`, stateConnector.address, quiet);
 
   // InflationAllocation contract
   // Inflation will be set to 0 for now...it will be set shortly.
@@ -154,7 +154,7 @@ export async function inflationContractsFix(hre: HardhatRuntimeEnvironment, oldC
 
   // Activate the manager
   if (!quiet) {
-    console.error("Activating manager...");
+    console.error("Activating managers...");
   }
   await ftsoRewardManager.activate();
   if (deployDataAvailabilityRewardManager) {
@@ -162,7 +162,7 @@ export async function inflationContractsFix(hre: HardhatRuntimeEnvironment, oldC
   }
 
   if (!quiet) {
-    console.error("Manager activated.");
+    console.error("Managers activated.");
   }
   
   // Turn over governance
