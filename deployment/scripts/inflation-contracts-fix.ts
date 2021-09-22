@@ -74,8 +74,9 @@ export async function inflationContractsFix(hre: HardhatRuntimeEnvironment, oldC
   await inflationAllocation.setAnnualInflation(parameters.scheduledInflationPercentageBIPS)
 
   // Get the timestamp for the just mined block
-  let currentBlock = await web3.eth.getBlock(await web3.eth.getBlockNumber());
-  const startTs = BN(currentBlock.timestamp);
+  // let currentBlock = await web3.eth.getBlock(await web3.eth.getBlockNumber());
+  // const startTs = BN(currentBlock.timestamp);
+  const startTs = BN(1631824801);
 
   // Inflation contract
   const inflation = await Inflation.new(
