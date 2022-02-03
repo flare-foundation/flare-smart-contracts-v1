@@ -22,7 +22,7 @@ interface IIFtso is IFtso, IFtsoGenesis {
             uint256 _totalNatWeight
         );
 
-    function fallbackFinalizePriceEpoch(uint256 _epochId) external;
+    function averageFinalizePriceEpoch(uint256 _epochId) external;
 
     function forceFinalizePriceEpoch(uint256 _epochId) external;
 
@@ -30,8 +30,8 @@ interface IIFtso is IFtso, IFtsoGenesis {
     // before this is done, FTSO can't run
     function activateFtso(
         uint256 _firstEpochStartTs,
-        uint256 _submitPeriodSeconds,
-        uint256 _revealPeriodSeconds
+        uint256 _epochPeriod,
+        uint256 _revealPeriod
     ) external;
 
     function deactivateFtso() external;
@@ -60,11 +60,6 @@ interface IIFtso is IFtso, IFtsoGenesis {
 
     function initializeCurrentEpochStateForReveal(uint256 _circulatingSupplyNat, bool _fallbackMode) external;
   
-    /**
-     * @notice Returns ftso manager address
-     */
-    function ftsoManager() external view returns (address);
-
     /**
      * @notice Returns the FTSO asset
      * @dev Asset is null in case of multi-asset FTSO

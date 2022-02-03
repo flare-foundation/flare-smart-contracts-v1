@@ -3,17 +3,22 @@ pragma solidity 0.7.6;
 
 import "../../token/interface/IIVPToken.sol";
 import "../interface/IIFtso.sol";
+import "../interface/IIFtsoManager.sol";
 import "../lib/FtsoEpoch.sol";
 import "../lib/FtsoVote.sol";
 import "../lib/FtsoMedian.sol";
-import "../../userInterfaces/IPriceSubmitter.sol";
 
 
 /**
  * @title A contract implementing Flare Time Series Oracle
  */
 contract Ftso is IIFtso {
+
     using FtsoEpoch for FtsoEpoch.State;
+
+    // number of decimal places in Asset USD price
+    // note that the actual USD price is the integer value divided by 10^ASSET_PRICE_USD_DECIMALS
+    uint256 public constant ASSET_PRICE_USD_DECIMALS = 5;
 
     // errors
     string internal constant ERR_NOT_ACTIVE = "FTSO not active";
@@ -21,40 +26,34 @@ contract Ftso is IIFtso {
     string internal constant ERR_NO_ACCESS = "Access denied";
     string internal constant ERR_PRICE_TOO_HIGH = "Price too high";
     string internal constant ERR_PRICE_REVEAL_FAILURE = "Reveal period not active";
+    string internal constant ERR_PRICE_INVALID = "Price already revealed or not valid";
     string internal constant ERR_EPOCH_FINALIZATION_FAILURE = "Epoch not ready for finalization";
     string internal constant ERR_EPOCH_ALREADY_FINALIZED = "Epoch already finalized";
+    string internal constant ERR_VOTEPOWER_INSUFFICIENT = "Insufficient vote power to submit vote";
     string internal constant ERR_EPOCH_NOT_INITIALIZED_FOR_REVEAL = "Epoch not initialized for reveal";
     string internal constant ERR_EPOCH_DATA_NOT_AVAILABLE = "Epoch data not available";
-    string internal constant ERR_INVALID_PRICE_EPOCH_PARAMETERS = "Invalid price epoch parameters";
+    string internal constant ERR_WRONG_EPOCH_ID = "Wrong epoch id";
+    string internal constant ERR_DUPLICATE_SUBMIT_IN_EPOCH = "Duplicate submit in epoch";
     
     
     // storage
     uint256 public immutable priceDeviationThresholdBIPS;   // threshold for price deviation between consecutive epochs
     uint256 public immutable priceEpochCyclicBufferSize;
-    bool public override active;                    // activation status of FTSO
-    string public override symbol;                  // asset symbol that identifies FTSO
+    bool public override active;                // activation status of FTSO
+    string public override symbol;              // asset symbol that identifies FTSO
 
-    // number of decimal places in Asset USD price
-    // note that the actual USD price is the integer value divided by 10^ASSET_PRICE_USD_DECIMALS
-    // solhint-disable-next-line var-name-mixedcase
-    uint256 public immutable ASSET_PRICE_USD_DECIMALS;
-
-    uint256 internal assetPriceUSD;                 // current asset USD price
-    uint256 internal assetPriceTimestamp;           // time when price was updated
-    FtsoEpoch.State internal epochs;                // epoch storage
-
-    // immutable settings
-    uint256 private immutable firstEpochStartTs;    // start timestamp of the first epoch instance
-    uint256 private immutable submitPeriodSeconds;  // duration of price submission for an epoch instance
-    uint256 private immutable revealPeriodSeconds;  // duration of price reveal for an epoch instance
+    uint256 internal assetPriceUSD;             // current asset USD price
+    uint256 internal assetPriceTimestamp;       // time when price was updated    
+    FtsoEpoch.State internal epochs;            // epoch storage
+    mapping(uint256 => mapping(address => bytes32)) internal epochVoterHash;
+    uint256 internal lastRevealEpochId;
 
     // external contracts
-    IIVPToken public immutable override wNat;       // wrapped native token
-    address immutable public override ftsoManager;  // FTSO manager contract
-    IPriceSubmitter public immutable priceSubmitter;// Price submitter contract
-
-    IIVPToken[] public assets;                      // array of assets
-    IIFtso[] public assetFtsos;                     // FTSOs for assets (for a multi-asset FTSO)
+    IIVPToken public immutable override wNat;    // wrapped native token
+    IIFtsoManager public immutable ftsoManager;  // FTSO manager contract
+    IPriceSubmitter public immutable priceSubmitter;        // Price submitter contract
+    IIVPToken[] public assets;                   // array of assets
+    IIFtso[] public assetFtsos;                  // FTSOs for assets (for a multi-asset FTSO)
 
     // Revert strings get inlined and take a lot of contract space
     // Calling them from auxiliary functions removes used space
@@ -66,7 +65,7 @@ contract Ftso is IIFtso {
     }
 
     modifier onlyFtsoManager {
-        if (msg.sender != ftsoManager) {
+        if (msg.sender != address(ftsoManager)) {
             revertNoAccess();
         }
         _;
@@ -81,26 +80,18 @@ contract Ftso is IIFtso {
 
     constructor(
         string memory _symbol,
-        uint256 _decimals,
         IPriceSubmitter _priceSubmitter,
         IIVPToken _wNat,
-        address _ftsoManager,
-        uint256 _firstEpochStartTs,
-        uint256 _submitPeriodSeconds,
-        uint256 _revealPeriodSeconds,
+        IIFtsoManager _ftsoManager,
         uint256 _initialPriceUSD,
         uint256 _priceDeviationThresholdBIPS,
         uint256 _cyclicBufferSize
     )
     {
         symbol = _symbol;
-        ASSET_PRICE_USD_DECIMALS = _decimals;
         priceSubmitter = _priceSubmitter;
         wNat = _wNat;
         ftsoManager = _ftsoManager;
-        firstEpochStartTs = _firstEpochStartTs;
-        submitPeriodSeconds = _submitPeriodSeconds;
-        revealPeriodSeconds = _revealPeriodSeconds;
         assetPriceUSD = _initialPriceUSD;
         assetPriceTimestamp = block.timestamp;
         priceDeviationThresholdBIPS = _priceDeviationThresholdBIPS;
@@ -108,10 +99,30 @@ contract Ftso is IIFtso {
     }
 
     /**
+     * @notice Submits price hash for current epoch
+     * @param _sender               Sender address
+     * @param _epochId              Target epoch id to which hashes are submitted
+     * @param _hash                 Hashed price and random number
+     * @notice Emits PriceHashSubmitted event
+     */
+    function submitPriceHashSubmitter(
+        address _sender,
+        uint256 _epochId,
+        bytes32 _hash
+    ) 
+        external override 
+        whenActive 
+        onlyPriceSubmitter         
+    {
+        _submitPriceHash(_sender, _epochId, _hash);
+    }
+
+    /**
      * @notice Reveals submitted price during epoch reveal period
      * @param _voter                Voter address
      * @param _epochId              Id of the epoch in which the price hash was submitted
      * @param _price                Submitted price in USD
+     * @param _random               Submitted random number
      * @notice The hash of _price and _random must be equal to the submitted hash
      * @notice Emits PriceRevealed event
      */
@@ -119,13 +130,14 @@ contract Ftso is IIFtso {
         address _voter,
         uint256 _epochId,
         uint256 _price,
+        uint256 _random,
         uint256 _voterWNatVP
     ) 
         external override
         whenActive
         onlyPriceSubmitter
     {
-        _revealPrice(_voter, _epochId, _price, _voterWNatVP);
+        _revealPrice(_voter, _epochId, _price, _random, _voterWNatVP);
     }
 
     /**
@@ -161,7 +173,7 @@ contract Ftso is IIFtso {
             if (!epoch.fallbackMode) {
                 emit LowTurnout(_epochId, natTurnout, epoch.lowNatTurnoutThresholdBIPS, block.timestamp);
             }
-            _medianFinalizePriceEpoch(_epochId, epoch, false);
+            _averageFinalizePriceEpoch(_epochId, epoch, false);
 
             // return empty reward data
             return (_eligibleAddresses, _natWeights, _natWeightsSum);
@@ -177,15 +189,15 @@ contract Ftso is IIFtso {
         // compute weighted median and truncated quartiles
         uint256[] memory index;
         FtsoMedian.Data memory data;
-        (index, data) = FtsoMedian._computeWeighted(price, weight);
+        (index, data) = FtsoMedian._compute(price, weight);
 
         // check price deviation
         if (epochs._getPriceDeviation(_epochId, data.finalMedianPrice, priceEpochCyclicBufferSize)
             > 
             priceDeviationThresholdBIPS)
         {
-            // revert to median price calculation
-            _medianFinalizePriceEpoch(_epochId, epoch, false);
+            // revert to average price calculation
+            _averageFinalizePriceEpoch(_epochId, epoch, false);
             // return empty reward data
             return (_eligibleAddresses, _natWeights, _natWeightsSum);
         }
@@ -201,9 +213,7 @@ contract Ftso is IIFtso {
         // return reward data if requested
         bool rewardedFtso = false;
         if (_returnRewardData) {
-            uint256 random = _getRandom(_epochId);
-            (_eligibleAddresses, _natWeights, _natWeightsSum) = 
-                _readRewardData(epoch, data, random, index, weightNat);
+            (_eligibleAddresses, _natWeights, _natWeightsSum) = _readRewardData(epoch, data, index, weightNat);
             if (_eligibleAddresses.length > 0) {
                 rewardedFtso = true;
             }
@@ -221,14 +231,14 @@ contract Ftso is IIFtso {
     }
 
     /**
-     * @notice Forces finalization of price epoch calculating median price from trusted addresses
+     * @notice Forces finalization of price epoch calculating average price from trusted addresses
      * @param _epochId              Id of the epoch to finalize
      * @dev Used as a fallback method if epoch finalization is failing
      */
-    function fallbackFinalizePriceEpoch(uint256 _epochId) external override onlyFtsoManager {
+    function averageFinalizePriceEpoch(uint256 _epochId) external override onlyFtsoManager {
         FtsoEpoch.Instance storage epoch = _getEpochForFinalization(_epochId);
         epoch.initializedForReveal = false; // set back to false for next usage
-        _medianFinalizePriceEpoch(_epochId, epoch, true);
+        _averageFinalizePriceEpoch(_epochId, epoch, true);
     }
 
     /**
@@ -244,22 +254,22 @@ contract Ftso is IIFtso {
 
     /**
      * @notice Initializes ftso immutable settings and activates oracle
-     * @param _firstEpochStartTs    Timestamp of the first epoch as seconds from unix epoch
-     * @param _submitPeriodSeconds  Duration of epoch submission period in seconds
-     * @param _revealPeriodSeconds  Duration of epoch reveal period in seconds
+     * @param _firstEpochStartTime  Timestamp of the first epoch as seconds from unix epoch
+     * @param _submitPeriod         Duration of epoch submission period in seconds
+     * @param _revealPeriod         Duration of epoch reveal period in seconds
      */
     function activateFtso(
-        uint256 _firstEpochStartTs,
-        uint256 _submitPeriodSeconds,
-        uint256 _revealPeriodSeconds
+        uint256 _firstEpochStartTime,
+        uint256 _submitPeriod,
+        uint256 _revealPeriod
     ) 
         external override
         onlyFtsoManager
     {
         require(!active, ERR_ALREADY_ACTIVATED);
-        require(firstEpochStartTs == _firstEpochStartTs, ERR_INVALID_PRICE_EPOCH_PARAMETERS);
-        require(submitPeriodSeconds == _submitPeriodSeconds, ERR_INVALID_PRICE_EPOCH_PARAMETERS);
-        require(revealPeriodSeconds == _revealPeriodSeconds, ERR_INVALID_PRICE_EPOCH_PARAMETERS);
+        epochs.firstEpochStartTime = _firstEpochStartTime;
+        epochs.submitPeriod = _submitPeriod;
+        epochs.revealPeriod = _revealPeriod;
         active = true;
     }
 
@@ -381,6 +391,7 @@ contract Ftso is IIFtso {
         // reset values for current epoch 
         epoch.finalizationType = IFtso.PriceFinalizationType.NOT_FINALIZED;
         epoch.accumulatedVotePowerNat = 0;
+        epoch.random = 0; // for easier testing.
         epoch.nextVoteIndex = 0;
         epoch.votePowerBlock = epochs.votePowerBlock;
         epoch.fallbackMode = _fallbackMode;
@@ -403,26 +414,28 @@ contract Ftso is IIFtso {
             assetPrices
         );
 
-        emit PriceEpochInitializedOnFtso(epochId, _getEpochSubmitEndTime(epochId), block.timestamp);
+        lastRevealEpochId = epochId;
+
+        emit PriceEpochInitializedOnFtso(epochId, epochs._epochSubmitEndTime(epochId), block.timestamp);
     }
     
     /**
      * @notice Returns current epoch data
-     * @return _firstEpochStartTs           First epoch start timestamp
-     * @return _submitPeriodSeconds         Submit period in seconds
-     * @return _revealPeriodSeconds         Reveal period in seconds
+     * @return _firstEpochStartTime         First epoch start time
+     * @return _submitPeriod                Submit period in seconds
+     * @return _revealPeriod                Reveal period in seconds
      */
     function getPriceEpochConfiguration() external view override 
         returns (
-            uint256 _firstEpochStartTs,
-            uint256 _submitPeriodSeconds,
-            uint256 _revealPeriodSeconds
+            uint256 _firstEpochStartTime,
+            uint256 _submitPeriod,
+            uint256 _revealPeriod
         )
     {
         return (
-            firstEpochStartTs, 
-            submitPeriodSeconds,
-            revealPeriodSeconds
+            epochs.firstEpochStartTime, 
+            epochs.submitPeriod,
+            epochs.revealPeriod
         );
     }
 
@@ -511,7 +524,8 @@ contract Ftso is IIFtso {
         if (currentEpochId == 0) {
             return 0;
         }
-        return _getRandom(currentEpochId - 1);
+        //slither-disable-next-line weak-prng // not used for random
+        return epochs.instance[(currentEpochId - 1) % priceEpochCyclicBufferSize].random;
     }
 
     /**
@@ -520,7 +534,7 @@ contract Ftso is IIFtso {
      * @return Random number
      */
     function getRandom(uint256 _epochId) external view override returns (uint256) {
-        return _getRandom(_epochId);
+        return _getEpochInstance(_epochId).random;
     }
 
     /**
@@ -542,8 +556,8 @@ contract Ftso is IIFtso {
         )
     {
         _epochId = getCurrentEpochId();
-        _epochSubmitEndTime = _getEpochSubmitEndTime(_epochId);
-        _epochRevealEndTime = _epochSubmitEndTime + revealPeriodSeconds;
+        _epochSubmitEndTime = epochs._epochSubmitEndTime(_epochId);
+        _epochRevealEndTime = _epochSubmitEndTime + epochs.revealPeriod;
 
         //slither-disable-next-line weak-prng // not used for random
         FtsoEpoch.Instance storage epoch = epochs.instance[_epochId % priceEpochCyclicBufferSize];
@@ -560,7 +574,7 @@ contract Ftso is IIFtso {
      * @return _assetWeightRatio        ratio of combined asset vp vs. native token vp (in BIPS)
      * @return _votePowerBlock          vote powewr block for given epoch
      */
-    function getVoteWeightingParameters() external view virtual override 
+    function getVoteWeightingParameters() external view override 
         returns (
             IIVPToken[] memory _assets,
             uint256[] memory _assetMultipliers,
@@ -599,7 +613,7 @@ contract Ftso is IIFtso {
      * @dev Should never revert
      */
     function getCurrentEpochId() public view override returns (uint256) {
-        return _getEpochId(block.timestamp);
+        return getEpochId(block.timestamp);
     }
 
     /**
@@ -608,7 +622,21 @@ contract Ftso is IIFtso {
      * @dev Should never revert
      */
     function getEpochId(uint256 _timestamp) public view override returns (uint256) {
-        return _getEpochId(_timestamp);
+        return epochs._getEpochId(_timestamp);
+    }
+
+    /**
+     * @notice Submits price hash for current epoch
+     * @param _sender               Sender address
+     * @param _epochId              Target epoch id to which hashes are submitted
+     * @param _hash                 Hashed price and random number
+     * @notice Emits PriceHashSubmitted event
+     */
+    function _submitPriceHash(address _sender, uint256 _epochId, bytes32 _hash) internal {
+        require(_epochId == getCurrentEpochId(), ERR_WRONG_EPOCH_ID);
+        require(epochVoterHash[_epochId][_sender] == 0, ERR_DUPLICATE_SUBMIT_IN_EPOCH);
+        epochVoterHash[_epochId][_sender] = _hash;
+        emit PriceHashSubmitted(_sender, _epochId, _hash, block.timestamp);
     }
 
     /**
@@ -616,6 +644,7 @@ contract Ftso is IIFtso {
      * @param _voter                Voter address
      * @param _epochId              Id of the epoch in which the price hash was submitted
      * @param _price                Submitted price in USD
+     * @param _random               Submitted random number
      * @notice The hash of _price and _random must be equal to the submitted hash
      * @notice Emits PriceRevealed event
      */
@@ -623,12 +652,15 @@ contract Ftso is IIFtso {
         address _voter, 
         uint256 _epochId, 
         uint256 _price, 
+        uint256 _random, 
         uint256 _voterWNatVP
     ) 
         internal
     {
         require(_price < 2**128, ERR_PRICE_TOO_HIGH);
-        require(_isEpochRevealInProcess(_epochId), ERR_PRICE_REVEAL_FAILURE);
+        require(epochs._epochRevealInProcess(_epochId), ERR_PRICE_REVEAL_FAILURE);
+        require(epochVoterHash[_epochId][_voter] == keccak256(abi.encode(_price, _random, _voter)), 
+                ERR_PRICE_INVALID);
         // get epoch
         //slither-disable-next-line weak-prng // not used for random
         FtsoEpoch.Instance storage epoch = epochs.instance[_epochId % priceEpochCyclicBufferSize];
@@ -654,11 +686,15 @@ contract Ftso is IIFtso {
             _voter,
             votePowerNat,
             votePowerAsset,
-            _price
+            _price,
+            uint256(keccak256(abi.encode(_random, _price)))
         );
 
+        // prevent price submission from being revealed twice
+        delete epochVoterHash[_epochId][_voter];
+
         // inform about price reveal result
-        emit PriceRevealed(_voter, _epochId, _price, block.timestamp, votePowerNat, votePowerAsset);
+        emit PriceRevealed(_voter, _epochId, _price, _random, block.timestamp, votePowerNat, votePowerAsset);
     }
 
     /**
@@ -708,27 +744,27 @@ contract Ftso is IIFtso {
     }
 
     /**
-     * @notice Forces finalization of the epoch calculating median price from trusted addresses
+     * @notice Forces finalization of the epoch calculating average price from trusted addresses
      * @param _epochId              Epoch id
      * @param _epoch                Epoch instance
      * @param _exception            Indicates if the exception happened
-     * @dev Sets the price to be the median of prices from trusted addresses or force finalize if no votes submitted
+     * @dev Sets the price to be the average of prices from trusted addresses or force finalize if no votes submitted
      */
-    function _medianFinalizePriceEpoch(
+    function _averageFinalizePriceEpoch(
         uint256 _epochId,
         FtsoEpoch.Instance storage _epoch,
         bool _exception
     ) 
         internal
     {
-        uint256[] memory _prices;
+        uint256 _priceSum;
         uint256 _count;
         
         // extract data from epoch trusted votes to memory
-        (_prices, _count) = _readTrustedVotes(_epoch, epochs.trustedAddresses);
+        (_priceSum, _count) = _readTrustedVotes(_epoch, epochs.trustedAddresses);
         if (_count > 0) {
             // finalizationType = PriceFinalizationType.TRUSTED_ADDRESSES
-            _epoch.price = FtsoMedian._computeSimple(_prices, _count);
+            _epoch.price = _priceSum / _count;
             _epoch.finalizationType = _exception ?
                 PriceFinalizationType.TRUSTED_ADDRESSES_EXCEPTION : PriceFinalizationType.TRUSTED_ADDRESSES;
 
@@ -880,13 +916,6 @@ contract Ftso is IIFtso {
     }
 
     /**
-     * @notice Returns random for given epoch id
-     */
-    function _getRandom(uint256 _epochId) internal view virtual returns (uint256) {
-        return uint256(keccak256(abi.encode(priceSubmitter.getRandom(_epochId), address(this))));
-    }
-
-    /**
      * @notice Extract vote data from epoch
      * @param _epoch                Epoch instance
      */
@@ -918,23 +947,22 @@ contract Ftso is IIFtso {
      * @notice Extract trusted vote data from epoch
      * @param _epoch                Epoch instance
      * @param _trustedAddresses     List of trusted addresses
-     * @return _prices              All prices submitted by trusted addresses
+     * @return _priceSum            Sum of all prices submitted by trusted addresses
      * @return _count               Number of prices submitted by trusted addresses
      */
     function _readTrustedVotes(FtsoEpoch.Instance storage _epoch, address[] memory _trustedAddresses) internal view 
         returns (
-            uint256[] memory _prices,
+            uint256 _priceSum,
             uint256 _count
         )
     {
         uint256 length = _epoch.nextVoteIndex;
-        uint256 trustedAddressesLength = _trustedAddresses.length;
-        _prices = new uint256[](trustedAddressesLength);
+
         for (uint256 i = 0; i < length; i++) {
             address voter = _epoch.votes[i].voter;
-            for (uint256 j = 0; j < trustedAddressesLength; j++) {
+            for (uint256 j = 0; j < _trustedAddresses.length; j++) {
                 if (voter == _trustedAddresses[j]) {
-                    _prices[_count] = uint256(_epoch.votes[i].price);
+                    _priceSum += _epoch.votes[i].price;     // no overflow as v.price < 2**128
                     _count++;
                 }
             }
@@ -945,14 +973,12 @@ contract Ftso is IIFtso {
      * @notice Extracts reward data for epoch
      * @param _epoch                The epoch instance to read data from
      * @param _data                 Median computation data
-     * @param _random               Random number
      * @param _index                Array of vote indices
      * @param _weightNat            Array of native token weights
      */
     function _readRewardData(
         FtsoEpoch.Instance storage _epoch,
         FtsoMedian.Data memory _data,
-        uint256 _random,
         uint256[] memory _index, 
         uint256[] memory _weightNat
     ) 
@@ -963,13 +989,14 @@ contract Ftso is IIFtso {
             uint256 _natWeightsSum
         )
     {
+        uint256 random = _epoch.random;
         uint256 voteRewardCount = 0;
         for (uint256 i = _data.quartile1Index; i <= _data.quartile3Index; i++) {
             uint256 idx = _index[i];
             if (_weightNat[idx] > 0) {
                 uint128 price = _epoch.votes[idx].price;
                 if ((price == _data.quartile1Price || price == _data.quartile3Price) &&
-                    ! _isAddressEligible(_random, _epoch.votes[idx].voter)) {
+                    ! _isAddressEligible(random, _epoch.votes[idx].voter)) {
                         continue;
                 }
                 voteRewardCount++;
@@ -985,7 +1012,7 @@ contract Ftso is IIFtso {
             if (weight > 0) {
                 uint128 price = _epoch.votes[idx].price;
                 if ((price == _data.quartile1Price || price == _data.quartile3Price) &&
-                    ! _isAddressEligible(_random, _epoch.votes[idx].voter)) {
+                    ! _isAddressEligible(random, _epoch.votes[idx].voter)) {
                     continue;
                 }
                 _eligibleAddresses[cnt] = _epoch.votes[idx].voter;
@@ -1002,7 +1029,7 @@ contract Ftso is IIFtso {
      * @return _epoch               Return epoch instance
      */
     function _getEpochForFinalization(uint256 _epochId) internal view returns (FtsoEpoch.Instance storage _epoch) {
-        require(block.timestamp >= _getEpochRevealEndTime(_epochId), ERR_EPOCH_FINALIZATION_FAILURE);
+        require(block.timestamp >= epochs._epochRevealEndTime(_epochId), ERR_EPOCH_FINALIZATION_FAILURE);
         _epoch = _getEpochInstance(_epochId);
         require(_epoch.finalizationType == PriceFinalizationType.NOT_FINALIZED, ERR_EPOCH_ALREADY_FINALIZED);
     }
@@ -1015,60 +1042,6 @@ contract Ftso is IIFtso {
         //slither-disable-next-line weak-prng // not used for random
         _epoch = epochs.instance[_epochId % priceEpochCyclicBufferSize];
         require(_epochId == _epoch.epochId, ERR_EPOCH_DATA_NOT_AVAILABLE);
-    }
-
-    
-    /**
-     * @notice Returns the id of the epoch opened for price submission at the given timestamp
-     * @param _timestamp            Timestamp as seconds since unix epoch
-     * @return Epoch id
-     * @dev Should never revert
-     */
-    function _getEpochId(uint256 _timestamp) internal view returns (uint256) {
-        if (_timestamp < firstEpochStartTs) {
-            return 0;
-        } else {
-            return (_timestamp - firstEpochStartTs) / submitPeriodSeconds;
-        }
-    }
-
-    /**
-     * @notice Returns start time of price submission for an epoch instance
-     * @param _epochId              Id of epoch instance
-     * @return Timestamp as seconds since unix epoch
-     */
-    function _getEpochSubmitStartTime(uint256 _epochId) internal view returns (uint256) {
-        return firstEpochStartTs + _epochId * submitPeriodSeconds;
-    }
-
-    /**
-     * @notice Returns end time of price submission for an epoch instance = reveal start time
-     * @param _epochId              Id of epoch instance
-     * @return Timestamp as seconds since unix epoch
-     * @dev half-closed interval - end time not included
-     */
-    function _getEpochSubmitEndTime(uint256 _epochId) internal view returns (uint256) {
-        return firstEpochStartTs + (_epochId + 1) * submitPeriodSeconds;
-    }
-
-    /**
-     * @notice Returns end time of price reveal for an epoch instance
-     * @param _epochId              Id of epoch instance
-     * @return Timestamp as seconds since unix epoch
-     * @dev half-closed interval - end time not included
-     */
-    function _getEpochRevealEndTime(uint256 _epochId) internal view returns (uint256) {
-        return _getEpochSubmitEndTime(_epochId) + revealPeriodSeconds;
-    }
-
-    /**
-     * @notice Determines if the epoch with the given id is currently in the reveal process
-     * @param _epochId              Id of epoch
-     * @return True if epoch reveal is in process and false otherwise
-     */
-    function _isEpochRevealInProcess(uint256 _epochId) internal view returns (bool) {
-        uint256 revealStartTime = _getEpochSubmitEndTime(_epochId);
-        return revealStartTime <= block.timestamp && block.timestamp < revealStartTime + revealPeriodSeconds;
     }
 
     /**

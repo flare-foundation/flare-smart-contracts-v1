@@ -21,6 +21,11 @@ library FtsoEpoch {
         // storage        
         mapping(uint256 => Instance) instance;  // mapping from epoch id to instance
         mapping(IIVPToken => uint256) assetNorm;  // mapping from asset address to its normalization
+
+        // immutable settings
+        uint256 firstEpochStartTime;            // start time of the first epoch instance
+        uint256 submitPeriod;                   // duration of price submission for an epoch instance
+        uint256 revealPeriod;                   // duration of price reveal for an apoch instance
         
         // configurable settings
         uint240 votePowerBlock;                 // current block at which the vote power is checked
@@ -49,6 +54,7 @@ library FtsoEpoch {
         uint256 accumulatedVotePowerNat;        // total native token vote power accumulated from votes in epoch
         // base weight ratio between asset and native token used to combine weights
         uint256 baseWeightRatio;
+        uint256 random;                         // random number associated with the epoch
         IIVPToken[] assets;                     // list of assets
         uint256[] assetWeightedPrices;          // prices that determine the contributions of assets to vote power
         uint256 nextVoteIndex;
@@ -105,13 +111,15 @@ library FtsoEpoch {
      * @param _votePowerNat         Vote power for native token
      * @param _votePowerAsset       Vote power for asset
      * @param _price                Price in USD submitted in a vote
+     * @param _random               Random number associated with the vote
      */
     function _addVote(
         Instance storage _instance,
         address _voter,
         uint256 _votePowerNat,
         uint256 _votePowerAsset,
-        uint256 _price
+        uint256 _price,
+        uint256 _random
     )
         internal
     {
@@ -129,6 +137,7 @@ library FtsoEpoch {
         _instance.votes[index] = vote;
         _instance.nextVoteIndex = index + 1;
         _instance.accumulatedVotePowerNat = _instance.accumulatedVotePowerNat.add(_votePowerNat);
+        _instance.random += _random;
     }
     
     /**
@@ -193,6 +202,64 @@ library FtsoEpoch {
         }
         
         return values;
+    }
+
+    /**
+     * @notice Returns the id of the epoch opened for price submission at the given timestamp
+     * @param _state                Epoch state
+     * @param _timestamp            Timestamp as seconds since unix epoch
+     * @return Epoch id
+     * @dev Should never revert
+     */
+    function _getEpochId(State storage _state, uint256 _timestamp) internal view returns (uint256) {
+        if (_timestamp < _state.firstEpochStartTime) {
+            return 0;
+        } else {
+            return (_timestamp - _state.firstEpochStartTime) / _state.submitPeriod;
+        }
+    }
+
+    /**
+     * @notice Returns start time of price submission for an epoch instance
+     * @param _state                Epoch state
+     * @param _epochId              Id of epoch instance
+     * @return Timestamp as seconds since unix epoch
+     */
+    function _epochSubmitStartTime(State storage _state, uint256 _epochId) internal view returns (uint256) {
+        return _state.firstEpochStartTime + _epochId * _state.submitPeriod;
+    }
+
+    /**
+     * @notice Returns end time of price submission for an epoch instance = reveal start time
+     * @param _state                Epoch state
+     * @param _epochId              Id of epoch instance
+     * @return Timestamp as seconds since unix epoch
+     * @dev half-closed interval - end time not included
+     */
+    function _epochSubmitEndTime(State storage _state, uint256 _epochId) internal view returns (uint256) {
+        return _state.firstEpochStartTime + (_epochId + 1) * _state.submitPeriod;
+    }
+
+    /**
+     * @notice Returns end time of price reveal for an epoch instance
+     * @param _state                Epoch state
+     * @param _epochId              Id of epoch instance
+     * @return Timestamp as seconds since unix epoch
+     * @dev half-closed interval - end time not included
+     */
+    function _epochRevealEndTime(State storage _state, uint256 _epochId) internal view returns (uint256) {
+        return _epochSubmitEndTime(_state, _epochId) + _state.revealPeriod;
+    }
+
+    /**
+     * @notice Determines if the epoch with the given id is currently in the reveal process
+     * @param _state                Epoch state
+     * @param _epochId              Id of epoch
+     * @return True if epoch reveal is in process and false otherwise
+     */
+    function _epochRevealInProcess(State storage _state, uint256 _epochId) internal view returns (bool) {
+        uint256 revealStartTime = _epochSubmitEndTime(_state, _epochId);
+        return revealStartTime <= block.timestamp && block.timestamp < revealStartTime + _state.revealPeriod;
     }
 
     /**

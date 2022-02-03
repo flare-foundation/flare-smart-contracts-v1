@@ -40,7 +40,7 @@ contract InfiniteLoopMock1 is IFlareDaemonize {
         return false;
     }
 
-    function getContractName() external pure override returns (string memory) {
-        return "InfiniteLoopMock1";
-    }
+    // function getContractName() external pure override returns (string memory) {
+    //     return "InfiniteLoopMock1";
+    // }
 }

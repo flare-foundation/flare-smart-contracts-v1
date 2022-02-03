@@ -5,20 +5,25 @@ interface IFtso {
     enum PriceFinalizationType {
         // initial state
         NOT_FINALIZED,
-        // median calculation used to find price
+        // median calculation used to decide price
         WEIGHTED_MEDIAN,
-        // low turnout - price calculated from median of trusted addresses
+        // low turnout - price decided from average of trusted addresses
         TRUSTED_ADDRESSES,
         // low turnout + no votes from trusted addresses - price copied from previous epoch
         PREVIOUS_PRICE_COPIED,
-        // price calculated from median of trusted addresses - triggered due to an exception
+        // price decided from average of trusted addresses - triggered due to an exception
         TRUSTED_ADDRESSES_EXCEPTION,
         // previous price copied - triggered due to an exception
         PREVIOUS_PRICE_COPIED_EXCEPTION
     }
 
+    // events
+    event PriceHashSubmitted(
+        address indexed submitter, uint256 indexed epochId, bytes32 hash, uint256 timestamp
+    );
+
     event PriceRevealed(
-        address indexed voter, uint256 indexed epochId, uint256 price, uint256 timestamp,
+        address indexed voter, uint256 indexed epochId, uint256 price, uint256 random, uint256 timestamp,
         uint256 votePowerNat, uint256 votePowerAsset
     );
 
@@ -59,13 +64,13 @@ interface IFtso {
      * @param _timestamp            Timestamp as seconds from unix epoch
      */
     function getEpochId(uint256 _timestamp) external view returns (uint256);
-    
+
     /**
      * @notice Returns random number of the specified epoch
      * @param _epochId              Id of the epoch
      */
     function getRandom(uint256 _epochId) external view returns (uint256);
-
+    
     /**
      * @notice Returns asset price consented in specific epoch
      * @param _epochId              Id of the epoch
@@ -92,14 +97,14 @@ interface IFtso {
 
     /**
      * @notice Returns current epoch data
-     * @return _firstEpochStartTs           First epoch start timestamp
-     * @return _submitPeriodSeconds         Submit period in seconds
-     * @return _revealPeriodSeconds         Reveal period in seconds
+     * @return _firstEpochStartTime         First epoch start time
+     * @return _submitPeriod                Submit period in seconds
+     * @return _revealPeriod                Reveal period in seconds
      */
     function getPriceEpochConfiguration() external view returns (
-        uint256 _firstEpochStartTs,
-        uint256 _submitPeriodSeconds,
-        uint256 _revealPeriodSeconds
+        uint256 _firstEpochStartTime,
+        uint256 _submitPeriod,
+        uint256 _revealPeriod
     );
     
     /**

@@ -20,6 +20,9 @@ contract MockNpmFtso is IIFtso {
     string internal constant ERR_NO_ACCESS = "Access denied";
     string internal constant ERR_PRICE_TOO_HIGH = "Price too high";
     string internal constant ERR_PRICE_REVEAL_FAILURE = "Reveal period not active";
+    string internal constant ERR_PRICE_INVALID = "Price already revealed or not valid";
+    string internal constant ERR_WRONG_EPOCH_ID = "Wrong epoch id";
+    string internal constant ERR_DUPLICATE_SUBMIT_IN_EPOCH = "Duplicate submit in epoch";
 
     string internal constant UNAVAILABLE = "Unavailable for testing";
 
@@ -29,15 +32,20 @@ contract MockNpmFtso is IIFtso {
     uint256 internal assetPriceUSD;            // current Asset USD price
     uint256 internal assetPriceTimestamp;      // time when price was updated    
 
+    mapping(uint256 => mapping(address => bytes32)) internal epochVoterHash;
+    uint256 internal lastRevealEpochId;
+
     // external contracts
     IPriceSubmitter public priceSubmitter;       // Price submitter contract
     IIVPToken[] public assets;                   // array of assets
     IIFtso[] public assetFtsos;                  // FTSOs for assets (for a multi-asset FTSO)
 
-    uint256 internal firstEpochStartTs;
-    uint256 internal submitPeriodSeconds;
-    uint256 internal revealPeriodSeconds;
+    // Info normally stored in epoch
+    uint256 internal firstEpochStartTime;
+    uint256 internal submitPeriod;
+    uint256 internal revealPeriod;
 
+    mapping(uint256 => uint256) internal random;
     mapping(uint256 => mapping (address => uint256)) internal revealedPrices;
 
     modifier onlyPriceSubmitter {
@@ -50,17 +58,38 @@ contract MockNpmFtso is IIFtso {
     constructor(
         string memory _symbol,
         IPriceSubmitter _priceSubmitter,
-        uint256 _firstEpochStartTs,
-        uint256 _submitPeriodSeconds,
-        uint256 _revealPeriodSeconds)
+        uint256 _firstEpochStartTime,
+        uint256 _submitPeriod,
+        uint256 _revealPeriod)
     {
         symbol = _symbol;
         assetPriceTimestamp = block.timestamp;
         active = true;
         priceSubmitter = _priceSubmitter;
-        firstEpochStartTs = _firstEpochStartTs;
-        submitPeriodSeconds = _submitPeriodSeconds;
-        revealPeriodSeconds = _revealPeriodSeconds;
+        firstEpochStartTime = _firstEpochStartTime;
+        submitPeriod = _submitPeriod;
+        revealPeriod = _revealPeriod;
+    }
+
+    // This methods should only be used by price submitter
+    /**
+     * @notice Submits price hash for current epoch
+     * @param _sender               Sender address
+     * @param _epochId              Target epoch id to which hashes are submitted
+     * @param _hash                 Hashed price and random number
+     * @notice Emits PriceHashSubmitted event
+     */
+    function submitPriceHashSubmitter(
+        address _sender,
+        uint256 _epochId,
+        bytes32 _hash
+    ) 
+        external override onlyPriceSubmitter 
+    {
+        require(_epochId == _getCurrentEpochId(), ERR_WRONG_EPOCH_ID);
+        require(epochVoterHash[_epochId][_sender] == 0, ERR_DUPLICATE_SUBMIT_IN_EPOCH);
+        epochVoterHash[_epochId][_sender] = _hash;
+        emit PriceHashSubmitted(_sender, _epochId, _hash, block.timestamp);
     }
 
     /**
@@ -68,6 +97,7 @@ contract MockNpmFtso is IIFtso {
      * @param _voter                Voter address
      * @param _epochId              Id of the epoch in which the price hash was submitted
      * @param _price                Submitted price in USD
+     * @param _random               Submitted random number
      * @notice The hash of _price and _random must be equal to the submitted hash
      * @notice Emits PriceRevealed event
      */
@@ -75,19 +105,26 @@ contract MockNpmFtso is IIFtso {
         address _voter,
         uint256 _epochId,
         uint256 _price,
+        uint256 _random,
         uint256 /*_wNatVP*/     // just an optimization, to read native token vp only once
     )
         external override onlyPriceSubmitter 
     {
         require(_price < 2**128, ERR_PRICE_TOO_HIGH);
         // Check if reveal is in progress
-        uint256 revealStartTime = firstEpochStartTs + (_epochId + 1) * submitPeriodSeconds; 
-        require(revealStartTime <= block.timestamp && block.timestamp < revealStartTime + revealPeriodSeconds, 
+        uint256 revealStartTime = firstEpochStartTime + (_epochId + 1) * submitPeriod; 
+        require(revealStartTime <= block.timestamp && block.timestamp < revealStartTime + revealPeriod, 
                 ERR_PRICE_REVEAL_FAILURE);
+        require(epochVoterHash[_epochId][_voter] == keccak256(abi.encode(_price, _random, _voter)), 
+                ERR_PRICE_INVALID);
 
+        // TODO: What about random
+
+        // prevent price submission from being revealed twice
+        delete epochVoterHash[_epochId][_voter];
         revealedPrices[_epochId][_voter] = _price;
         // inform about price reveal result
-        emit PriceRevealed(_voter, _epochId, _price, block.timestamp, 0, 0);
+        emit PriceRevealed(_voter, _epochId, _price, _random, block.timestamp, 0, 0);
     }
 
     function wNatVotePowerCached(address _owner, uint256 _epochId) external override returns (uint256 _wNatVP) {
@@ -103,8 +140,11 @@ contract MockNpmFtso is IIFtso {
         // TODO
     }
 
-    function ftsoManager() external pure override returns (address) {
-        // TODO
+    /**
+     * @notice Returns current random number
+     */
+    function getCurrentRandom() external pure override returns (uint256) {
+        return 0;
     }
 
     /**
@@ -126,8 +166,8 @@ contract MockNpmFtso is IIFtso {
         )
     {
         _epochId = _getCurrentEpochId();
-        _epochSubmitEndTime = firstEpochStartTs + (_epochId + 1) * submitPeriodSeconds;
-        _epochRevealEndTime = _epochSubmitEndTime + revealPeriodSeconds;
+        _epochSubmitEndTime = firstEpochStartTime + (_epochId + 1) * submitPeriod;
+        _epochRevealEndTime = _epochSubmitEndTime + revealPeriod;
 
         _votePowerBlock = 0;
         _fallbackMode = false;
@@ -135,21 +175,21 @@ contract MockNpmFtso is IIFtso {
 
     /**
      * @notice Returns current epoch data
-     * @return _firstEpochStartTs           First epoch start timestamp
-     * @return _submitPeriodSeconds         Submit period in seconds
-     * @return _revealPeriodSeconds         Reveal period in seconds
+     * @return _firstEpochStartTime         First epoch start time
+     * @return _submitPeriod                Submit period in seconds
+     * @return _revealPeriod                Reveal period in seconds
      */
     function getPriceEpochConfiguration() external view override 
         returns (
-            uint256 _firstEpochStartTs,
-            uint256 _submitPeriodSeconds,
-            uint256 _revealPeriodSeconds
+            uint256 _firstEpochStartTime,
+            uint256 _submitPeriod,
+            uint256 _revealPeriod
         )
     {
         return (
-            firstEpochStartTs, 
-            submitPeriodSeconds,
-            revealPeriodSeconds
+            firstEpochStartTime, 
+            submitPeriod,
+            revealPeriod
         );
     }
 
@@ -177,44 +217,13 @@ contract MockNpmFtso is IIFtso {
      * @dev Should never revert
      */
     function _getEpochId(uint256 _timestamp) internal view returns (uint256) {
-        if (_timestamp < firstEpochStartTs) {
+        if (_timestamp < firstEpochStartTime) {
             return 0;
         } else {
-            return (_timestamp - firstEpochStartTs) / submitPeriodSeconds;
+            return (_timestamp - firstEpochStartTime) / submitPeriod;
         }
 
     }
-
-    /**
-     * @notice Returns current random number
-     * @return Random number
-     * @dev Should never revert
-     */
-    function getCurrentRandom() external view override returns (uint256) {
-        uint256 currentEpochId = _getCurrentEpochId();
-        if (currentEpochId == 0) {
-            return 0;
-        }
-        return _getRandom(currentEpochId);
-    }
-
-    /**
-     * @notice Returns random number of the specified epoch
-     * @param _epochId Id of the epoch
-     * @return Random number
-     */
-    function getRandom(uint256 _epochId) external view override returns (uint256) {
-        return _getRandom(_epochId);
-    }
-
-    /**
-     * @notice Returns random for given epoch id
-     */
-    function _getRandom(uint256 _epochId) internal view virtual returns (uint256) {
-        return uint256(keccak256(abi.encode(priceSubmitter.getRandom(_epochId), address(this))));
-    }
-
-
 
     // Methods only used for IIFtso implementation
     // Will always fail
@@ -230,7 +239,7 @@ contract MockNpmFtso is IIFtso {
         return (new address[](0), new uint256[](0), 0);
     }
 
-    function fallbackFinalizePriceEpoch(uint256) external pure override {
+    function averageFinalizePriceEpoch(uint256) external pure override {
         require(false, UNAVAILABLE);
     }
 
@@ -324,12 +333,19 @@ contract MockNpmFtso is IIFtso {
         return (0, 0, 0, 0, 0, 0, new address[](0));
     }
 
-    function getCurrentEpochId() external view override returns (uint256) {
-        return _getCurrentEpochId();
+    function getCurrentEpochId() external pure override returns (uint256) {
+        require(false, UNAVAILABLE);
+        return 0;
     }
 
-    function getEpochId(uint256 _timestamp) external view override returns (uint256) {
-        return _getEpochId(_timestamp);
+    function getEpochId(uint256) external pure override returns (uint256) {
+        require(false, UNAVAILABLE);
+        return 0;
+    }
+
+    function getRandom(uint256) external pure override returns (uint256) {
+        require(false, UNAVAILABLE);
+        return 0;
     }
 
     function getEpochPrice(uint256) external pure override returns (uint256) {

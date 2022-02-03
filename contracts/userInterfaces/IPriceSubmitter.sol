@@ -3,20 +3,21 @@ pragma solidity 0.7.6;
 
 import "../genesis/interface/IFtsoGenesis.sol";
 import "../genesis/interface/IFtsoRegistryGenesis.sol";
-import "../genesis/interface/IFtsoManagerGenesis.sol";
 
 interface IPriceSubmitter {
     /**
-     * Event emitted when hash was submitted through PriceSubmitter.
+     * Event emitted when price hashes were submitted through PriceSubmitter.
      * @param submitter the address of the sender
      * @param epochId current price epoch id
-     * @param hash the submitted hash
+     * @param ftsos array of ftsos that correspond to the indexes in call
+     * @param hashes the submitted hashes
      * @param timestamp current block timestamp
      */
-    event HashSubmitted(
+    event PriceHashesSubmitted(
         address indexed submitter,
         uint256 indexed epochId,
-        bytes32 hash,
+        IFtsoGenesis[] ftsos,
+        bytes32[] hashes,
         uint256 timestamp
     );
 
@@ -33,35 +34,37 @@ interface IPriceSubmitter {
         uint256 indexed epochId,
         IFtsoGenesis[] ftsos,
         uint256[] prices,
-        uint256 random,
+        uint256[] randoms,
         uint256 timestamp
     );
     
     /**
-     * @notice Submits hash for current epoch
-     * @param _epochId              Target epoch id to which hash is submitted
-     * @param _hash                 Hash of ftso indices, prices, random number and voter address
-     * @notice Emits HashSubmitted event
+     * @notice Submits price hashes for current epoch
+     * @param _epochId              Target epoch id to which hashes are submitted
+     * @param _ftsoIndices          List of ftso indices
+     * @param _hashes               List of hashed price and random number
+     * @notice Emits PriceHashesSubmitted event
      */
-    function submitHash(
+    function submitPriceHashes(
         uint256 _epochId,
-        bytes32 _hash
+        uint256[] memory _ftsoIndices,
+        bytes32[] memory _hashes
     ) external;
 
     /**
      * @notice Reveals submitted prices during epoch reveal period
      * @param _epochId              Id of the epoch in which the price hashes was submitted
-     * @param _ftsoIndices          List of increasing ftso indices
+     * @param _ftsoIndices          List of ftso indices
      * @param _prices               List of submitted prices in USD
-     * @param _random               Submitted random number
-     * @notice The hash of ftso indices, prices, random number and voter address must be equal to the submitted hash
+     * @param _randoms              List of submitted random numbers
+     * @notice The hash of _price and _random must be equal to the submitted hash
      * @notice Emits PricesRevealed event
      */
     function revealPrices(
         uint256 _epochId,
         uint256[] memory _ftsoIndices,
         uint256[] memory _prices,
-        uint256 _random
+        uint256[] memory _randoms
     ) external;
 
     /**
@@ -73,16 +76,5 @@ interface IPriceSubmitter {
 
     function getVoterWhitelister() external view returns (address);
     function getFtsoRegistry() external view returns (IFtsoRegistryGenesis);
-    function getFtsoManager() external view returns (IFtsoManagerGenesis);
-
-    /**
-     * @notice Returns current random number
-     */
-    function getCurrentRandom() external view returns (uint256);
-    
-    /**
-     * @notice Returns random number of the specified epoch
-     * @param _epochId              Id of the epoch
-     */
-    function getRandom(uint256 _epochId) external view returns (uint256);
+    function getFtsoManager() external view returns (address);
 }

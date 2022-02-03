@@ -12,22 +12,6 @@ import {FtsoMedian} from "../lib/FtsoMedian.sol";
 contract FtsoMedianMock {
     using FtsoMedian for FtsoMedian.Data;
     
-    function computeWeighted(
-        uint256[] memory _price,
-        uint256[] memory _weight
-    )
-        public view 
-        returns (
-            uint256[] memory _index, 
-            FtsoMedian.Data memory _d,
-            uint256[] memory,
-            uint256[] memory
-        )
-    {
-        (_index, _d) = FtsoMedian._computeWeighted(_price, _weight);
-        return (_index, _d, _price, _weight);
-    }
-    
     function swap(uint256 _i, uint256 _j, uint256[] memory _index) public pure returns (uint256[] memory) {
         FtsoMedian._swap(_i, _j, _index);
         return _index;
@@ -92,17 +76,19 @@ contract FtsoMedianMock {
         return FtsoMedian._closestPriceFix(_start, _end, _index, _price);
     }
 
-    function computeSimple(
-        uint256[] memory _prices,
-        uint256 _count
+    function compute(
+        uint256[] memory _price,
+        uint256[] memory _weight
     )
-        public pure 
+        public view 
         returns (
-            uint256 _finalMedianPrice, 
+            uint256[] memory _index, 
+            FtsoMedian.Data memory _d,
             uint256[] memory,
-            uint256
+            uint256[] memory
         )
     {
-        return (FtsoMedian._computeSimple(_prices, _count), _prices, _count);
+        (_index, _d) = FtsoMedian._compute(_price, _weight);
+        return (_index, _d, _price, _weight);
     }
 }
