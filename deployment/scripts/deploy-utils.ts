@@ -167,8 +167,7 @@ export async function deployNewAsset(
   const Ftso: FtsoContract = artifacts.require("Ftso");
 
   // Register an FTSO for the new Asset
-  const ftso = await Ftso.new(xAssetDefinition.symbol, xAssetDefinition.ftsoDecimals, priceSubmitterAddress, wnatAddress, ftsoManager.address, startTs, priceEpochDurationSeconds,
-    revealEpochDurationSeconds,xAssetDefinition.initialPriceUSDDec5, priceDeviationThresholdBIPS, priceEpochCyclicBufferSize);
+  const ftso = await Ftso.new(xAssetDefinition.symbol, priceSubmitterAddress, wnatAddress, ftsoManager.address,xAssetDefinition.initialPriceUSDDec5, priceDeviationThresholdBIPS, priceEpochCyclicBufferSize);
   spewNewContractInfo(contracts, null, `FTSO ${xAssetDefinition.symbol}`, `Ftso.sol`, ftso.address, quiet);
 
   // Deploy Asset if we are not deploying on real network

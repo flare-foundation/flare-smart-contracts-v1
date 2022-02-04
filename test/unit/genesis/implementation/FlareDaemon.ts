@@ -1,15 +1,12 @@
-import {
+import { 
   EndlessLoopMockInstance,
-  FlareDaemonInstance,
-  InflationMockInstance,
-  InflationMock1Instance,
-  MockContractInstance
-} from "../../../../typechain-truffle";
+  FlareDaemonInstance, 
+  InflationMockInstance, 
+  MockContractInstance } from "../../../../typechain-truffle";
 
-import { expectRevert, expectEvent, time, constants } from '@openzeppelin/test-helpers';
-import { encodeContractNames, toBN } from "../../../utils/test-helpers";
+import {expectRevert, expectEvent, time, constants} from '@openzeppelin/test-helpers';
+import { toBN } from "../../../utils/test-helpers";
 import { TestableFlareDaemonInstance } from "../../../../typechain-truffle/TestableFlareDaemon";
-import { Contracts } from "../../../../deployment/scripts/Contracts";
 const getTestFile = require('../../../utils/constants').getTestFile;
 const GOVERNANCE_GENESIS_ADDRESS = require('../../../utils/constants').GOVERNANCE_GENESIS_ADDRESS;
 
@@ -17,7 +14,6 @@ const TestableFlareDaemon = artifacts.require("TestableFlareDaemon");
 const MockContract = artifacts.require("MockContract");
 const SuicidalMock = artifacts.require("SuicidalMock");
 const InflationMock = artifacts.require("InflationMock");
-const InflationMock1 = artifacts.require("InflationMock1");
 const EndlessLoopMock = artifacts.require("EndlessLoopMock");
 const RealFlareDaemon = artifacts.require("FlareDaemon");
 
@@ -43,139 +39,133 @@ const ERR_OUT_OF_GAS = "out of gas";
 const MAX_MINTING_FREQUENCY_SEC = 23 * 60 * 60; // Limit from FlareDaemon
 
 contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, async accounts => {
-  const ADDRESS_UPDATER = accounts[16];
   // contains a fresh contract for each test
   let flareDaemon: TestableFlareDaemonInstance;
   let mockInflation: InflationMockInstance;
-  let mockInflation1: InflationMock1Instance;
   let mockContractToDaemonize: MockContractInstance;
   let endlessLoop: EndlessLoopMockInstance;
-  const daemonize = web3.utils.sha3("daemonize()")!.slice(0, 10); // first 4 bytes is function selector
+  const daemonize = web3.utils.sha3("daemonize()")!.slice(0,10); // first 4 bytes is function selector
 
-  beforeEach(async () => {
+  beforeEach(async() => {
     flareDaemon = await TestableFlareDaemon.new();
     await flareDaemon.initialiseFixedAddress();
-    await flareDaemon.setAddressUpdater(ADDRESS_UPDATER, { from: GOVERNANCE_GENESIS_ADDRESS });
     mockContractToDaemonize = await MockContract.new();
     mockInflation = await InflationMock.new();
-    mockInflation1 = await InflationMock1.new();
     endlessLoop = await EndlessLoopMock.new(false, false);
   });
 
-  describe("register", async () => {
-    it("Should register a contract to daemonize", async () => {
+  describe("register", async() => {
+    it("Should register a contract to daemonize", async() => {
       // Assemble
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
       // Act
-      const tx = await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      const tx = await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
-      const { 0: daemonizedContracts } = await flareDaemon.getDaemonizedContractsData();
+      const {0: daemonizedContracts} = await flareDaemon.getDaemonizedContractsData();
       assert.equal(daemonizedContracts[0], mockContractToDaemonize.address);
-      expectEvent(tx, REGISTRATIONUPDATED_EVENT, { theContract: mockContractToDaemonize.address, add: true });
+      expectEvent(tx, REGISTRATIONUPDATED_EVENT, {theContract: mockContractToDaemonize.address, add: true});
     });
 
-    it("Should test deamonized contracts getter", async () => {
+    it("Should test deamonized contracts getter", async() => {
       // Assemble
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 1111 }];
-
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 1111}];
+      
       // Act
-      const tx = await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      const tx = await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
-      const { 0: daemonizedContracts, 1: gasLimits, 2: holdoffRemaining } = await flareDaemon.getDaemonizedContractsData();
+      const {0: daemonizedContracts, 1: gasLimits, 2: holdoffRemaining} = await flareDaemon.getDaemonizedContractsData();
       assert.equal(daemonizedContracts[0], mockContractToDaemonize.address);
       assert.equal(gasLimits[0].toString(), "1111");
       assert.equal(holdoffRemaining[0].toString(), "0");
     });
 
-    it("Should reject contract registration if not from governance", async () => {
+    it("Should reject contract registration if not from governance", async() => {
       // Assemble
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
       // Act
-      const registerPromise = flareDaemon.registerToDaemonize(registrations, { from: accounts[2] });
+      const registerPromise = flareDaemon.registerToDaemonize(registrations, {from: accounts[2]});
       // Assert
       await expectRevert(registerPromise, ONLY_GOVERNANCE_MSG);
     });
 
-    it("Should not register a dup contract", async () => {
+    it("Should not register a dup contract", async() => {
       // Assemble
       const registrations = [
-        { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 },
-        { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
+        {daemonizedContract: mockContractToDaemonize.address, gasLimit: 0},
+        {daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}
       ];
       // Act
-      const promise = flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      const promise = flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
       await expectRevert(promise, ERR_DUPLICATE_ADDRESS);
     });
 
-    it("Should not register more contracts than allowed", async () => {
+    it("Should not register more contracts than allowed", async() => {
       // Assemble
       const MAX = 10;
       const registrations = [];
-      for (let i = 0; i <= MAX; i++) {
-        const registration = { daemonizedContract: (await MockContract.new()).address, gasLimit: 0 };
+      for (let i = 0; i <= MAX; i++ ) {
+        const registration = {daemonizedContract: (await MockContract.new()).address, gasLimit: 0};
         registrations.push(registration);
       }
       // Act
-      const registerPromise = flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      const registerPromise = flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
       await expectRevert(registerPromise, TOO_MANY_CONTRACTS_MSG);
     });
   });
 
-  describe("unregister", async () => {
-    it("Should unregister a daemonized contract", async () => {
-      // Assemble
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
-      // Act
-      const tx = await flareDaemon.unregisterAll({ from: GOVERNANCE_GENESIS_ADDRESS });
-      // Assert
-      expectEvent(tx, REGISTRATIONUPDATED_EVENT, { theContract: mockContractToDaemonize.address, add: false });
+  describe("unregister", async() => {
+      it("Should unregister a daemonized contract", async() => {
+        // Assemble
+        const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
+        await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+        // Act
+        const tx = await flareDaemon.unregisterAll({from: GOVERNANCE_GENESIS_ADDRESS});
+        // Assert
+        expectEvent(tx, REGISTRATIONUPDATED_EVENT, {theContract: mockContractToDaemonize.address, add: false});
+      
+        const {0: daemonizedContracts} = await flareDaemon.getDaemonizedContractsData();
+        assert.equal(daemonizedContracts.length, 0);
+      });
 
-      const { 0: daemonizedContracts } = await flareDaemon.getDaemonizedContractsData();
-      assert.equal(daemonizedContracts.length, 0);
-    });
+      it("Should reject contract unregistration if not from governed", async() => {
+        // Assemble
+        // Act
+        const unregisterPromise = flareDaemon.unregisterAll({from: accounts[2]});
+        // Assert
+        await expectRevert(unregisterPromise, ONLY_GOVERNANCE_MSG);
+      });
 
-    it("Should reject contract unregistration if not from governed", async () => {
-      // Assemble
-      // Act
-      const unregisterPromise = flareDaemon.unregisterAll({ from: accounts[2] });
-      // Assert
-      await expectRevert(unregisterPromise, ONLY_GOVERNANCE_MSG);
-    });
+      it("Should register all", async() => {
+        // Assemble
+        const MAX = 10;
+        const registrations = [];
+        for (let i = 0; i < MAX; i++ ) {
+          const registration = {daemonizedContract: (await MockContract.new()).address, gasLimit: 0};
+          registrations.push(registration);
+        }
+        await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+        const {0: daemonizedContracts} = await flareDaemon.getDaemonizedContractsData();
 
-    it("Should register all", async () => {
-      // Assemble
-      const MAX = 10;
-      const registrations = [];
-      for (let i = 0; i < MAX; i++) {
-        const registration = { daemonizedContract: (await MockContract.new()).address, gasLimit: 0 };
-        registrations.push(registration);
-      }
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
-      const { 0: daemonizedContracts } = await flareDaemon.getDaemonizedContractsData();
-
-      assert.equal(daemonizedContracts.length, 10);
-      // Act
-      await flareDaemon.unregisterAll({ from: GOVERNANCE_GENESIS_ADDRESS });
-      // Assert
-      const { 0: daemonizedContracts2 } = await flareDaemon.getDaemonizedContractsData();
-      assert.equal(daemonizedContracts2.length, 0);
-    });
+        assert.equal(daemonizedContracts.length, 10);
+        // Act
+        await flareDaemon.unregisterAll({from: GOVERNANCE_GENESIS_ADDRESS});
+        // Assert
+        const {0: daemonizedContracts2} = await flareDaemon.getDaemonizedContractsData();
+        assert.equal(daemonizedContracts2.length, 0);
+      });  
   });
 
-  describe("daemonize", async () => {
-    it("Should daemonize a contract", async () => {
+  describe("daemonize", async() => {
+    it("Should daemonize a contract", async() => {
       // Assemble
       // Shim up mock
       await mockContractToDaemonize.givenMethodReturnBool(daemonize, true);
       // Register mock
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       // Assert
@@ -183,33 +173,29 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(invocationCount.toNumber(), 1);
     });
 
-    it("Should advance last triggered block", async () => {
+    it("Should advance last triggered block", async() => {
       // Assemble
       const oldLastTriggeredBlock = await flareDaemon.systemLastTriggeredAt();
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       // Assert
-      const currentBlock = await web3.eth.getBlockNumber();
+      const currentBlock = await web3.eth.getBlockNumber();            
       const lastTriggeredBlock = await flareDaemon.systemLastTriggeredAt();
       assert(lastTriggeredBlock.toNumber() > oldLastTriggeredBlock.toNumber());
       assert.equal(lastTriggeredBlock.toNumber(), currentBlock);
     });
 
-    it.skip("Should revert if trigger called more than once from same block", async () => {
-      // TODO: Test reject if trigger called more than once for same block; HH advances the block for every call.
-      // Not sure how to do this in an automated manner.
-      // 2.1.0 Version of Hardhat supports interval mining
-      // https://github.com/nomiclabs/hardhat/releases/tag/hardhat-core-v2.1.0
+    it.skip("Should revert if trigger called more than once from same block", async() => {
+        // TODO: Test reject if trigger called more than once for same block; HH advances the block for every call.
+        // Not sure how to do this in an automated manner.
+        // 2.1.0 Version of Hardhat supports interval mining
+        // https://github.com/nomiclabs/hardhat/releases/tag/hardhat-core-v2.1.0
     });
 
-    it("Should return amount to mint when triggered with a pending mint request", async () => {
+    it("Should return amount to mint when triggered with a pending mint request", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, accounts[0]], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(accounts[0], {from: GOVERNANCE_GENESIS_ADDRESS});
       await flareDaemon.requestMinting(BN(100), { from: accounts[0] });
       // Act
       const toMint = await flareDaemon.trigger.call();
@@ -217,60 +203,54 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(toMint.toNumber(), 100);
     });
 
-    it("Should emit event when triggered with a pending mint request", async () => {
+    it("Should emit event when triggered with a pending mint request", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, accounts[0]], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(accounts[0], {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       const txReq = await flareDaemon.requestMinting(BN(100), { from: accounts[0] });
       const txTrigger = await flareDaemon.trigger();
       // Assert
-      expectEvent(txReq, MINTINGREQUESTRECEIVED_EVENT, { amountWei: BN(100) });
+      expectEvent(txReq, MINTINGREQUESTRECEIVED_EVENT, {amountWei: BN(100)});
       expectEvent(txTrigger, MINTINGREQUESTTRIGGERED_EVENT, { amountWei: BN(100) });
     });
 
-    it("Should log error if inflation not set", async () => {
+    it("Should log error if inflation not set", async() => {
       // Assemble
       // Act
       const tx = await flareDaemon.trigger();
       // Assert
-      const { 2: errorStringArr } = await flareDaemon.showLastDaemonizedError();
+      const { 2: errorStringArr} = await flareDaemon.showLastDaemonizedError();
       assert.equal(errorStringArr[0], INFLATION_ZERO_MSG);
     });
 
-    it("Should advance daemonize error counter if daemonized contract reverts", async () => {
+    it("Should advance daemonize error counter if daemonized contract reverts", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodRevertWithMessage(daemonize, "I am broken");
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
 
       // Act
       await flareDaemon.trigger();
 
       // Assert
-      const { 0: numDaemonizedErrors } = await flareDaemon.errorData();
+      const {0: numDaemonizedErrors} = await flareDaemon.errorData();
       assert.equal(numDaemonizedErrors.toNumber(), 1);
 
       // Act
       await flareDaemon.trigger();
 
       // Assert
-      const { 0: numDaemonizedErrors2 } = await flareDaemon.errorData();
+      const {0: numDaemonizedErrors2} = await flareDaemon.errorData();
       assert.equal(numDaemonizedErrors2.toNumber(), 2);
     });
 
-    it("Should create new entry for new error type, correct contract address, not create new entry for repeating error type", async () => {
+    it("Should create new entry for new error type, correct contract address, not create new entry for repeating error type", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodRevertWithMessage(daemonize, "I am broken");
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
 
       // Act
       await flareDaemon.trigger();
@@ -288,22 +268,20 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(erroringContractArr2.length, 1);
     });
 
-    it("Should create new entry for new error type, correct string and correct error numbers", async () => {
+    it("Should create new entry for new error type, correct string and correct error numbers", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodRevertWithMessage(daemonize, "I am broken");
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
 
       // Act
       let tx = await flareDaemon.trigger();
-      const {
+      const { 
         0: lastErrorBlockArr,
         1: numErrorsArr,
         2: errorStringArr
-      } = await flareDaemon.showDaemonizedErrors(0, 10);
+        } = await flareDaemon.showDaemonizedErrors(0, 10);
 
       // Assert
       assert.equal(lastErrorBlockArr[0].toNumber(), tx.logs[0].blockNumber);
@@ -312,7 +290,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
 
       // Act
       tx = await flareDaemon.trigger();
-      const {
+      const { 
         0: lastErrorBlockArr2,
         1: numErrorsArr2,
         2: errorStringArr2
@@ -324,24 +302,22 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(errorStringArr2[0], "I am broken");
     });
 
-    it("Should show last daemonized error data", async () => {
+    it("Should show last daemonized error data", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodRevertWithMessage(daemonize, "I am broken");
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+      const registrations = [{daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}];
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
 
       // Act
       let tx = await flareDaemon.trigger();
-      const {
+      const { 
         0: lastErrorBlockArr,
         1: numErrorsArr,
         2: errorStringArr,
         3: errorContractArr,
         4: totalDaemonizedErrors
-      } = await flareDaemon.showLastDaemonizedError();
+        } = await flareDaemon.showLastDaemonizedError();
 
       // Assert
       assert.equal(lastErrorBlockArr[0].toNumber(), tx.logs[0].blockNumber);
@@ -352,7 +328,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
 
       // Act
       tx = await flareDaemon.trigger();
-      const {
+      const { 
         0: lastErrorBlockArr2,
         1: numErrorsArr2,
         2: errorStringArr2,
@@ -371,9 +347,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
     it("Should shorten error to 64 chars to make gas usage predictable", async () => {
       // Assemble
       await mockContractToDaemonize.givenMethodRevertWithMessage(daemonize, "This is a very long error message that should be shortened to fit into 64 character limit");
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, { from: GOVERNANCE_GENESIS_ADDRESS });
       const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }];
       await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
 
@@ -385,30 +359,28 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(errorStringArr[0], "This is a very long error message that should be shortened to fi");
     });
 
-    it("Should show last daemonized error data for two strings", async () => {
+    it("Should show last daemonized error data for two strings", async() => {
       // Assemble
       const mockDaemonizedContract = await MockContract.new();
       const mockDaemonizedContract2 = await MockContract.new();
       await mockDaemonizedContract.givenMethodRevertWithMessage(daemonize, "I am broken");
       await mockDaemonizedContract2.givenMethodRevertWithMessage(daemonize, "Me tooooo");
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       const registrations = [
-        { daemonizedContract: mockDaemonizedContract.address, gasLimit: 0 },
-        { daemonizedContract: mockDaemonizedContract2.address, gasLimit: 0 }
+        {daemonizedContract: mockDaemonizedContract.address, gasLimit: 0},
+        {daemonizedContract: mockDaemonizedContract2.address, gasLimit: 0}
       ];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
 
       // Act
       let tx = await flareDaemon.trigger();
-      const {
+      const { 
         0: lastErrorBlockArr,
         1: numErrorsArr,
         2: errorStringArr,
         3: errorContractArr,
         4: totalDaemonizedErrors
-      } = await flareDaemon.showDaemonizedErrors(0, 2);
+        } = await flareDaemon.showDaemonizedErrors(0, 2);
 
       // Assert
       assert.equal(lastErrorBlockArr[0].toNumber(), tx.logs[0].blockNumber);
@@ -419,53 +391,13 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(errorContractArr[1], mockDaemonizedContract2.address);
       assert.equal(totalDaemonizedErrors.toNumber(), 2);
     });
-
-    it("Should revert if trying to register zero-account", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      const registrations = [
-        { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 },
-        { daemonizedContract: "0x0000000000000000000000000000000000000000", gasLimit: 0 }
-      ];
-      let register = flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
-      await expectRevert(register, "address zero");
-    });
-
-    it("Should update a daemonized contract", async () => {
-      // Assemble
-      // Shim up mock
-      const newMockContractToDaemonize = await MockContract.new();
-      await mockContractToDaemonize.givenMethodReturnBool(daemonize, true);
-      await newMockContractToDaemonize.givenMethodReturnBool(daemonize, true);
-      const getContractName = web3.utils.sha3("getContractName()")!.slice(0, 10); // first 4 bytes is function selector
-      const getContractNameReturn = web3.eth.abi.encodeParameter('string', 'SOME_CONTRACT_NAME');
-      await mockContractToDaemonize.givenMethodReturn(getContractName, getContractNameReturn);
-      // Register mock
-      const registrations = [{ daemonizedContract: mockContractToDaemonize.address, gasLimit: 500000 }];
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, "SOME_CONTRACT_NAME"]),
-        [ADDRESS_UPDATER, mockInflation.address, newMockContractToDaemonize.address], {from: ADDRESS_UPDATER});
-      // Act
-      await flareDaemon.trigger();
-      // Assert
-      const invocationCountOld = await mockContractToDaemonize.invocationCountForMethod.call(daemonize);
-      assert.equal(invocationCountOld.toNumber(), 0);
-      const invocationCountNew = await newMockContractToDaemonize.invocationCountForMethod.call(daemonize);
-      assert.equal(invocationCountNew.toNumber(), 1);
-      assert.equal((await flareDaemon.getDaemonizedContractsData())[0].length, 1);
-      assert.equal((await flareDaemon.getDaemonizedContractsData())[0][0], newMockContractToDaemonize.address);
-      assert.equal((await flareDaemon.getDaemonizedContractsData())[1][0].toNumber(), 500000);
-    });
-
   });
 
-  describe("governance", async () => {
-    it("Should transfer governance", async () => {
+  describe("governance", async() => {
+    it("Should transfer governance", async() => {
       // Assemble
-      await flareDaemon.proposeGovernance(accounts[1], { from: GOVERNANCE_GENESIS_ADDRESS });
-      await flareDaemon.claimGovernance({ from: accounts[1] });
+      await flareDaemon.proposeGovernance(accounts[1], {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.claimGovernance({from: accounts[1]});
       // Act
       let newGovernance = await flareDaemon.governance();
       // Assert
@@ -480,45 +412,36 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Assert
       await expectRevert(realFlareDaemon.trigger(), "a");
     })
-
-    it("Should return governance address ", async () => {
-      let initialise = await flareDaemon.contract.methods.initialiseFixedAddress().call({ from: accounts[0] });
-      await flareDaemon.initialiseFixedAddress();
-      expect(initialise).to.equals("0xfffEc6C83c8BF5c3F4AE0cCF8c45CE20E4560BD7");
-    });
-
   });
 
-  describe("minting", async () => {
-    it("Should set inflation", async () => {
+  describe("minting", async() => {
+    it("Should set inflation", async() => {
       // Assemble
       // Act
-      const receipt = await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      const receipt = await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
       assert.equal(await flareDaemon.inflation(), mockInflation.address);
       expectEvent(receipt, INFLATIONSET_EVENT, {
         theNewContract: mockInflation.address,
-        theOldContract: constants.ZERO_ADDRESS
-      }
+        theOldContract: constants.ZERO_ADDRESS}
       );
     });
 
-    it("Should not set inflation if not from address updater", async () => {
+    it("Should not set inflation if not from governance", async() => {
+      // Assemble
+      // Act
+      // const promise = flareDaemon.setInflation(mockInflation.address, {from: accounts[0]});
+      // // Assert
+      // await expectRevert(promise, "only governance");
       await expectRevert(
-        flareDaemon.updateContractAddresses(
-          encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-          [ADDRESS_UPDATER, mockInflation.address], {from: accounts[0]}),
-        "only address updater"
+        flareDaemon.setInflation(mockInflation.address, {from: accounts[0]}),
+        "only governance"
       )
     });
 
-    it("Should request and transfer minted amount to inflation", async () => {
+    it("Should request and transfer minted amount to inflation", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       await mockInflation.setDoNotReceiveNoMoreThan(1000);
       await mockInflation.requestMinting(BN(100));
@@ -527,47 +450,43 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Our fakey validator will be suiciding the right amount of native token into flareDaemon
       const suicidalMock = await SuicidalMock.new(flareDaemon.address);
       // Give suicidal some native token
-      await web3.eth.sendTransaction({ from: accounts[0], to: suicidalMock.address, value: 100 });
+      await web3.eth.sendTransaction({from: accounts[0], to: suicidalMock.address, value: 100});
       // Suicidal validator mints
       await suicidalMock.die();
       // Act
       let receipt = await flareDaemon.trigger();
       // Assert
-      expectEvent(receipt, MINTINGRECEIVED_EVENT, { amountWei: "100" });
-      expectEvent(receipt, MINTINGWITHDRAWN_EVENT, { amountWei: "100" });
+      expectEvent(receipt, MINTINGRECEIVED_EVENT, {amountWei: "100"});
+      expectEvent(receipt, MINTINGWITHDRAWN_EVENT, {amountWei: "100"});
       const inflationBalance = BN(await web3.eth.getBalance(mockInflation.address));
       assert.equal(inflationBalance.toNumber(), 100);
     })
 
-    it("Should post received native token to self-destruct bucket if minting not expected", async () => {
+    it("Should post received native token to self-destruct bucket if minting not expected", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       // Request more that we are going to receive
       await mockInflation.requestMinting(110);
       // Our subversive attacker will be suiciding some native token into flareDaemon
       const suicidalMock = await SuicidalMock.new(flareDaemon.address);
       // Give suicidal some native token
-      await web3.eth.sendTransaction({ from: accounts[0], to: suicidalMock.address, value: 100 });
+      await web3.eth.sendTransaction({from: accounts[0], to: suicidalMock.address, value: 100});
       // Attacker dies
       await suicidalMock.die();
       // Act
       let receipt = await flareDaemon.trigger();
       // Assert
-      expectEvent(receipt, SELFDESTRUCTRECEIVED_EVENT, { amountWei: "100" });
+      expectEvent(receipt, SELFDESTRUCTRECEIVED_EVENT, {amountWei: "100"});
       const receivedSelfDestructProceeds = await flareDaemon.totalSelfDestructReceivedWei();
       assert(receivedSelfDestructProceeds.eq(BN(100)));
       const daemonBalance = BN(await web3.eth.getBalance(flareDaemon.address));
       assert(daemonBalance.eq(BN(100)));
     });
 
-    it("Should receive scheduled minting and any received self-destructed balance", async () => {
+    it("Should receive scheduled minting and any received self-destructed balance", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       await mockInflation.setDoNotReceiveNoMoreThan(1000);
       await mockInflation.requestMinting(BN(100));
@@ -576,7 +495,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Our fakey validator will be suiciding the right amount of native token into flareDaemon
       const suicidalMock = await SuicidalMock.new(flareDaemon.address);
       // Give suicidal some native token
-      await web3.eth.sendTransaction({ from: accounts[0], to: suicidalMock.address, value: 110 });
+      await web3.eth.sendTransaction({from: accounts[0], to: suicidalMock.address, value: 110});
       // Suicidal validator mints and we pretend that another attacker attacks in same block
       await suicidalMock.die();
       // Act
@@ -596,9 +515,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
     // Working version
     it("Should self destruct when minting more than available", async () => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       await mockInflation.requestMinting(BN(100));
 
@@ -606,7 +523,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Our fakey validator will be suiciding with less than expected to mint
       const suicidalMock = await SuicidalMock.new(flareDaemon.address);
       // Give suicidal some native token
-      await web3.eth.sendTransaction({ from: accounts[0], to: suicidalMock.address, value: 90 });
+      await web3.eth.sendTransaction({from: accounts[0], to: suicidalMock.address, value: 90});
       // Suicidal validator mints and we pretend that another attacker attacks in same block
       await suicidalMock.die();
       // Act
@@ -621,14 +538,12 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Daemon still has remaining balance
       const daemonBalance = BN(await web3.eth.getBalance(flareDaemon.address));
       assert(daemonBalance.eq(BN(90)), "daemon does not contain expected balance");
-
+      
     });
 
-    it("Should log error if transfer of requested minting fails", async () => {
+    it("Should log error if transfer of requested minting fails", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       await mockInflation.setDoNotReceiveNoMoreThan(BN(90));
       await mockInflation.requestMinting(BN(100));
@@ -637,21 +552,19 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Our fakey validator will be suiciding the right amount of native token into flareDaemon
       const suicidalMock = await SuicidalMock.new(flareDaemon.address);
       // Give suicidal some native token
-      await web3.eth.sendTransaction({ from: accounts[0], to: suicidalMock.address, value: 100 });
+      await web3.eth.sendTransaction({from: accounts[0], to: suicidalMock.address, value: 100});
       // Suicidal validator mints
       await suicidalMock.die();
       // Act
       await flareDaemon.trigger();
       // Assert
-      const { 2: errorStringArr } = await flareDaemon.showLastDaemonizedError();
+      const { 2: errorStringArr} = await flareDaemon.showLastDaemonizedError();
       assert.equal(errorStringArr[0], "too much");
     });
 
-    it("Should log error if transfer of requested minting fails when additional self-destruct received", async () => {
+    it("Should log error if transfer of requested minting fails when additional self-destruct received", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       await mockInflation.setDoNotReceiveNoMoreThan(90);
       await mockInflation.requestMinting(BN(100));
@@ -660,21 +573,19 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       // Our fakey validator will be suiciding the right amount of native token into flareDaemon
       const suicidalMock = await SuicidalMock.new(flareDaemon.address);
       // Give suicidal some native token
-      await web3.eth.sendTransaction({ from: accounts[0], to: suicidalMock.address, value: 110 });
+      await web3.eth.sendTransaction({from: accounts[0], to: suicidalMock.address, value: 110});
       // Suicidal validator mints and we pretend that another attacker attacks in same block
       await suicidalMock.die();
       // Act
       await flareDaemon.trigger();
       // Assert
-      const { 2: errorStringArr } = await flareDaemon.showLastDaemonizedError();
+      const { 2: errorStringArr} = await flareDaemon.showLastDaemonizedError();
       assert.equal(errorStringArr[0], "too much");
     });
 
-    it("Should not allow mint request before timelock expires", async () => {
+    it("Should not allow mint request before timelock expires", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       await mockInflation.requestMinting(BN(100));
       // Act
@@ -683,12 +594,10 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       await expectRevert.unspecified(requestPromise); // unspecified because it is raised within mock call
     });
 
-    it("Should allow mint request exactly after timelock expires", async () => {
+    it("Should allow mint request exactly after timelock expires", async() => {
       // This test currently waits 23h on a real network so run it with caution
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       // Advance block to ensure that daemon has current time
       await time.advanceBlock();
@@ -705,11 +614,9 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       await requestPromise;
     });
 
-    it("Should have cap on excessive minting", async () => {
+    it("Should have cap on excessive minting", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
       // Act
       const requestPromise = mockInflation.requestMinting(web3.utils.toWei(BN(100000000)));
@@ -717,63 +624,53 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       await expectRevert.unspecified(requestPromise); // unspecified because it is raised within mock call
     });
 
-    it("Should make sure setMaxMintRequest changes are time locked", async () => {
+    it("Should make sure setMaxMintRequest changes are time locked", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
 
       // first request should succeed.
       // correct amount success
       await flareDaemon.setMaxMintingRequest(BN(1000), { from: GOVERNANCE_GENESIS_ADDRESS });
 
-      await expectRevert(flareDaemon.setMaxMintingRequest(BN(1000),
+      await expectRevert(flareDaemon.setMaxMintingRequest(BN(1000), 
         { from: GOVERNANCE_GENESIS_ADDRESS }),
         "time gap too short");
     });
 
-    it("Should make sure setMaxMintRequest changes are not too large", async () => {
+    it("Should make sure setMaxMintRequest changes are not too large", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
 
       // the request should fail as we can only increase the maximum by 10%
-      await expectRevert(flareDaemon.setMaxMintingRequest(web3.utils.toWei(BN(100000000)),
+      await expectRevert(flareDaemon.setMaxMintingRequest(web3.utils.toWei(BN(60000000)),
         { from: GOVERNANCE_GENESIS_ADDRESS }),
         "max mint too high");
     });
 
-    it("Should make sure setMaxMintRequest changes just below allowed maximum go through", async () => {
+    it("Should make sure setMaxMintRequest changes just below allowed maximum go through", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
 
-      await flareDaemon.setMaxMintingRequest(web3.utils.toWei(BN(99000000)), { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setMaxMintingRequest(web3.utils.toWei(BN(55000000)), { from: GOVERNANCE_GENESIS_ADDRESS });
     });
 
-    it("Should make sure setMaxMintRequest changes are not too large", async () => {
+    it("Should make sure setMaxMintRequest changes are not too large", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
 
       // the request should fail as we can only increase the maximum by 10%
-      await expectRevert(flareDaemon.setMaxMintingRequest(web3.utils.toWei(BN(99000001)),
+      await expectRevert(flareDaemon.setMaxMintingRequest(web3.utils.toWei(BN(55000001)),
         { from: GOVERNANCE_GENESIS_ADDRESS }),
         "max mint too high");
     });
 
-    it("Should make sure setMaxMintRequest cannot be set to zero", async () => {
+    it("Should make sure setMaxMintRequest cannot be set to zero", async() => {
       // Assemble
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       await mockInflation.setFlareDaemon(flareDaemon.address);
 
       // the request should fail as we cannot set the maximum to 0
@@ -781,138 +678,43 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
         { from: GOVERNANCE_GENESIS_ADDRESS }),
         "max mint is zero");
     });
-
-    it("Should return max minting frequency sec ", async () => {
-      let getNextMintReq = await flareDaemon.contract.methods.getNextMintRequestAllowedTs().call({ from: accounts[0] });
-      await flareDaemon.getNextMintRequestAllowedTs();
-      expect(parseInt(getNextMintReq, 10)).to.equals(MAX_MINTING_FREQUENCY_SEC);
-    });
-
-    it("Should log error if transfer of requested minting fails without a message", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation1.address], {from: ADDRESS_UPDATER});
-      await mockInflation1.setFlareDaemon(flareDaemon.address);
-
-      await mockInflation1.requestMinting(90);
-      await web3.eth.sendTransaction({ from: accounts[0], to: flareDaemon.address, value: 100 });
-      await flareDaemon.trigger();
-
-      await web3.eth.sendTransaction({ from: accounts[0], to: flareDaemon.address, value: 90 });
-      let tx = await flareDaemon.trigger();
-      expectEvent(tx, "ContractDaemonizeErrored", { theMessage: "unknown error. receiveMinting", gasConsumed: toBN(0) })
-    });
-
-    it("Should log error if receiving of requested minting fails without a message", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation1.address], {from: ADDRESS_UPDATER});
-      await mockInflation1.setFlareDaemon(flareDaemon.address);
-
-      await mockInflation1.requestMinting(90);
-      await web3.eth.sendTransaction({ from: accounts[0], to: flareDaemon.address, value: 100 });
-      await flareDaemon.trigger();
-
-      await web3.eth.sendTransaction({ from: accounts[0], to: flareDaemon.address, value: 190 });
-      let tx = await flareDaemon.trigger();
-      expectEvent(tx, "ContractDaemonizeErrored", { theMessage: "unknown error. receiveMinting", gasConsumed: toBN(0) })
-    });
-
-    it("Should revert if minted from wrong contract ", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, accounts[0]], {from: ADDRESS_UPDATER});
-      const tx = flareDaemon.requestMinting(BN(100), { from: accounts[1] });
-      await expectRevert(tx, "not inflation");
-    });
-
-    it("Should not emit MintingRequestReceived event ", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, accounts[0]], {from: ADDRESS_UPDATER});
-      const tx = await flareDaemon.requestMinting(BN(0), { from: accounts[0] });
-      expectEvent.notEmitted(tx, "MintingRequestReceived")
-    });
-
-    it("Should revert if inflation contract is zero-account", async () => {
-      let tx = flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, constants.ZERO_ADDRESS], {from: ADDRESS_UPDATER});
-      await expectRevert(tx, "address zero");
-    });
-
-    it("Should set max minting request to 1000 and not to MAX_MINTING_REQUEST_DEFAULT", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, accounts[0]], {from: ADDRESS_UPDATER});
-      await flareDaemon.setMaxMintingRequest(BN(1000), { from: GOVERNANCE_GENESIS_ADDRESS });
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, accounts[0]], {from: ADDRESS_UPDATER});
-      let maxMinting = await flareDaemon.maxMintingRequestWei();
-      assert.equal(maxMinting.toNumber(), 1000);
-      let requestDefault = 50000000 * 10 ** 18
-      assert.notEqual(maxMinting.toNumber(), requestDefault);
-    })
-
-    it("Should revert if start index is too high", async () => {
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation1.address], {from: ADDRESS_UPDATER});
-      await mockInflation1.setFlareDaemon(flareDaemon.address);
-
-      await mockInflation1.requestMinting(90);
-      await web3.eth.sendTransaction({ from: accounts[0], to: flareDaemon.address, value: 100 });
-      await flareDaemon.trigger();
-
-      await web3.eth.sendTransaction({ from: accounts[0], to: flareDaemon.address, value: 90 });
-      let tx = await flareDaemon.trigger();
-
-      let err = flareDaemon.showDaemonizedErrors(1, 1);
-      await expectRevert(err, "start index high");
-    });
-
   });
 
-  describe("gas limit", async () => {
-    it("Should set gas limit", async () => {
+  describe("gas limit", async() => {
+    it("Should set gas limit", async() => {
       // Assemble
-      const registrations = [{ daemonizedContract: endlessLoop.address, gasLimit: 1000000 }];
+      const registrations = [{daemonizedContract: endlessLoop.address, gasLimit: 1000000}];
       // Act
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
-      const { 0: daemonizedContracts, 1: gasLimits } = await flareDaemon.getDaemonizedContractsData();
+      const {0: daemonizedContracts, 1: gasLimits} = await flareDaemon.getDaemonizedContractsData();
       assert.equal(daemonizedContracts[0], endlessLoop.address);
       assert.equal(gasLimits[0].toString(), "1000000");
     });
 
-    it("Should not exceed gas limit of runaway contract", async () => {
-      const registrations = [{ daemonizedContract: endlessLoop.address, gasLimit: 1000000 }];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+    it("Should not exceed gas limit of runaway contract", async() => {
+      const registrations = [{daemonizedContract: endlessLoop.address, gasLimit: 1000000}];
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       // Assert
-      const {
+      const { 
         2: errorStringArr,
         3: erroringContractArr } = await flareDaemon.showDaemonizedErrors(0, 10);
       assert.equal(endlessLoop.address, erroringContractArr[0]);
       assert.equal(errorStringArr[0], ERR_OUT_OF_GAS);
     });
 
-    it("Should execute 2nd contract when 1st contract exceeds gas limit", async () => {
+    it("Should execute 2nd contract when 1st contract exceeds gas limit", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodReturnBool(daemonize, true);
       const registrations = [
-        { daemonizedContract: endlessLoop.address, gasLimit: 1000000 },
-        { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
+        {daemonizedContract: endlessLoop.address, gasLimit: 1000000},
+        {daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       // Assert
@@ -927,10 +729,8 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
         { daemonizedContract: endlessLoop.address, gasLimit: 0 },
         { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
       await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, { from: GOVERNANCE_GENESIS_ADDRESS });
       // Act
       const receipt = await flareDaemon.trigger({ gas: 1_000_000 });
       // Assert
@@ -940,19 +740,17 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
     });
   });
 
-  describe("holdoff", async () => {
-    it("Should set block holdoff on contract when gas limit exceeded", async () => {
+  describe("holdoff", async() => {
+    it("Should set block holdoff on contract when gas limit exceeded", async() => {
       const registrations = [
-        { daemonizedContract: endlessLoop.address, gasLimit: 1000000 }
+        {daemonizedContract: endlessLoop.address, gasLimit: 1000000}
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       // Assert
-      const { 0: daemonizedContracts, 1: gasLimits, 2: holdoffRemaining } = await flareDaemon.getDaemonizedContractsData();
+      const {0: daemonizedContracts, 1: gasLimits, 2: holdoffRemaining} = await flareDaemon.getDaemonizedContractsData();
       assert.equal(daemonizedContracts[0], endlessLoop.address);
       assert.equal(gasLimits[0].toString(), "1000000");
 
@@ -960,18 +758,16 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(holdoffRemaining[0].toString(), holdoff.toString());
     });
 
-    it("Should execute 2nd contract twice when 1st contract heldoff", async () => {
+    it("Should execute 2nd contract twice when 1st contract heldoff", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodReturnBool(daemonize, true);
       const registrations = [
-        { daemonizedContract: endlessLoop.address, gasLimit: 1000000 },
-        { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
+        {daemonizedContract: endlessLoop.address, gasLimit: 1000000},
+        {daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
-      await flareDaemon.setBlockHoldoff(10, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setBlockHoldoff(10, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       const receipt = await flareDaemon.trigger();
@@ -981,25 +777,23 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       expectEvent(receipt, CONTRACTHELDOFF_EVENT);
     });
 
-    it("Should execute endless loop contract again after being heldoff", async () => {
+    it("Should execute endless loop contract again after being heldoff", async() => {
       // Assemble
       await mockContractToDaemonize.givenMethodReturnBool(daemonize, true);
       const registrations = [
-        { daemonizedContract: endlessLoop.address, gasLimit: 1000000 },
-        { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
+        {daemonizedContract: endlessLoop.address, gasLimit: 1000000},
+        {daemonizedContract: mockContractToDaemonize.address, gasLimit: 0}
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
-      await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
-      await flareDaemon.setBlockHoldoff(1, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.registerToDaemonize(registrations, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setInflation(mockInflation.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+      await flareDaemon.setBlockHoldoff(1, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Act
       await flareDaemon.trigger();
       await flareDaemon.trigger();  // Holdoff
       const receipt = await flareDaemon.trigger();
       // Assert
-      expectEvent(receipt, CONTRACTDAEMONIZEERRORED_EVENT, { theContract: endlessLoop.address });
-      expectEvent(receipt, CONTRACTDAEMONIZED_EVENT, { theContract: mockContractToDaemonize.address });
+      expectEvent(receipt, CONTRACTDAEMONIZEERRORED_EVENT, {theContract: endlessLoop.address});
+      expectEvent(receipt, CONTRACTDAEMONIZED_EVENT, {theContract: mockContractToDaemonize.address});
     });
 
     it("Should fallback instead of holdoff if possible", async () => {
@@ -1010,10 +804,8 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
         { daemonizedContract: fallbackEndlessLoop.address, gasLimit: 1000000 },
         { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
       await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, { from: GOVERNANCE_GENESIS_ADDRESS });
       await flareDaemon.setBlockHoldoff(5, { from: GOVERNANCE_GENESIS_ADDRESS });
       // Act
       const receipt1 = await flareDaemon.trigger(); // endlessLoop fails and goes to fallback
@@ -1034,10 +826,8 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
         { daemonizedContract: fallbackEndlessLoop.address, gasLimit: 1000000 },
         { daemonizedContract: mockContractToDaemonize.address, gasLimit: 0 }
       ];
-      await flareDaemon.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-        [ADDRESS_UPDATER, mockInflation.address], {from: ADDRESS_UPDATER});
       await flareDaemon.registerToDaemonize(registrations, { from: GOVERNANCE_GENESIS_ADDRESS });
+      await flareDaemon.setInflation(mockInflation.address, { from: GOVERNANCE_GENESIS_ADDRESS });
       await flareDaemon.setBlockHoldoff(5, { from: GOVERNANCE_GENESIS_ADDRESS });
       // Act
       const receipt1 = await flareDaemon.trigger(); // endlessLoop fails and goes to fallback
@@ -1052,16 +842,16 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon unit tests`, 
       assert.equal(holdoffRemaining[0].toNumber(), 5);
     });
 
-    it("Should set holdoff", async () => {
+    it("Should set holdoff", async() => {
       // Assemble
       // Act
-      const receipt = await flareDaemon.setBlockHoldoff(5, { from: GOVERNANCE_GENESIS_ADDRESS });
+      const receipt = await flareDaemon.setBlockHoldoff(5, {from: GOVERNANCE_GENESIS_ADDRESS});
       // Assert
       const holdoff = await flareDaemon.blockHoldoff();
       assert.equal(holdoff.toString(), "5");
     });
 
-    it("Should not set holdoff if not from governance", async () => {
+    it("Should not set holdoff if not from governance", async() => {
       // Assemble
       // Act
       const receipt = flareDaemon.setBlockHoldoff(5);
