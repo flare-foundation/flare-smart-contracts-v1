@@ -19,7 +19,7 @@ contract ReadGasLeft is IFlareDaemonize {
         return false;
     }
 
-    // function getContractName() external pure override returns (string memory) {
-    //     return "ReadGasLeft";
-    // }
+    function getContractName() external pure override returns (string memory) {
+        return "ReadGasLeft";
+    }
 }

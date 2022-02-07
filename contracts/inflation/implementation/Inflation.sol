@@ -301,12 +301,12 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         return false;
     }
 
-    // /**
-    //  * @notice Implement this function for updating daemonized contracts through AddressUpdater.
-    //  */
-    // // function getContractName() external pure override returns (string memory) {
-    // //     return "Inflation";
-    // // }
+    /**
+     * @notice Implement this function for updating daemonized contracts through AddressUpdater.
+     */
+    function getContractName() external pure override returns (string memory) {
+        return "Inflation";
+    }
 
     /**
      * @notice Returns next expected inflation topup time stamp which is also inflation authorization time. 

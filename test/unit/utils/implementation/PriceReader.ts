@@ -41,7 +41,6 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
 
     dummyFtso = await MockFtso.new(
       "",
-      5,
       constants.ZERO_ADDRESS,
       constants.ZERO_ADDRESS,
       constants.ZERO_ADDRESS,
@@ -49,7 +48,6 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
       1, // initial token price 0.00001$
       1e10,
       defaultPriceEpochCyclicBufferSize,
-      false
     );
 
     const ftsoCreadedInstance = Ftso__factory.createInterface();

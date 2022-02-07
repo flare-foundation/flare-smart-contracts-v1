@@ -1,9 +1,10 @@
 import { constants, time } from "@openzeppelin/test-helpers";
-import { Contracts } from "../../../deployment/scripts/Contracts";
-import { FtsoRegistryInstance, SimpleMockFtsoInstance, MockContractInstance, PriceSubmitterInstance, SupplyInstance, VoterWhitelisterMockInstance, VPTokenMockInstance, WNatInstance, FtsoManagerInstance } from "../../../typechain-truffle";
+import { FtsoRegistryInstance, SimpleMockFtsoInstance, MockContractInstance, PriceSubmitterInstance, SupplyInstance, VoterWhitelisterMockInstance, VPTokenMockInstance, WNatInstance } from "../../../typechain-truffle";
 import { defaultPriceEpochCyclicBufferSize, GOVERNANCE_GENESIS_ADDRESS, getTestFile } from "../../utils/constants";
-import { compareArrays, encodeContractNames, getRandom, increaseTimeTo, submitHash, submitPriceHash, toBN } from "../../utils/test-helpers";
+import { compareArrays, increaseTimeTo, submitPriceHash, toBN, encodeContractNames } from "../../utils/test-helpers";
 import { setDefaultVPContract } from "../../utils/token-test-helpers";
+import { Contracts } from "../../../deployment/scripts/Contracts";
+
 
 const VoterWhitelister = artifacts.require("VoterWhitelisterMock");
 const WNat = artifacts.require("WNat");
@@ -11,8 +12,8 @@ const VPToken = artifacts.require("VPTokenMock");
 const Ftso = artifacts.require("SimpleMockFtso");
 const FtsoRegistry = artifacts.require("FtsoRegistry");
 const PriceSubmitter = artifacts.require("PriceSubmitter");
+const Supply = artifacts.require("Supply");
 const MockContract = artifacts.require("MockContract");
-const FtsoManager = artifacts.require("FtsoManager");
 
 function toBNFixed(x: number, decimals: number) {
     const prec = Math.min(decimals, 6);
@@ -37,8 +38,8 @@ function fmtNum(x: BN) {
 
 contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption tests`, async accounts => {
     const governance = GOVERNANCE_GENESIS_ADDRESS;
-    const ADDRESS_UPDATER = accounts[16];
     const ftsoManager = accounts[33];
+    const ADDRESS_UPDATER = accounts[16];
     
     const epochDurationSec = 120;
     const revealDurationSec = 60;
@@ -51,13 +52,14 @@ contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption te
 
     let ftsoRegistry: FtsoRegistryInstance;
 
-    let mockFtsoManager: FtsoManagerInstance;
+    let supplyInterface: SupplyInstance;
+    let supplyMock: MockContractInstance;
 
     let vpBlockNumber: number;
     let epochId: number;
 
     async function createFtso(symbol: string, initialPrice: BN) {
-        const ftso = await Ftso.new(symbol, 5, priceSubmitter.address, wnat.address, ftsoManager, 0, epochDurationSec, revealDurationSec, initialPrice, 1e10, defaultPriceEpochCyclicBufferSize);
+        const ftso = await Ftso.new(symbol, priceSubmitter.address, wnat.address, ftsoManager, initialPrice, 1e10, defaultPriceEpochCyclicBufferSize);
         await ftsoRegistry.addFtso(ftso.address, { from: ftsoManager });
         // add ftso to price submitter and whitelist
         const ftsoIndex = await ftsoRegistry.getFtsoIndex(symbol);
@@ -120,35 +122,18 @@ contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption te
             // create price submitter
             priceSubmitter = await PriceSubmitter.new();
             await priceSubmitter.initialiseFixedAddress();
-            await priceSubmitter.setAddressUpdater(ADDRESS_UPDATER, { from: governance });
-
-            mockFtsoManager = await FtsoManager.new(
-                governance,
-                governance,
-                ADDRESS_UPDATER,
-                priceSubmitter.address,
-                constants.ZERO_ADDRESS,
-                0,
-                epochDurationSec,
-                revealDurationSec,
-                2 * epochDurationSec + revealDurationSec,
-                10 * epochDurationSec,
-                7
-              );
-
             // create registry
             ftsoRegistry = await FtsoRegistry.new(governance, ADDRESS_UPDATER);
             await ftsoRegistry.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
-                [ADDRESS_UPDATER, ftsoManager], {from: ADDRESS_UPDATER});
+              encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
+              [ADDRESS_UPDATER, ftsoManager], {from: ADDRESS_UPDATER});
+
             // create whitelister
             whitelist = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 200);
             await whitelist.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
-                [ADDRESS_UPDATER, ftsoRegistry.address, ftsoManager], {from: ADDRESS_UPDATER});
-            await priceSubmitter.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.FTSO_MANAGER]),
-                [ADDRESS_UPDATER, ftsoRegistry.address, whitelist.address, mockFtsoManager.address], {from: ADDRESS_UPDATER});
+              encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
+              [ADDRESS_UPDATER, ftsoRegistry.address, ftsoManager], {from: ADDRESS_UPDATER});
+            await priceSubmitter.setContractAddresses(ftsoRegistry.address, whitelist.address, ftsoManager, { from: governance });
             // create assets
             wnat = await WNat.new(governance, "Wrapped NAT", "WNAT");
             await setDefaultVPContract(wnat, governance);
@@ -158,6 +143,9 @@ contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption te
                 await setDefaultVPContract(asset, governance);
                 assets.push(asset);
             }
+            // create supply
+            supplyInterface = await Supply.new(governance, constants.ZERO_ADDRESS, governance, 10_000, 0, []);
+            supplyMock = await MockContract.new();
             // create ftsos
             natFtso = await createFtso("NAT", usd(1));
             ftsos = [];
@@ -240,7 +228,7 @@ contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption te
             // Act
             const allFtsos = [natFtso, ...ftsos];
             const prices = [usd(2.1), usd(0.6), usd(5.5), usd(1.9), usd(0.23), usd(1.4)];
-            const random = getRandom();
+            const randoms = prices.map(_ => toBN(Math.round(Math.random() * 1e9)));
             const indices: BN[] = [];
             for (const ftso of allFtsos) {
                 const symbol = await ftso.symbol();
@@ -254,13 +242,13 @@ contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption te
             // submit hashes
             await startNewPriceEpoch();
             for (const voter of voters) {
-                const hash = submitHash(indices, prices, random, voter);
-                await priceSubmitter.submitHash(epochId, hash, { from: voter });
+                const hashes = allFtsos.map((ftso, i) => submitPriceHash(prices[i], randoms[i], voter));
+                await priceSubmitter.submitPriceHashes(epochId, indices, hashes, { from: voter });
             }
             // reveal prices
             await initializeForReveal();
             for (const voter of voters) {
-                await priceSubmitter.revealPrices(epochId, indices, prices, random, { from: voter });
+                await priceSubmitter.revealPrices(epochId, indices, prices, randoms, { from: voter });
             }
             // finalize
             await advanceTimeTo((epochId + 1) * epochDurationSec + revealDurationSec); // reveal period end

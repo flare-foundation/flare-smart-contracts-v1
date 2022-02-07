@@ -43,4 +43,6 @@ interface IIFtsoManager is IFtsoManager {
     function setFallbackMode(bool _fallbackMode) external;
 
     function setFtsoFallbackMode(IIFtso _ftso, bool _fallbackMode) external;
+
+    function getRewardEpochToExpireNext() external returns (uint256);
 }

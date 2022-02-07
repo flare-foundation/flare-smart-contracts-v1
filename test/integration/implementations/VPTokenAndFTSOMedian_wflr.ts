@@ -17,13 +17,12 @@ async function deployContracts(signer: SignerWithAddress, epochStartTimestamp: n
     await setDefaultVPContract_ethers(assetToken, signer);
 
     let ftso: MockFtso = await newContract<MockFtso>("MockFtso", signer,
-        "XASSET", 5, constants.ZERO_ADDRESS, natToken.address, signer.address, // symbol, address priceSubmitter, address _wNat, address _ftsoManager
+        "XASSET", constants.ZERO_ADDRESS, natToken.address, signer.address, // symbol, address priceSubmitter, address _wNat, address _ftsoManager
         epochStartTimestamp, // uint256 _startTimestamp
         epochPeriod, revealPeriod, //uint256 _epochPeriod, uint256 _revealPeriod
         1, //uint256 _initialPrice
         1e10,
-        defaultPriceEpochCyclicBufferSize,
-        true
+        defaultPriceEpochCyclicBufferSize
     );
     await ftso.connect(signer).setAsset(assetToken.address);
 

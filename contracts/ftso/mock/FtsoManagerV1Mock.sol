@@ -117,7 +117,7 @@ contract FtsoManagerV1Mock is IIFtsoManagerV1, GovernedAndFlareDaemonized, IFlar
         return false;
     }
 
-    // function getContractName() external pure override returns (string memory) {
-    //     return "FtsoManagerV1Mock";
-    // }
+    function getContractName() external pure override returns (string memory) {
+        return "FtsoManagerV1Mock";
+    }
 }

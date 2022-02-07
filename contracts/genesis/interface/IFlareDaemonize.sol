@@ -18,7 +18,7 @@ interface IFlareDaemonize {
     function switchToFallbackMode() external returns (bool);
 
 
-    // /// Implement this function for updating daemonized contracts through AddressUpdater.
-    // function getContractName() external view returns (string memory);
+    /// Implement this function for updating daemonized contracts through AddressUpdater.
+    function getContractName() external view returns (string memory);
 
 }

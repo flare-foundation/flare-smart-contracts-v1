@@ -55,15 +55,13 @@ contract(`FlashLoanMock.sol; ${getTestFile(__filename)}; FlashLoanMock unit test
             await setDefaultVPContract(wnat, accounts[0]);
             ftso = await MockFtso.new(
                 "ATOK",
-                5,
                 accounts[4],
                 wnat.address,
                 accounts[10],
-                0, 120, 60,
+                0, 0, 0,    // special mock settings, not needed here
                 1,
                 1e10,
-                35,
-                false
+                35
             );
             await ftso.configureEpochs( 1, 1, 1000, 10000, 500, 500, [], { from: accounts[10] });
             await ftso.activateFtso(0, 120, 60, { from: accounts[10] });

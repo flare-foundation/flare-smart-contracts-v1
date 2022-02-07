@@ -1,4 +1,5 @@
-import { getRandom, submitHash, toBN } from "../../test/utils/test-helpers";
+import { expectRevert } from "@openzeppelin/test-helpers";
+import { submitPriceHash, toBN } from "../../test/utils/test-helpers";
 import { FtsoManagerContract, FtsoManagerInstance, PriceSubmitterContract, PriceSubmitterInstance } from "../../typechain-truffle";
 import { Contracts } from "../scripts/Contracts";
 
@@ -15,7 +16,7 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
     let price = 200000;
     let index = 1;
     let gas = 800000;
-    let random = getRandom();
+    let random = 123;
 
     before(async() => {
         contracts = new Contracts();
@@ -30,13 +31,13 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
 
     describe("submit and reveal price gas usage", async() => {
         it("Should submit price", async() => {
-            let hash = submitHash([index], [price], random, account);
+            let hash = submitPriceHash(price, random, account);
 
             let initialBalance = toBN(await web3.eth.getBalance(account));
             console.log(initialBalance.toString());
             
-            let epochId = await ftsoManager.getCurrentPriceEpochId();
-            let tx = await priceSubmitter.submitHash(epochId, hash, { from: account, gasPrice: gasPrice, gas: gas });
+            let epochId = (await ftsoManager.getCurrentPriceEpochData())[0];
+            let tx = await priceSubmitter.submitPriceHashes(epochId, [index], [hash], { from: account, gasPrice: gasPrice, gas: gas });
             let gasUsed = toBN(tx.receipt.gasUsed);
             console.log(gasUsed.toString());
 
@@ -51,10 +52,10 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
         
         it("Should reveal price", async() => {
             // submit price
-            let hash = submitHash([index], [price], random, account);
+            let hash = submitPriceHash(price, random, account);
 
-            let epochId = await ftsoManager.getCurrentPriceEpochId();
-            await priceSubmitter.submitHash(epochId, hash, { from: account, gasPrice: gasPrice, gas: gas });
+            let epochId = (await ftsoManager.getCurrentPriceEpochData())[0];
+            await priceSubmitter.submitPriceHashes(epochId, [index], [hash], { from: account, gasPrice: gasPrice, gas: gas });
 
             // wait
             let priceEpochData = await ftsoManager.getPriceEpochConfiguration();
@@ -74,7 +75,7 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
             let initialBalance = toBN(await web3.eth.getBalance(account));
             console.log(initialBalance.toString());
 
-            let tx2 = await priceSubmitter.revealPrices(epochId, [index], [price], random, { from: account, gasPrice: gasPrice, gas: gas });
+            let tx2 = await priceSubmitter.revealPrices(epochId, [index], [price], [random], { from: account, gasPrice: gasPrice, gas: gas });
             
             let gasUsed = toBN(tx2.receipt.gasUsed);
             console.log(gasUsed.toString());
@@ -90,10 +91,10 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
 
         it("Should revert at reveal price", async() => {
             // submit price
-            let hash = submitHash([index], [price], random, account);
+            let hash = submitPriceHash(price, random, account);
 
-            let epochId = await ftsoManager.getCurrentPriceEpochId();
-            await priceSubmitter.submitHash(epochId, hash, { from: account, gasPrice: gasPrice, gas: gas });
+            let epochId = (await ftsoManager.getCurrentPriceEpochData())[0];
+            await priceSubmitter.submitPriceHashes(epochId, [index], [hash], { from: account, gasPrice: gasPrice, gas: gas });
 
             // wait
             let priceEpochData = await ftsoManager.getPriceEpochConfiguration();
@@ -116,7 +117,7 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
             let gasUsed = toBN(0);
             try {
                 // will always revert
-                await priceSubmitter.revealPrices(epochId, [index], [price + 1], random, { from: account, gasPrice: gasPrice, gas: gas });
+                await priceSubmitter.revealPrices(epochId, [index], [price + 1], [random], { from: account, gasPrice: gasPrice, gas: gas });
             } catch(e: any) {
                 gasUsed = toBN(e.receipt.gasUsed);
             }

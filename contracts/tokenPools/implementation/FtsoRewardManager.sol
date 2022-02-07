@@ -372,7 +372,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
         require(!active && oldFtsoRewardManager != address(0) && 
             initialRewardEpoch == 0 && nextRewardEpochToExpire == 0, "not initial state");
         initialRewardEpoch = getCurrentRewardEpoch().add(1); // in order to distinguish from 0 
-        // nextRewardEpochToExpire = ftsoManager.getRewardEpochToExpireNext();
+        nextRewardEpochToExpire = ftsoManager.getRewardEpochToExpireNext();
     }
 
     /**
