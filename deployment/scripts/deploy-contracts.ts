@@ -253,19 +253,20 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   );
 
   // Set other contracts on all address updatable contracts
+  // (expect on ftsoManager, flareDaemon and priceSubmitter, which are from songbird)
   let addressUpdatableContracts = [
-    flareDaemon.address,
     inflationAllocation.address,
     inflation.address,
     ftsoRegistry.address, 
     cleanupBlockNumberManager.address, 
     voterWhitelister.address, 
-    priceSubmitter.address, 
-    ftsoManager.address, 
     ftsoRewardManager.address,
     supply.address
   ];
   await addressUpdater.updateContractAddresses(addressUpdatableContracts);
+  await ftsoManager.setContractAddresses(ftsoRewardManager.address, ftsoRegistry.address, voterWhitelister.address, supply.address, cleanupBlockNumberManager.address);
+  await priceSubmitter.setContractAddresses(ftsoRegistry.address, voterWhitelister.address, ftsoManager.address);
+
 
   let assetToContracts = new Map<string, AssetContracts>();
 

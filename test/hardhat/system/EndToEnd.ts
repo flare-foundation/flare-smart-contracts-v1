@@ -23,7 +23,7 @@ import {
 import { moveToFinalizeStart, moveToRevealStart } from "../../utils/FTSO-test-utils";
 import { PriceInfo } from '../../utils/PriceInfo';
 import { moveToRewardFinalizeStart } from "../../utils/RewardManagerTestUtils";
-import { getRandom, submitHash } from '../../utils/test-helpers';
+import { getRandom, submitHash, submitPriceHash } from '../../utils/test-helpers';
 
 const getTestFile = require('../../utils/constants').getTestFile;
 const BN = web3.utils.toBN;
@@ -84,19 +84,27 @@ export async function submitPricePriceSubmitter(ftsos: FtsoInstance[], ftsoIndic
   let epochId = ((await ftsos[0].getCurrentEpochId()) as BN).toString();
   let preparedPrices: number[] = [];
   let priceInfos: PriceInfo[] = [];
+  let randoms: any[] = [];
+  let hashes: string[] = [];
   for (let i = 0; i < ftsos.length; i++) {
     let price = prices[i]
     let preparedPrice = preparePrice(price);
+    let random = await getRandom();
+    randoms.push(random);
+    let hash = submitPriceHash(preparedPrice, random, by);
     preparedPrices.push(preparedPrice);
+    hashes.push(hash);
   }
+
   
   // console.log(`Submitting prices ${preparedPrices} by ${by} for epoch ${epochId}`);
   // await priceSubmitter.submitPriceHash(hash!, {from: by});
   const random = await getRandom();
-  const hash = submitHash(ftsoIndices, preparedPrices, random, by);
-  await priceSubmitter.submitHash(epochId, hash, { from: by })
+  // const hash = submitHash(ftsoIndices, preparedPrices, random, by);
+  // await priceSubmitter.submitHash(epochId, hash, { from: by })
+  await priceSubmitter.submitPriceHashes(epochId, ftsoIndices, hashes, { from: by })
   for (let i = 0; i < ftsos.length; i++) {
-    const priceInfo = new PriceInfo(epochId, preparedPrices[i], random);
+    const priceInfo = new PriceInfo(epochId, preparedPrices[i], randoms[i]);
     priceInfo.moveToNextStatus();
     priceInfos.push(priceInfo);
   }
@@ -116,7 +124,7 @@ export async function revealPricePriceSubmitter(ftsos: FtsoInstance[], ftsoIndic
     epochId,
     ftsoIndices,
     priceInfos.map(priceInfo => priceInfo.priceSubmitted),
-    priceInfos[0].random,
+    priceInfos.map(priceInfo => priceInfo.random),
     { from: by }
   )
   expectEvent(tx, "PricesRevealed");
@@ -291,8 +299,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    rewardEpochsStartTs = (await ftsoManager.getRewardEpochConfiguration())[0];
-    rewardEpochDurationSeconds = (await ftsoManager.getRewardEpochConfiguration())[1];
+    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
+    rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
 
     // Set up the suicidal mock contract so we can conjure NAT into the daemon by self-destruction
     SuicidalMock = artifacts.require("SuicidalMock");
@@ -333,7 +341,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await flareDaemon.trigger({ gas: 2_000_000 });
   });
 
-  it("Should establish vote power and mint ", async () => {
+  it("Should establish vote power and mint", async () => {
 
     // Supply contract - inflatable balance should be updated
     const initialGenesisAmountWei = await supply.initialGenesisAmountWei();
@@ -352,7 +360,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     }
 
     // Verify that rewards epoch did not start yet
-    await expectRevert.unspecified(ftsoManager.getRewardEpochData(0))
+    await expectRevert.unspecified(ftsoManager.rewardEpochs(0))
 
     // Jump to reward epoch start
     await time.increaseTo(rewardEpochsStartTs.sub(BN(1)));
@@ -360,8 +368,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await time.increaseTo(rewardEpochsStartTs.add(BN(1))); // sometimes we get a glitch
 
     await flareDaemon.trigger({ gas: 2_000_000 }); // initialize reward epoch - also start of new price epoch
-    let firstRewardEpoch = await ftsoManager.getRewardEpochData(0);
-    let votePowerBlock = firstRewardEpoch.votepowerBlock;
+    let firstRewardEpoch = await ftsoManager.rewardEpochs(0);
+    let votePowerBlock = firstRewardEpoch[0];
 
     assert((await wNAT.votePowerOfAt(p1, votePowerBlock)).gt(BN(0)), "Vote power of p1 must be > 0")
     assert((await wNAT.votePowerOfAt(p2, votePowerBlock)).gt(BN(0)), "Vote power of p2 must be > 0")
@@ -399,7 +407,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
   });
 
   it("Should submit prices for first price epoch and claim for first reward epoch", async () => {
-    rewardExpiryOffsetSeconds = (await ftsoManager.getGovernanceParameters())[6].toNumber();
+    rewardExpiryOffsetSeconds = (await ftsoManager.settings())[6].toNumber();
 
     // get the firs reward
     while ((await (await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds)) {
