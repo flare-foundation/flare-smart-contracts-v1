@@ -543,7 +543,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         // Act
         let addressUpdatable = await AddressUpdatable.at(contracts.getContractAddress(name));
         // Assert
-        assert.equal(await addressUpdatable.addressUpdater(), addressUpdater.address);
+        assert.equal(await addressUpdatable.getAddressUpdater(), addressUpdater.address);
       }
     });
   });
