@@ -264,6 +264,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     supply.address
   ];
   await addressUpdater.updateContractAddresses(addressUpdatableContracts);
+  await flareDaemon.setInflation(inflation.address);
   await ftsoManager.setContractAddresses(ftsoRewardManager.address, ftsoRegistry.address, voterWhitelister.address, supply.address, cleanupBlockNumberManager.address);
   await priceSubmitter.setContractAddresses(ftsoRegistry.address, voterWhitelister.address, ftsoManager.address);
 

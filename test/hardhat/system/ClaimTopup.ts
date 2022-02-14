@@ -23,7 +23,7 @@ import {
 import { moveToFinalizeStart, moveToRevealStart } from "../../utils/FTSO-test-utils";
 import { PriceInfo } from '../../utils/PriceInfo';
 import { moveToRewardFinalizeStart } from "../../utils/RewardManagerTestUtils";
-import { getRandom, submitHash } from '../../utils/test-helpers';
+import { getRandom, submitPriceHash } from '../../utils/test-helpers';
 
 const getTestFile = require('../../utils/constants').getTestFile;
 const BN = web3.utils.toBN;
@@ -72,21 +72,25 @@ function preparePrice(price: number) {
 async function submitPricePriceSubmitter(ftsos: FtsoInstance[], ftsoIndices: BN[], priceSubmitter: PriceSubmitterInstance, prices: number[], by: string): Promise<PriceInfo[] | undefined> {
   if (!ftsos || !prices || ftsos.length != prices.length) throw Error("Lists of ftsos and prices illegal or do not match")
   let epochId = ((await ftsos[0].getCurrentEpochId()) as BN).toString();
+  let hashes: string[] = [];
   let preparedPrices: number[] = [];
   let priceInfos: PriceInfo[] = [];
+  let randoms: any[] = [];
   for (let i = 0; i < ftsos.length; i++) {
     let price = prices[i]
     let preparedPrice = preparePrice(price);
+    let random = await getRandom();
+    randoms.push(random);
+    let hash = submitPriceHash(preparedPrice, random, by);
     preparedPrices.push(preparedPrice);
+    hashes.push(hash);
   }
 
   // console.log(`Submitting prices ${preparedPrices} by ${by} for epoch ${epochId}`);
   // await priceSubmitter.submitPriceHash(hash!, {from: by});
-  const random = await getRandom();
-  const hash = submitHash(ftsoIndices, preparedPrices, random, by);
-  await priceSubmitter.submitHash(epochId, hash, { from: by })
+  await priceSubmitter.submitPriceHashes(epochId, ftsoIndices, hashes, { from: by })
   for (let i = 0; i < ftsos.length; i++) {
-    const priceInfo = new PriceInfo(epochId, preparedPrices[i], random);
+    const priceInfo = new PriceInfo(epochId, preparedPrices[i], randoms[i]);
     priceInfo.moveToNextStatus();
     priceInfos.push(priceInfo);
   }
@@ -106,7 +110,7 @@ async function revealPricePriceSubmitter(ftsos: FtsoInstance[], ftsoIndices: BN[
     epochId,
     ftsoIndices,
     priceInfos.map(priceInfo => priceInfo.priceSubmitted),
-    priceInfos[0].random,
+    priceInfos.map(priceInfo => priceInfo.random),
     { from: by }
   )
   expectEvent(tx, "PricesRevealed");
@@ -356,8 +360,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    rewardEpochsStartTs = (await ftsoManager.getRewardEpochConfiguration())[0];
-    rewardEpochDurationSeconds = (await ftsoManager.getRewardEpochConfiguration())[1];
+    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
+    rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
 
     // must be 1h long reward epoch 
     assert.equal(rewardEpochDurationSeconds.toString(10), "3600");
@@ -406,7 +410,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await transferWithSuicide(day1_totalMintingRequestedWei, accounts[0], flareDaemon.address);
 
     // Verify that rewards epoch did not start yet
-    await expectRevert.unspecified(ftsoManager.getRewardEpochData(0))
+    await expectRevert.unspecified(ftsoManager.rewardEpochs(0))
 
     // Jump to reward epoch start
     await time.increaseTo(rewardEpochsStartTs.sub(BN(1)));
@@ -414,8 +418,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await time.increaseTo(rewardEpochsStartTs.add(BN(1))); // sometimes we get a glitch
 
     await flareDaemon.trigger({ gas: 40_000_000 }); // initialize reward epoch - also start of new price epoch
-    let firstRewardEpoch = await ftsoManager.getRewardEpochData(0);
-    let votePowerBlock = firstRewardEpoch.votepowerBlock;
+    let firstRewardEpoch = await ftsoManager.rewardEpochs(0);
+    let votePowerBlock = firstRewardEpoch[0];
 
     // Make sure price providers have vote power
     assert((await wNAT.votePowerOfAt(p1, votePowerBlock)).gt(BN(0)), "Vote power of p1 must be > 0")

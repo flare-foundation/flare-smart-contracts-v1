@@ -117,6 +117,14 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       flareDaemon = await FlareDaemon.at(contracts.getContractAddress(Contracts.FLARE_DAEMON));
     });
 
+    it("Should know about Inflation", async () => {
+      // Assemble
+      // Act
+      const address = await flareDaemon.inflation();
+      // Assert
+      assert.equal(address, contracts.getContractAddress(Contracts.INFLATION));
+    });
+
     it("Should be daemonizing", async () => {
       // Assemble
       // Act

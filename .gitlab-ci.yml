@@ -62,7 +62,7 @@ workflow:
         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
 
 .yarn-scdev: &yarn-scdev
-    image: timivesel/flare-scdev:1.1
+    image: timivesel/flare-scdev:1.0
     <<: *pipeline-settings
     before_script:
         - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
