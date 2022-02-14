@@ -144,7 +144,7 @@ contract(`FtsoBenchmark.sol; ${getTestFile(__filename)}; FTSO gas consumption te
                 assets.push(asset);
             }
             // create supply
-            supplyInterface = await Supply.new(governance, constants.ZERO_ADDRESS, governance, 10_000, 0, []);
+            supplyInterface = await Supply.new(governance, accounts[16], constants.ZERO_ADDRESS, 10_000, 0, []);
             supplyMock = await MockContract.new();
             // create ftsos
             natFtso = await createFtso("NAT", usd(1));

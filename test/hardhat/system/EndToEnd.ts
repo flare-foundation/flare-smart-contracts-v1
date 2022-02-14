@@ -339,10 +339,10 @@
    });
  
    it("Should establish vote power and mint ", async () => {
- 
      // Supply contract - inflatable balance should be updated
      const initialGenesisAmountWei = await supply.initialGenesisAmountWei();
      const inflatableBalanceWei = await supply.getInflatableBalance();
+     console.log(initialGenesisAmountWei.toString(), inflatableBalanceWei.toString());
      assert(inflatableBalanceWei.gt(initialGenesisAmountWei), "Authorized inflation not distributed...");
  
      // A minting request should be pending...

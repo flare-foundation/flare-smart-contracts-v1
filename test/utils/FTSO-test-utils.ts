@@ -733,7 +733,7 @@
      const Supply = artifacts.require("Supply");
      const MockSupply = artifacts.require("MockContract");
  
-     let supplyInterface = await Supply.new(address, constants.ZERO_ADDRESS, address, 1000, 0, []);
+     let supplyInterface = await Supply.new(address, address, constants.ZERO_ADDRESS, 1000, 0, []);
      let mockSupply = await MockSupply.new();
      const getCirculatingSupplyAtCached = supplyInterface.contract.methods.getCirculatingSupplyAtCached(0).encodeABI();
      const getCirculatingSupplyAtCachedReturn = web3.eth.abi.encodeParameter('uint256', circulatingSupply);

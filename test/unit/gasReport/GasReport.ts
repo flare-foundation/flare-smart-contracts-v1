@@ -252,7 +252,7 @@ contract(`a few contracts; ${getTestFile(__filename)}; gas consumption tests`, a
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
         [ADDRESS_UPDATER, ftsoManager], {from: ADDRESS_UPDATER});
       // create whitelister
-      whitelist = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, ADDRESS_UPDATER, priceSubmitter.address, 10);
+      whitelist = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, ADDRESS_UPDATER, priceSubmitter.address, 100);
       await whitelist.updateContractAddresses(
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
         [ADDRESS_UPDATER, ftsoRegistry.address, ftsoManager], {from: ADDRESS_UPDATER});
