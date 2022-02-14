@@ -393,18 +393,14 @@ contract(`EndToEndFuzzing.sol; ${getTestFile(__filename)}; End to end fuzzing te
 
                 // add fake events for start of price/reveal epoch
                 const priceEpoch = toNumber(await ftsoWnat.getCurrentEpochId());
-                const lastUnprocessedEpochData = await ftsoManager.getLastUnprocessedPriceEpochData();
-                const lastUnprocessedPriceEpoch = toNumber(lastUnprocessedEpochData._lastUnprocessedPriceEpoch);
-                const lastUnprocessedPriceEpochInitialized = lastUnprocessedEpochData._lastUnprocessedPriceEpochInitialized;
-                if (priceEpoch > currentPriceEpoch && lastUnprocessedPriceEpoch >= priceEpoch - 1 && lastUnprocessedPriceEpochInitialized) {
+                if (priceEpoch !== currentPriceEpoch) {
                     currentPriceEpoch = priceEpoch;
+                    currentRevealEpoch = priceEpoch - 1;
                     events.push({ address: 'fake', event: 'SubmitEpochStarted', args: { epochId: currentPriceEpoch } });
                     transactionRunner.comment(`PRICE EPOCH START:  submitEpoch=${currentPriceEpoch}  revealEpoch=${currentRevealEpoch}`);
-                    if (lastUnprocessedPriceEpoch === priceEpoch - 1) {
-                        currentRevealEpoch = lastUnprocessedPriceEpoch;
-                        events.push({ address: 'fake', event: 'RevealEpochStarted', args: { epochId: currentRevealEpoch } });
-                        transactionRunner.comment(`REVEAL EPOCH START:  submitEpoch=${currentPriceEpoch}  revealEpoch=${currentRevealEpoch}`);
-                    }
+                    
+                    events.push({ address: 'fake', event: 'RevealEpochStarted', args: { epochId: currentRevealEpoch } });
+                    transactionRunner.comment(`REVEAL EPOCH START:  submitEpoch=${currentPriceEpoch}  revealEpoch=${currentRevealEpoch}`);
                 }
 
                 // proces intervals in [startEvent, endEvent)

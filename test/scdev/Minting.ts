@@ -1,6 +1,4 @@
-import { Contracts } from "../../deployment/scripts/Contracts";
 import { FlareDaemonInstance, InflationMockInstance } from "../../typechain-truffle";
-import { encodeContractNames } from "../utils/test-helpers";
 
 const getTestFile = require('../utils/constants').getTestFile;
 const BN = web3.utils.toBN;
@@ -43,8 +41,6 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; Minting system test`, asy
       throw Error("Check .env file, if the private keys are correct and are prefixed by '0x'.\n" + e)
     }
 
-    const ADDRESS_UPDATER = accounts[16];
-
     // Wire up the default account that will do the deployment
     web3.eth.defaultAccount = deployerAccount.address;
 
@@ -74,10 +70,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; Minting system test`, asy
     await flareDaemon.claimGovernance({ from: deployerAccount.address });
 
     // Set a reference to inflation mock on the daemon
-    await flareDaemon.setAddressUpdater(ADDRESS_UPDATER, { from: deployerAccount.address });
-    await flareDaemon.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-      [ADDRESS_UPDATER, inflationMock.address], {from: ADDRESS_UPDATER});
+    await flareDaemon.setInflation(inflationMock.address);
 
     // Set a reference to daemon on inflation mock
     await inflationMock.setFlareDaemon(flareDaemon.address);

@@ -59,8 +59,9 @@ export class RewardEpochTimes {
     }
  
     static async forFtsoManager(ftsoManager: FtsoManagerInstance | FtsoManager) {
-        const epochConfig = await ftsoManager.getRewardEpochConfiguration();
-        return new RewardEpochTimes(epochConfig[0].toNumber(), epochConfig[1].toNumber());
+        const rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
+        const rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
+        return new RewardEpochTimes(rewardEpochsStartTs.toNumber(), rewardEpochDurationSeconds.toNumber());
     }
 
     epochId(timestamp: number) {

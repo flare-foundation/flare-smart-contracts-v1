@@ -2,31 +2,37 @@
  * End-to-end system test running the validator. Assumes validator is running and contracts are deployed.
  * Contract json file is to be fed in to stdin.
  */
-import { expectEvent } from "@openzeppelin/test-helpers";
-import { Contracts } from "../../deployment/scripts/Contracts";
-import {
-  FlareDaemonContract,
-  FlareDaemonInstance,
-  FtsoContract,
-  FtsoInstance, FtsoManagerContract,
-  FtsoManagerInstance, FtsoRegistryContract,
-  FtsoRegistryInstance, FtsoRewardManagerContract,
+ import { 
+  FlareDaemonContract, 
+  FlareDaemonInstance, 
+  FtsoContract, 
+  FtsoInstance,
+  FtsoRegistryContract, 
+  FtsoRegistryInstance, 
+  FtsoManagerContract, 
+  FtsoManagerInstance, 
+  FtsoRewardManagerContract,
   FtsoRewardManagerInstance,
   PriceSubmitterContract,
   PriceSubmitterInstance,
   VoterWhitelisterContract,
   VoterWhitelisterInstance,
   WNatContract,
-  WNatInstance
-} from "../../typechain-truffle";
-import { spewDaemonErrors } from "../utils/FlareDaemonTestUtils";
-import { PriceInfo } from '../utils/PriceInfo';
-import { advanceBlock, getRandom, submitHash } from '../utils/test-helpers';
+  WNatInstance} from "../../typechain-truffle";
 
+import { Contracts } from "../../deployment/scripts/Contracts";
+import { PriceInfo } from '../utils/PriceInfo';
+import { submitPriceHash, advanceBlock } from '../utils/test-helpers';
+import { spewDaemonErrors } from "../utils/FlareDaemonTestUtils";
+import { expectEvent } from "@openzeppelin/test-helpers";
 const getTestFile = require('../utils/constants').getTestFile;
 const BN = web3.utils.toBN;
+var randomNumber = require("random-number-csprng");
 const calcGasCost = require('../utils/eth').calcGasCost; 
 
+async function getRandom() {
+  return await randomNumber(0, 10 ** 5);
+};
 
 function preparePrice(price: number) {
   // Assume 5 decimals
@@ -36,21 +42,25 @@ function preparePrice(price: number) {
 async function submitPricePriceSubmitter(ftsos: FtsoInstance[], ftsoIndices: BN[], priceSubmitter: PriceSubmitterInstance, prices: number[], by: string): Promise<PriceInfo[] | undefined> {
   if (!ftsos || !prices || ftsos.length != prices.length) throw Error("Lists of ftsos and prices illegal or do not match")
   let epochId = ((await ftsos[0].getCurrentEpochId()) as BN).toString();
+  let hashes: string[] = [];
   let preparedPrices: number[] = [];
   let priceInfos: PriceInfo[] = [];
+  let randoms: any[] = [];
   for (let i = 0; i < ftsos.length; i++) {
     let price = prices[i]
     let preparedPrice = preparePrice(price);
+    let random = await getRandom();
+    randoms.push(random);
+    let hash = submitPriceHash(preparedPrice, random, by);
     preparedPrices.push(preparedPrice);
+    hashes.push(hash);
   }
 
-  const random = await getRandom();
-  const hash = submitHash(ftsoIndices, preparedPrices, random, by);
   console.log(`Submitting prices ${preparedPrices} by ${by} for epoch ${epochId}`);
   // await priceSubmitter.submitPriceHash(hash!, {from: by});
-  await priceSubmitter.submitHash(epochId, hash, { from: by })
+  await priceSubmitter.submitPriceHashes(epochId, ftsoIndices, hashes, { from: by })
   for (let i = 0; i < ftsos.length; i++) {
-    const priceInfo = new PriceInfo(epochId, preparedPrices[i], random);
+    const priceInfo = new PriceInfo(epochId, preparedPrices[i], randoms[i]);
     priceInfo.moveToNextStatus();
     priceInfos.push(priceInfo);
   }
@@ -69,7 +79,7 @@ async function revealPricePriceSubmitter(ftsos: FtsoInstance[], ftsoIndices: BN[
     epochId,
     ftsoIndices,
     priceInfos.map(priceInfo => priceInfo.priceSubmitted),
-    priceInfos[0].random,
+    priceInfos.map(priceInfo => priceInfo.random),
     { from: by }
   )
   expectEvent(tx, "PricesRevealed");
@@ -192,8 +202,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    rewardEpochsStartTs = (await ftsoManager.getRewardEpochConfiguration())[0];
-    rewardEpochDurationSeconds = (await ftsoManager.getRewardEpochConfiguration())[1];
+    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
+    rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
 
     console.log("Depositing and delegating NAT...");
 
@@ -355,13 +365,13 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
         .add(gasCost);
 
     // Compute what we should have distributed for one price epoch
-    const almost7FullDaysSec = BN(7* 3600 * 24 - 1);
+    const almostFullDaySec = BN(3600 * 24 - 1);
     // Get the daily inflation authorized on ftso reward manager
     const dailyAuthorizedInflation = await rewardManager.dailyAuthorizedInflation();
     const authorizedInflationTimestamp = await rewardManager.lastInflationAuthorizationReceivedTs();
 
     // use the same formula as in ftso reward manager to calculate claimable value
-    const dailyPeriodEndTs = authorizedInflationTimestamp.add(almost7FullDaysSec);
+    const dailyPeriodEndTs = authorizedInflationTimestamp.add(almostFullDaySec);
     const priceEpochEndTime = BN(firstPriceEpochStartTs.toNumber() + (epochId.toNumber() + 1) * priceEpochDurationSeconds.toNumber() - 1);
     const shouldaClaimed = dailyAuthorizedInflation.div( 
         (dailyPeriodEndTs.sub(priceEpochEndTime)).div(priceEpochDurationSeconds).add(BN(1))

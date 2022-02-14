@@ -199,7 +199,7 @@ export class PriceAndRewardChecker implements EventStateChecker {
                 this.logFile.log(`    total rewards per provider: [${perProvider.join(', ')}]`);
                 for (const user of this.environment.users) {
                     const { 0: providers, 1: amounts, 3: claimable } = await this.environment.ftsoRewardManager.getStateOfRewards(user.address, rewardEpochId);
-                    const { votepowerBlock } = await this.environment.ftsoManager.getRewardEpochData(rewardEpochId);
+                    const { 0: votepowerBlock } = await this.environment.ftsoManager.rewardEpochs(rewardEpochId);
                     const { 0: delegates, 1: bips } = await this.environment.wNat.delegatesOfAt(user.address, votepowerBlock);
                     const balance = await this.environment.wNat.balanceOfAt(user.address, votepowerBlock);
                     const delegations = delegates.map((dlg, i) => `${this.eventDecoder.formatAddress(dlg)}:${formatBN(bips[i].mul(balance).div(MAX_BIPS))}`);
