@@ -1,0 +1,127 @@
+[
+  {
+    "name": "StateConnector",
+    "contractName": "StateConnector.sol",
+    "address": "0x1000000000000000000000000000000000000001"
+  },
+  {
+    "name": "FlareDaemon",
+    "contractName": "FlareDaemon.sol",
+    "address": "0x1000000000000000000000000000000000000002"
+  },
+  {
+    "name": "PriceSubmitter",
+    "contractName": "PriceSubmitter.sol",
+    "address": "0x1000000000000000000000000000000000000003"
+  },
+  {
+    "name": "AddressUpdater",
+    "contractName": "AddressUpdater.sol",
+    "address": "0x502D0C2AB7d993Eb9298e59CF12E77913A590d00"
+  },
+  {
+    "name": "InflationAllocation",
+    "contractName": "InflationAllocation.sol",
+    "address": "0xE3B1FaaC8A29d9Cbf931f94cfD8aB604b0d163B3"
+  },
+  {
+    "name": "Inflation",
+    "contractName": "Inflation.sol",
+    "address": "0x8121314e876FbDAdf6d4705Fba42a41F64343635"
+  },
+  {
+    "name": "Supply",
+    "contractName": "Supply.sol",
+    "address": "0x95615f2612143BE1f40beD532a1695BceC2681Cd"
+  },
+  {
+    "name": "FtsoRewardManager",
+    "contractName": "FtsoRewardManager.sol",
+    "address": "0x4D93A8dDEe99eB0E0db407178AEDcE36d73dd0e3"
+  },
+  {
+    "name": "CleanupBlockNumberManager",
+    "contractName": "CleanupBlockNumberManager.sol",
+    "address": "0x7b7C5700531c5f9703e567B299259AFF360E7Cfd"
+  },
+  {
+    "name": "FtsoRegistry",
+    "contractName": "FtsoRegistry.sol",
+    "address": "0x0Cd00ed105dbC87660aA05aB0b68f355344EF41C"
+  },
+  {
+    "name": "VoterWhitelister",
+    "contractName": "VoterWhitelister.sol",
+    "address": "0x60a4BECf22318376a5aD885b907d3CE9A2D68Db2"
+  },
+  {
+    "name": "FtsoManager",
+    "contractName": "FtsoManager.sol",
+    "address": "0xE88da3129F720a02f61CD40198EC355B24Dbb7f8"
+  },
+  {
+    "name": "WNat",
+    "contractName": "WNat.sol",
+    "address": "0xa6d89c2eE6dD97d2DF7f62e506C0cD1b47570B5f"
+  },
+  {
+    "name": "FtsoWnat",
+    "contractName": "Ftso.sol",
+    "address": "0x5AfF1bd034cb1d11626c5D6a2E2fceB1b01cc6c9"
+  },
+  {
+    "name": "FtsoTestXrp",
+    "contractName": "Ftso.sol",
+    "address": "0x0DB1a3B06A3AD84c0Cc3090A48388bD9d370F864"
+  },
+  {
+    "name": "FtsoTestLtc",
+    "contractName": "Ftso.sol",
+    "address": "0x1903Ca3B2b89f5a12ABe48D4be33F782dCb7D12c"
+  },
+  {
+    "name": "FtsoTestXlm",
+    "contractName": "Ftso.sol",
+    "address": "0x6Bf6eC2C20FD01b0C4D9018C80734752eBceD7Ce"
+  },
+  {
+    "name": "FtsoTestDoge",
+    "contractName": "Ftso.sol",
+    "address": "0x7452e20A1216402aC12b33401B4B257B4c8ddA28"
+  },
+  {
+    "name": "FtsoTestAda",
+    "contractName": "Ftso.sol",
+    "address": "0x3260DcD0cfa11F22926C6A1D47de3b1a38acB1e7"
+  },
+  {
+    "name": "FtsoTestAlgo",
+    "contractName": "Ftso.sol",
+    "address": "0x6CFA8A9fec4169C22984187dDedDdccDA4344208"
+  },
+  {
+    "name": "FtsoTestBch",
+    "contractName": "Ftso.sol",
+    "address": "0xec4264F05061B57C471D00467B75Df85e24302FE"
+  },
+  {
+    "name": "FtsoTestDgb",
+    "contractName": "Ftso.sol",
+    "address": "0x571D6270BD2Ba02b568f0E617D13dD4D2d6d744e"
+  },
+  {
+    "name": "FtsoTestBtc",
+    "contractName": "Ftso.sol",
+    "address": "0x4E60E1b1a75b114f712AFBbbE39b04Ff5f68c756"
+  },
+  {
+    "name": "FtsoTestEth",
+    "contractName": "Ftso.sol",
+    "address": "0xC155210B1c23c1d004D9c446dc01b2BCEDEb4E6A"
+  },
+  {
+    "name": "FtsoTestFil",
+    "contractName": "Ftso.sol",
+    "address": "0xF5aA70ffD50aeA8FF321baa1d38e1Be18c44835A"
+  }
+]
