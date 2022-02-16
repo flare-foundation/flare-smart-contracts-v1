@@ -1,16 +1,15 @@
-import { FlareDaemonInstance, 
-  MockContractInstance, 
-  PriceSubmitterInstance} from "../../../typechain-truffle";
+import { time } from '@openzeppelin/test-helpers';
+import {
+    FlareDaemonInstance,
+    MockContractInstance,
+    PriceSubmitterInstance
+} from "../../../typechain-truffle";
+import { FLARE_DAEMON_ADDRESS, PRICE_SUBMITTER_ADDRESS } from "../../utils/constants";
+import { spewDaemonErrors } from "../../utils/FlareDaemonTestUtils";
+import { advanceBlock } from '../../utils/test-helpers';
 
-import {constants, time} from '@openzeppelin/test-helpers';
 const getTestFile = require('../../utils/constants').getTestFile;
 const GOVERNANCE_GENESIS_ADDRESS = require('../../utils/constants').GOVERNANCE_GENESIS_ADDRESS;
-import { advanceBlock, encodeContractNames, waitFinalize, waitFinalize3 } from '../../utils/test-helpers';
-import { spewDaemonErrors } from "../../utils/FlareDaemonTestUtils";
-import { defaultPriceEpochCyclicBufferSize, FLARE_DAEMON_ADDRESS, PRICE_SUBMITTER_ADDRESS } from "../../utils/constants";
-import { Contracts } from "../../../deployment/scripts/Contracts";
-
-const BN = web3.utils.toBN;
 
 const FlareDaemon = artifacts.require("FlareDaemon");
 const PriceSubmitter = artifacts.require("PriceSubmitter");
@@ -24,12 +23,10 @@ const MockContract = artifacts.require("MockContract");
  * It does not assume that contracts are deployed, other than the FlareDaemon, which should
  * already be loaded in the genesis block.
  */
- contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`, async accounts => {
+contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`, async accounts => {
     // Static address of the daemon and price submitter on a local network
     let flareDaemon: FlareDaemonInstance;
     let priceSubmitter: PriceSubmitterInstance;
-
-    const ADDRESS_UPDATER = accounts[16];
 
     // fresh contracts for each test
     let rewardManagerMock: MockContractInstance;
@@ -50,7 +47,7 @@ const MockContract = artifacts.require("MockContract");
         // Make sure daemon is initialized with a governance address...if may revert if already done.
         try {
             await flareDaemon.initialiseFixedAddress();
-            await flareDaemon.setInflation(inflationMock.address, { from: GOVERNANCE_GENESIS_ADDRESS })
+            await flareDaemon.setInflation(inflationMock.address, { from: GOVERNANCE_GENESIS_ADDRESS });
         } catch (e) {
             const governanceAddress = await flareDaemon.governance();
             if (GOVERNANCE_GENESIS_ADDRESS != governanceAddress) {
@@ -60,7 +57,6 @@ const MockContract = artifacts.require("MockContract");
         }
         try {
             await priceSubmitter.initialiseFixedAddress();
-            await priceSubmitter.setContractAddresses(Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.FTSO_MANAGER, {from: GOVERNANCE_GENESIS_ADDRESS});
         } catch (e) {
             const governanceAddress = await priceSubmitter.governance();
             if (GOVERNANCE_GENESIS_ADDRESS != governanceAddress) {
@@ -117,7 +113,7 @@ const MockContract = artifacts.require("MockContract");
             // an active reward epoch.
             await spewDaemonErrors(flareDaemon);
             //assert.equal(await spewDaemonErrors(flareDaemon), 0);
-            const { 1: votepowerBlock } = await ftsoManager.rewardEpochs(0);
+            const { 0: votepowerBlock } = await ftsoManager.rewardEpochs(0);
             assert(votepowerBlock.toNumber() != 0);
         });
     });
