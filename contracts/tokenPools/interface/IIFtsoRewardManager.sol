@@ -9,7 +9,6 @@ interface IIFtsoRewardManager is IFtsoRewardManager, IIInflationReceiver, IIToke
 
     event DailyAuthorizedInflationSet(uint256 authorizedAmountWei);
     event InflationReceived(uint256 amountReceivedWei);
-    event RewardsBurned(uint256 amountBurnedWei);
 
     function activate() external;
     function deactivate() external;
@@ -25,12 +24,6 @@ interface IIFtsoRewardManager is IFtsoRewardManager, IIInflationReceiver, IIToke
         uint256 currentRewardEpoch,
         uint256 priceEpochEndTime,
         uint256 votePowerBlock
-    ) external;
-
-    function accrueUnearnedRewards(
-        uint256 epochId,
-        uint256 priceEpochDurationSeconds,
-        uint256 priceEpochEndTime
     ) external;
 
     /**

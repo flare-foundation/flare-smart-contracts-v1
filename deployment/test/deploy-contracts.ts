@@ -544,7 +544,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
     });
 
     it("Address updatable contracts should know about address updater", async () => {
-      let contractNames = [Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, 
+      let contractNames = [Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, 
         Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION];
 
       for (let name of contractNames) {

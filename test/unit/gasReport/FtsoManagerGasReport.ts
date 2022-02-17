@@ -238,8 +238,6 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       // create ftso reward manager
       ftsoRewardManager = await FtsoRewardManager.new(
         governance,
-        ADDRESS_UPDATER,
-        constants.ZERO_ADDRESS,
         3,
         0
       );
@@ -290,9 +288,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       await whitelist.updateContractAddresses(
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
         [ADDRESS_UPDATER, ftsoRegistry.address, ftsoManager.address], {from: ADDRESS_UPDATER});
-      await ftsoRewardManager.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
-        [ADDRESS_UPDATER, inflation, ftsoManager.address, wNat.address, supplyInterface.address], {from: ADDRESS_UPDATER});
+      await ftsoRewardManager.setContractAddresses(inflation, ftsoManager.address, wNat.address, {from: governance});
       await ftsoRewardManager.activate({ from: governance });
   
 
