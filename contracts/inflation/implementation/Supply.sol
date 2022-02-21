@@ -41,7 +41,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
     SupplyData[] public tokenPools;
 
     address public inflation;
-    address public burnAddress;
+    address immutable public burnAddress;
 
     // balance of burn address at last check - needed for updating circulating supply
     uint256 private burnAddressBalance;
@@ -75,7 +75,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
             _addTokenPool(_tokenPools[i]);
         }
 
-        _updateCirculatingSupply();
+        _updateCirculatingSupply(_burnAddress);
     }
 
     /**
@@ -92,7 +92,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
         // Save old total inflation authorized value to compare with after update.
         uint256 oldTotalInflationAuthorizedWei = totalInflationAuthorizedWei;
         
-        _updateCirculatingSupply();
+        _updateCirculatingSupply(burnAddress);
         
         // Check if new authorized inflation was distributed and updated correctly.
         if (totalInflationAuthorizedWei != oldTotalInflationAuthorizedWei.add(_inflationAuthorizedWei)) {
@@ -117,7 +117,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
     {
         _decreaseFoundationSupply(_decreaseFoundationSupplyByAmountWei);
         _addTokenPool(_tokenPool);
-        _updateCirculatingSupply();
+        _updateCirculatingSupply(burnAddress);
     }
 
     /**
@@ -126,7 +126,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
      */
     function decreaseFoundationSupply(uint256 _amountWei) external onlyGovernance {
         _decreaseFoundationSupply(_amountWei);
-        _updateCirculatingSupply();
+        _updateCirculatingSupply(burnAddress);
     }
     
     /**
@@ -187,7 +187,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
         circulatingSupplyWei.writeValue(circulatingSupplyWei.valueAtNow().sub(_descreaseBy));
     }
 
-    function _updateCirculatingSupply() internal {
+    function _updateCirculatingSupply(address _burnAddress) internal {
         uint256 len = tokenPools.length;
         for (uint256 i = 0; i < len; i++) {
             SupplyData storage data = tokenPools[i];
@@ -214,11 +214,11 @@ contract Supply is IISupply, Governed, AddressUpdatable {
             data.totalClaimedWei = newTotalClaimedWei;
         }
 
-        _updateBurnAddressAmount();
+        _updateBurnAddressAmount(_burnAddress);
     }
 
-    function _updateBurnAddressAmount() internal {
-        uint256 newBalance = burnAddress.balance;
+    function _updateBurnAddressAmount(address _burnAddress) internal {
+        uint256 newBalance = _burnAddress.balance;
         _decreaseCirculatingSupply(newBalance.sub(burnAddressBalance));
         burnAddressBalance = newBalance;
     }
