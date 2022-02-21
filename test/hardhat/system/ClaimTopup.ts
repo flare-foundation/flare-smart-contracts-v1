@@ -2,31 +2,39 @@
  * End-to-end system test running on hardhat. Assumes hardhat is running in node mode, that the deploy
  * has already been done, and that contract json file has been feed into stdin.
  */
-import { expectEvent, expectRevert, time } from '@openzeppelin/test-helpers';
-import { Contracts } from "../../../deployment/scripts/Contracts";
-import {
+ import {
   FlareDaemonContract,
   FlareDaemonInstance,
   FtsoContract,
   FtsoInstance,
   FtsoManagerContract,
-  FtsoManagerInstance, FtsoRegistryInstance, FtsoRewardManagerContract,
-  FtsoRewardManagerInstance, InflationContract,
-  InflationInstance, PriceSubmitterContract,
+  FtsoManagerInstance,
+  FtsoRewardManagerContract,
+  FtsoRewardManagerInstance,
+  PriceSubmitterContract,
   PriceSubmitterInstance,
   SuicidalMockContract,
   SuicidalMockInstance,
   SupplyContract,
-  SupplyInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatContract,
-  WNatInstance
+  SupplyInstance,
+  WNatContract,
+  WNatInstance,
+  FtsoRegistryInstance,
+  VoterWhitelisterInstance,
+  VoterWhitelisterContract,
+  InflationContract,
+  InflationInstance,
 } from "../../../typechain-truffle";
-import { moveToFinalizeStart, moveToRevealStart } from "../../utils/FTSO-test-utils";
-import { PriceInfo } from '../../utils/PriceInfo';
-import { moveToRewardFinalizeStart } from "../../utils/RewardManagerTestUtils";
-import { getRandom, submitPriceHash } from '../../utils/test-helpers';
 
+import { Contracts } from "../../../deployment/scripts/Contracts";
+import { PriceInfo } from '../../utils/PriceInfo';
+import { moveFromCurrentToNextEpochStart, moveToFinalizeStart, moveToRevealStart } from "../../utils/FTSO-test-utils"
+import { moveToRewardFinalizeStart } from "../../utils/RewardManagerTestUtils";
+import { increaseTimeTo, submitPriceHash } from '../../utils/test-helpers';
+import { expectRevert, expectEvent, time } from '@openzeppelin/test-helpers';
 const getTestFile = require('../../utils/constants').getTestFile;
 const BN = web3.utils.toBN;
+let randomNumber = require("random-number-csprng");
 const calcGasCost = require('../../utils/eth').calcGasCost;
 
 let contracts: Contracts;
@@ -63,6 +71,10 @@ let VoterWhitelister: VoterWhitelisterContract;
 let voterWhitelister: VoterWhitelisterInstance;
 let Inflation: InflationContract;
 let inflation: InflationInstance;
+
+async function getRandom() {
+  return await randomNumber(0, 10 ** 5);
+};
 
 function preparePrice(price: number) {
   // Assume 5 decimals
@@ -268,14 +280,6 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
   let day5_totalMintingRequestedWei: BN;
   let day6_totalMintingRequestedWei: BN;
   let day7_totalMintingRequestedWei: BN;
-
-  let day1_totalBurnedWei: BN;
-  let day2_totalBurnedWei: BN;
-  let day3_totalBurnedWei: BN;
-  let day4_totalBurnedWei: BN;
-  let day5_totalBurnedWei: BN;
-  let day6_totalBurnedWei: BN;
-  let day7_totalBurnedWei: BN;
 
   let day1RewardEpochs = 3;
   let day4RewardEpochs = 10;
@@ -561,14 +565,13 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
         .add(gasCost);
 
     // Compute what we should have distributed for one price epoch
-    const almost7FullDaysSec = BN(7 * 3600 * 24 - 1);
+    const almostFullDaySec = BN(3600 * 24 - 1);
     // Get the daily inflation authorized on ftso reward manager
     day1_dailyAuthorizedInflation = await ftsoRewardManager.dailyAuthorizedInflation();
-    day1_totalBurnedWei = await ftsoRewardManager.totalBurnedWei();
     const authorizedInflationTimestamp = await ftsoRewardManager.lastInflationAuthorizationReceivedTs();
 
     // use the same formula as in ftso reward manager to calculate claimable value
-    const dailyPeriodEndTs = authorizedInflationTimestamp.add(almost7FullDaysSec);
+    const dailyPeriodEndTs = authorizedInflationTimestamp.add(almostFullDaySec);
     const priceEpochEndTime = BN(firstPriceEpochStartTs.toNumber() + (firstPriceEpoch + 1) * priceEpochDurationSeconds.toNumber() - 1);
     const shouldClaimed = day1_dailyAuthorizedInflation.div(
       (dailyPeriodEndTs.sub(priceEpochEndTime)).div(priceEpochDurationSeconds).add(BN(1))
@@ -585,7 +588,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
 
     // Reward manager balance must be total authorized inflation for day 1 - whatever was claimed
     // On day 1 we are capped with already authorized inflation (which is dailyAuthorizedInflation)
-    let day1_expectedRewardBalance = day1_dailyAuthorizedInflation.sub(day1_computedRewardClaimed).sub(day1_totalBurnedWei);
+    let day1_expectedRewardBalance = day1_dailyAuthorizedInflation.sub(day1_computedRewardClaimed);
     let day1_realRewardBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
 
     // TEST 2 asserts
@@ -607,10 +610,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await transferWithSuicide(day2_totalMintingRequestedWei.sub(day1_totalMintingRequestedWei), accounts[0], flareDaemon.address);
     await time.advanceBlock();
     await flareDaemon.trigger({ gas: 40_000_000 });
-    day2_totalBurnedWei = await ftsoRewardManager.totalBurnedWei();
 
     // Reward manager balance must be total authorized inflation for day 2 + for day 1 - whatever was claimed
-    let day2_expectedRewardBalance = day2_dailyAuthorizedInflation.add(day1_dailyAuthorizedInflation).sub(day1_computedRewardClaimed).sub(day2_totalBurnedWei.sub(day1_totalBurnedWei));
+    let day2_expectedRewardBalance = day2_dailyAuthorizedInflation.add(day1_dailyAuthorizedInflation).sub(day1_computedRewardClaimed);
     let day2_realRewardBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
 
     // TEST 3 asserts
@@ -634,10 +636,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await transferWithSuicide(day3_totalMintingRequestedWei.sub(day2_totalMintingRequestedWei), accounts[0], flareDaemon.address);
     await time.advanceBlock();
     await flareDaemon.trigger({ gas: 40_000_000 });
-    day3_totalBurnedWei = await ftsoRewardManager.totalBurnedWei();
 
     // Reward manager balance must be total authorized inflation for day 2 + for day 1 - whatever was claimed
-    let day3_expectedRewardBalance = day3_dailyAuthorizedInflation.add(day2_dailyAuthorizedInflation).add(day1_dailyAuthorizedInflation).sub(day1_computedRewardClaimed).sub(day3_totalBurnedWei.sub(day2_totalBurnedWei));
+    let day3_expectedRewardBalance = day3_dailyAuthorizedInflation.add(day2_dailyAuthorizedInflation).add(day1_dailyAuthorizedInflation).sub(day1_computedRewardClaimed);
     let day3_realRewardBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
 
     // TEST 4 asserts
@@ -661,10 +662,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await transferWithSuicide(day4_totalMintingRequestedWei.sub(day3_totalMintingRequestedWei), accounts[0], flareDaemon.address);
     await time.advanceBlock();
     await flareDaemon.trigger({ gas: 40_000_000 });
-    day4_totalBurnedWei = await ftsoRewardManager.totalBurnedWei();
 
     // Reward manager balance must be total authorized inflation (last 3 days worth of inflation)
-    day4_expectedRewardBalance = day4_dailyAuthorizedInflation.add(day3_dailyAuthorizedInflation).add(day2_dailyAuthorizedInflation).sub(day4_totalBurnedWei.sub(day3_totalBurnedWei));
+    day4_expectedRewardBalance = day4_dailyAuthorizedInflation.add(day3_dailyAuthorizedInflation).add(day2_dailyAuthorizedInflation);
     let day4_realRewardBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
 
     // TEST 5 asserts
@@ -779,98 +779,97 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await transferWithSuicide(day5_totalMintingRequestedWei.sub(day4_totalMintingRequestedWei), accounts[0], flareDaemon.address);
     await time.advanceBlock();
     await flareDaemon.trigger({ gas: 40_000_000 });
-    day5_totalBurnedWei = await ftsoRewardManager.totalBurnedWei();
 
     // Reward manager balance must be total authorized inflation past 3 days
-    let day5_expectedRewardBalance = day5_dailyAuthorizedInflation.add(day4_dailyAuthorizedInflation).add(day3_dailyAuthorizedInflation).sub(day5_totalBurnedWei.sub(day4_totalBurnedWei));
+    let day5_expectedRewardBalance = day5_dailyAuthorizedInflation.add(day4_dailyAuthorizedInflation).add(day3_dailyAuthorizedInflation);
     let day5_realRewardBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
 
     // Make sure its the inflation of last 3 days
     assert(day5_expectedRewardBalance.eq(day5_realRewardBalance), `Reward manager balance is expected to be ${day5_expectedRewardBalance.toString(10)} but it is ${day5_realRewardBalance.toString(10)}`)
     console.log('\x1b[32m%s\x1b[0m', "Day 5 balance is correct");
 
-    // Make sure that we toped up exactly how much was claimed and burned (+ possible inflation differences when moving days)    
-    const expectedTopUp = day5_dailyAuthorizedInflation.muln(3).sub(Day5OpeningBalance);
-    const claimedAndBurned = day4_computedRewardClaimed.add(day4_totalBurnedWei.sub(day3_totalBurnedWei));
-    assert(claimedAndBurned.eq(expectedTopUp), `Claimed and top-up rewards should match, expected ${claimedAndBurned.toString(10)}, actual: ${expectedTopUp.toString(10)}`)
+    // Make sure that we toped up exactly how much was claimed (+ possible inflation differences when moving days)    
+    const expectedTopUp = day5_realRewardBalance.sub(Day5OpeningBalance).add(day5_dailyAuthorizedInflation).sub(day2_dailyAuthorizedInflation);
+    assert(day4_computedRewardClaimed.eq(expectedTopUp), `Claimed and top-up rewards should match, expected ${day4_computedRewardClaimed.toString(10)}, actual: ${expectedTopUp.toString(10)}`)
     console.log('\x1b[32m%s\x1b[0m', "Day 5 claims and balances match");
 
     // We now start claiming and reporting left and right (we wanna exhaust the reward manager)
-    for (let i = 1; i <= 4; i++) {
-      const RewardEpochsToExhaust = i == 4 ? 23 : 24;  // number of reward epoch we wanna do full reporting
-      let ExhaustRewardEpochs = []
-      for (let hours = 0; hours < RewardEpochsToExhaust; hours++) {
-        ExhaustRewardEpochs.push((await ftsoManager.getCurrentRewardEpoch()).toNumber());
-        await submitRevealMultipleRewardAndFinalizeEpoch(submitters, ftsos, ftsoIndices, priceSeries, 2);
-      }
+    const RewardEpochsToExhaust = 23  // number of reward epoch we wanna do full reporting - must be less than a day to claim before new topup happens
+    let ExhaustRewardEpochs = []
+    for (let hours = 0; hours < RewardEpochsToExhaust; hours++) {
+      ExhaustRewardEpochs.push((await ftsoManager.getCurrentRewardEpoch()).toNumber());
+      await submitRevealMultipleRewardAndFinalizeEpoch(submitters, ftsos, ftsoIndices, priceSeries, 2);
+    }
 
-      // Prepare some variables to save claiming results to 
-      const allAccounts = [p1, p2, p3, d2, d1]
-      let awarded_rewards = [BN(0), BN(0), BN(0), BN(0), BN(0)];
-      let txCosts = [BN(0), BN(0), BN(0), BN(0), BN(0)];
-      let txGasUsed = [BN(0), BN(0), BN(0), BN(0), BN(0)];
+    // Prepare some variables to save claiming results to 
+    const allAccounts = [p1, p2, p3, d2, d1]
+    let awarded_rewards = [BN(0), BN(0), BN(0), BN(0), BN(0)];
+    let txCosts = [BN(0), BN(0), BN(0), BN(0), BN(0)];
+    let txGasUsed = [BN(0), BN(0), BN(0), BN(0), BN(0)];
 
-      // Get the opening balances
-      const accountsOpeningBalances = [
-        BN(await web3.eth.getBalance(p1)),
-        BN(await web3.eth.getBalance(p2)),
-        BN(await web3.eth.getBalance(p3)),
-        BN(await web3.eth.getBalance(d2)),
-        BN(await web3.eth.getBalance(d1))]
+    // Get the opening balances
+    const accountsOpeningBalances = [
+      BN(await web3.eth.getBalance(p1)),
+      BN(await web3.eth.getBalance(p2)),
+      BN(await web3.eth.getBalance(p3)),
+      BN(await web3.eth.getBalance(d2)),
+      BN(await web3.eth.getBalance(d1))]
 
-      // Claim for all price providers
-      console.log(`Claiming rewards for reward epoch ${ExhaustRewardEpochs}`);
+    // Claim for all price providers
+    console.log(`Claiming rewards for reward epoch ${ExhaustRewardEpochs}`);
 
-      for (let acc_index = 0; acc_index < allAccounts.length; acc_index++) {
-        console.log(`Claiming reward for acc ${acc_index}`);
-        let rwMnBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
-        console.log(`rewardManager Balance: ${rwMnBalance.toString(10)}`);
-        let TempReward = BN(0);
-        try {
-          for (let tempEpoch of ExhaustRewardEpochs) {
-            let partReward = (await ftsoRewardManager.getStateOfRewards(allAccounts[acc_index], tempEpoch));
-            for (let rew of partReward[1]) {
-              TempReward = TempReward.add(rew);
-            }
-          }
-          console.log(`Account can claim:     ${TempReward.toString(10)}`);
-        } catch (e: unknown) {
-          console.log("Manager Exhausted");
-          console.log(e);
-        }
-
-        try {
-          if (true && acc_index < 5) {
-            const tx = await ftsoRewardManager.claimReward(allAccounts[acc_index], ExhaustRewardEpochs, { from: allAccounts[acc_index] });
-            txGasUsed[acc_index] = tx.receipt.cumulativeGasUsedok;
-            txCosts[acc_index] = await calcGasCost(tx);
-            console.log("CLAIMED")
-          } else {
-            console.log("Skip claim")
-          }
-        } catch (e: unknown) { console.log("Claim failed for acc " + acc_index) }
-        let endRwMnBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
-        awarded_rewards[acc_index] = rwMnBalance.sub(endRwMnBalance);
-        console.log(`Account got claim:     ${awarded_rewards[acc_index].toString(10)}`);
-      }
+    for (let acc_index = 0; acc_index < allAccounts.length; acc_index++) {
+      console.log(`Claiming reward for acc ${acc_index}`);
       let rwMnBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
       console.log(`rewardManager Balance: ${rwMnBalance.toString(10)}`);
+      let TempReward = BN(0);
+      try {
+        for (let tempEpoch of ExhaustRewardEpochs) {
+          let partReward = (await ftsoRewardManager.getStateOfRewards(allAccounts[acc_index], tempEpoch));
+          for (let rew of partReward[1]) {
+            TempReward = TempReward.add(rew);
+          }
+        }
+        console.log(`Account can claim:     ${TempReward.toString(10)}`);
+      } catch (e: unknown) {
+        console.log("Manager Exhausted");
+        console.log(e);
+      }
 
-      const accountsClosingBalances = [
-        BN(await web3.eth.getBalance(p1)),
-        BN(await web3.eth.getBalance(p2)),
-        BN(await web3.eth.getBalance(p3)),
-        BN(await web3.eth.getBalance(d2)),
-        BN(await web3.eth.getBalance(d1))]
-
-      // TEST 7 asserts
-      // Make sure that all accounts claimed some rewards
-      assert.equal((accountsClosingBalances[0].sub(accountsOpeningBalances[0]).add(txCosts[0])).toString(10), awarded_rewards[0].toString(10));
-      assert.equal((accountsClosingBalances[1].sub(accountsOpeningBalances[1]).add(txCosts[1])).toString(10), awarded_rewards[1].toString(10));
-      assert.equal((accountsClosingBalances[2].sub(accountsOpeningBalances[2]).add(txCosts[2])).toString(10), awarded_rewards[2].toString(10));
-      assert.equal((accountsClosingBalances[3].sub(accountsOpeningBalances[3]).add(txCosts[3])).toString(10), awarded_rewards[3].toString(10));
-      assert.equal((accountsClosingBalances[4].sub(accountsOpeningBalances[4]).add(txCosts[4])).toString(10), awarded_rewards[4].toString(10));
+      try {
+        if (true && acc_index < 5) {
+          const tx = await ftsoRewardManager.claimReward(allAccounts[acc_index], ExhaustRewardEpochs, { from: allAccounts[acc_index] });
+          txGasUsed[acc_index] = tx.receipt.cumulativeGasUsedok;
+          txCosts[acc_index] = await calcGasCost(tx);
+          console.log("CLAIMED")
+        } else {
+          console.log("Skip claim")
+        }
+      } catch (e: unknown) { console.log("Claim failed for acc " + acc_index) }
+      let endRwMnBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
+      awarded_rewards[acc_index] = rwMnBalance.sub(endRwMnBalance);
+      console.log(`Account got claim:     ${awarded_rewards[acc_index].toString(10)}`);
     }
+    let rwMnBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));
+    console.log(`rewardManager Balance: ${rwMnBalance.toString(10)}`);
+
+
+    const accountsClosingBalances = [
+      BN(await web3.eth.getBalance(p1)),
+      BN(await web3.eth.getBalance(p2)),
+      BN(await web3.eth.getBalance(p3)),
+      BN(await web3.eth.getBalance(d2)),
+      BN(await web3.eth.getBalance(d1))]
+
+    // TEST 7 asserts
+    // Make sure that first 4 accounts claimed some rewards
+    assert.equal((accountsClosingBalances[0].sub(accountsOpeningBalances[0]).add(txCosts[0])).toString(10), awarded_rewards[0].toString(10));
+    assert.equal((accountsClosingBalances[1].sub(accountsOpeningBalances[1]).add(txCosts[1])).toString(10), awarded_rewards[1].toString(10));
+    assert.equal((accountsClosingBalances[2].sub(accountsOpeningBalances[2]).add(txCosts[2])).toString(10), awarded_rewards[2].toString(10));
+    assert.equal((accountsClosingBalances[3].sub(accountsOpeningBalances[3]).add(txCosts[3])).toString(10), awarded_rewards[3].toString(10));
+
+    // Make sure that last account did not claim any rewards
+    assert.equal(accountsClosingBalances[4].toString(10), accountsOpeningBalances[4].toString(10));
 
     console.log('\x1b[32m%s\x1b[0m', "Exhausting reward manager balances match");
   });
@@ -894,13 +893,12 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     // topup should happen here
     await transferWithSuicide(day7_totalMintingRequestedWei.sub(day5_totalMintingRequestedWei), accounts[0], flareDaemon.address);
     await flareDaemon.trigger({ gas: 40_000_000 });
-    day7_totalBurnedWei = await ftsoRewardManager.totalBurnedWei();
     await time.advanceBlock();
 
     // Reward manager balance must be min of (3 x last authorized inflation value) and (total authorized - total claimed)
     let { 0: foundationAllocatedFundsWei, 1: totalInflationAuthorizedWei, 2: totalClaimedWei } = await ftsoRewardManager.getTokenPoolSupplyData();
     let day7_maxExpectedBalance = totalInflationAuthorizedWei.sub(totalClaimedWei);
-    let day7_threeTimesAuthorizedBalance = day7_dailyAuthorizedInflation.muln(3).sub(day7_totalBurnedWei.sub(day5_totalBurnedWei));
+    let day7_threeTimesAuthorizedBalance = day7_dailyAuthorizedInflation.muln(3);
 
     let day7_expectedRewardBalance = day7_maxExpectedBalance.lt(day7_threeTimesAuthorizedBalance) ? day7_maxExpectedBalance : day7_threeTimesAuthorizedBalance;
     let day7_realRewardBalance = BN(await web3.eth.getBalance(ftsoRewardManager.address));

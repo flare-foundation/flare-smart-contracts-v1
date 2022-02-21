@@ -183,8 +183,6 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   // FtsoRewardManager contract
   const ftsoRewardManager = await FtsoRewardManager.new(
     deployerAccount.address,
-    addressUpdater.address,
-    "0x0000000000000000000000000000000000000000", // old ftso reward manager
     parameters.rewardFeePercentageUpdateOffsetEpochs,
     parameters.defaultRewardFeePercentageBIPS);
   spewNewContractInfo(contracts, addressUpdaterContracts, FtsoRewardManager.contractName, `FtsoRewardManager.sol`, ftsoRewardManager.address, quiet);
@@ -253,19 +251,20 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   );
 
   // Set other contracts on all address updatable contracts
-  // (expect on ftsoManager, flareDaemon and priceSubmitter, which are from songbird)
+  // (expect on ftsoManager, ftsoRewardManager, flareDaemon and priceSubmitter, which are from songbird)
   let addressUpdatableContracts = [
     inflationAllocation.address,
     inflation.address,
     ftsoRegistry.address, 
     cleanupBlockNumberManager.address, 
     voterWhitelister.address, 
-    ftsoRewardManager.address,
     supply.address
   ];
   await addressUpdater.updateContractAddresses(addressUpdatableContracts);
-  await flareDaemon.setInflation(inflation.address);
+
   await ftsoManager.setContractAddresses(ftsoRewardManager.address, ftsoRegistry.address, voterWhitelister.address, supply.address, cleanupBlockNumberManager.address);
+  await ftsoRewardManager.setContractAddresses(inflation.address, ftsoManager.address, wNat.address);
+  await flareDaemon.setInflation(inflation.address);
   await priceSubmitter.setContractAddresses(ftsoRegistry.address, voterWhitelister.address, ftsoManager.address);
 
 

@@ -39,8 +39,6 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
     // Set up the ftsoRewardManager
     ftsoRewardManager = await FtsoRewardManager.new(
       accounts[0],
-      ADDRESS_UPDATER,
-      constants.ZERO_ADDRESS,
       3,
       0
     );
@@ -80,9 +78,7 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
     // Register inflation to mock daemon contract so we can trigger inflation
     await mockFlareDaemon.registerToDaemonize(inflation.address);
     // Tell ftso reward manager about inflation
-    await ftsoRewardManager.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
-      [ADDRESS_UPDATER, inflation.address, (await MockContract.new()).address, (await MockContract.new()).address, supply.address], {from: ADDRESS_UPDATER});
+    await ftsoRewardManager.setContractAddresses(inflation.address, (await MockContract.new()).address, (await MockContract.new()).address, {from: accounts[0]});
   });
 
   describe("daily roll", async() => {
