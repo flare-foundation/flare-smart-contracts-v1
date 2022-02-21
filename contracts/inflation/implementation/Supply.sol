@@ -128,18 +128,6 @@ contract Supply is IISupply, Governed, AddressUpdatable {
         _decreaseFoundationSupply(_amountWei);
         _updateCirculatingSupply();
     }
-
-    /**
-     * @notice Change burn address
-     * @param _burnAddress                          New burn address
-     * @dev Updates burn value for current address, changes to new address and updates again
-     */
-    function changeBurnAddress(address _burnAddress) external onlyGovernance {
-        _updateCirculatingSupply();
-        burnAddressBalance = 0;
-        burnAddress = _burnAddress;
-        _updateBurnAddressAmount();
-    }
     
     /**
      * @notice Get approximate circulating supply for given block number from cache - only past block
