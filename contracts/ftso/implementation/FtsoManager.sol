@@ -462,7 +462,6 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonized, IFlareDaemoni
             _ftsoInFallbackMode[i] = ftsoInFallbackMode[_ftsos[i]];
         }
     }
-
     
     /**
      * @notice Implement this function for updating daemonized contracts through AddressUpdater.
@@ -478,7 +477,6 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonized, IFlareDaemoni
     function getRewardEpochToExpireNext() external view override returns (uint256) {
         return nextRewardEpochToExpire;
     }
-
         
     /**
      * @notice Returns current reward epoch index (one currently running)
@@ -946,5 +944,4 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonized, IFlareDaemoni
     function _getFtsos() private view returns (IIFtso[] memory) {
         return ftsoRegistry.getSupportedFtsos();
     }
-
 }

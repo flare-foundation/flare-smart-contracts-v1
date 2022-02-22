@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.6 <0.9;
 
+
 interface IInflationGenesis {
     /**
      * @notice Receive newly minted native tokens from the FlareDaemon.
