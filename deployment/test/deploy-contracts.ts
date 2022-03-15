@@ -361,7 +361,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         assert.equal(priceSubmitter, contracts.getContractAddress(Contracts.PRICE_SUBMITTER));
       });
 
-      for (let asset of ["XRP", "LTC", "DOGE"]) {
+      for (let asset of parameters.NATMultiAssets) {
         it(`Should know about ${asset} Asset FTSO`, async () => {
           // Assemble
           // Act
@@ -370,30 +370,6 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
           assert(found);
         });
       }
-
-      it("Should know about XRP Asset FTSO", async () => {
-        // Assemble
-        // Act
-        const found = await findAssetFtso(contracts, contracts.getContractAddress(Contracts.FTSO_XRP));
-        // Assert
-        assert(found);
-      });
-
-      it("Should know about LTC Asset FTSO", async () => {
-        // Assemble
-        // Act
-        const found = await findAssetFtso(contracts, contracts.getContractAddress(Contracts.FTSO_LTC));
-        // Assert
-        assert(found);
-      });
-
-      it("Should know about XDG Asset FTSO", async () => {
-        // Assemble
-        // Act
-        const found = await findAssetFtso(contracts, contracts.getContractAddress(Contracts.FTSO_DOGE));
-        // Assert
-        assert(found);
-      });
     });
   }
 

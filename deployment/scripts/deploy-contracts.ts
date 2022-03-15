@@ -361,7 +361,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   let ftsoWnat: any;
   if (parameters.deployNATFtso) {
     ftsoWnat = await Ftso.new(parameters.nativeSymbol, priceSubmitter.address, wnat.address, ftsoManager.address, parameters.initialWnatPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
-    spewNewContractInfo(contracts, `FTSO ${parameters.wrappedNativeSymbol}`, `Ftso.sol`, ftsoWnat.address, quiet);
+    spewNewContractInfo(contracts, `FTSO WNAT`, `Ftso.sol`, ftsoWnat.address, quiet);
 
     assetToContracts.set(parameters.nativeSymbol, {
       xAssetToken: wnat,
