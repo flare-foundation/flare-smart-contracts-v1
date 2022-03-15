@@ -26,6 +26,7 @@ import { transferGovernance } from "./deployment/scripts/transfer-governance";
 import "./type-extensions";
 import { transferGovWorkingBalance } from "./deployment/scripts/transfer-gov-working-balance";
 import { inflationContractsFix } from "./deployment/scripts/inflation-contracts-fix";
+import { deployNatFtso } from "./deployment/scripts/deploy-nat-ftso";
 const intercept = require('intercept-stdout');
 
 // Override solc compile task and filter out useless warnings
@@ -257,6 +258,20 @@ task("inflation-contracts-fix", "Deploy Inflation, InflationAllocation, Supply a
     const contracts = new Contracts();
     await contracts.deserialize(process.stdin);
     await inflationContractsFix(hre, contracts, parameters, args.quiet);
+  } else {
+    throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
+  }
+});
+
+// Deploy FTSO for NAT task
+task("deploy-nat-ftso", "Deploy FTSO for NAT")
+.addFlag("quiet", "Suppress console output")
+.setAction(async (args, hre, runSuper) => {
+  const parameters = getChainConfigParameters(process.env.CHAIN_CONFIG);
+  if (parameters) {
+    const contracts = new Contracts();
+    await contracts.deserialize(process.stdin);
+    await deployNatFtso(hre, contracts, parameters, args.quiet);
   } else {
     throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
   }

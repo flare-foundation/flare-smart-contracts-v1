@@ -47,8 +47,8 @@
     "ftsoManagerGasLimit": 40000000,
     "deployDistributionContract": false,
     "deployDummyXAssetTokensAndMinters": false,
-    "deployNATFtso": false,
-    "NATMultiAssets": [],
+    "deployNATFtso": true,
+    "NATMultiAssets": ["XRP", "LTC", "BTC"],
     "assets": [
         {
             "assetSymbol": "XRP",
