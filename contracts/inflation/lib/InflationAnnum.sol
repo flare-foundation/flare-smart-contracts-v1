@@ -33,7 +33,7 @@ library InflationAnnum {
     }
 
     uint256 internal constant BIPS100 = 1e4;                            // 100% in basis points
-    uint256 internal constant MAX_ANNUAL_INFLATION = 5000000000 ether;
+    uint256 internal constant MAX_ANNUAL_INFLATION = 1000000000 ether;
 
     /**
      * @notice Helper function to compute recognized inflation.

@@ -177,7 +177,7 @@ export function processGenesisAccounts(network: string, accountDefinitions: Gene
     let processedAccounts: GenesisAccount[] = [];
     if(network === "songbird") {
         processedAccounts = processGenesisAccountDefinitions(accountDefinitions, totalSupply);
-    } else if(network === "flare") {
+    } else if(network === "flare" || network === "coston2") {
         processedAccounts = processGenesisAccountDefinitionsFlare(accountDefinitions, totalSupply);
     }
 
