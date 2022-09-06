@@ -107,11 +107,11 @@
 
     "-----------COSTON2": "",
     "test_initial_airdrop_state_testnet": "yarn test deployment/test/coston2/initialVerificationTest.ts",
-    "create_airdrop_transactions_testnet": "yarn ts-node -r dotenv/config airdrop/coston2/createAirdropTransactions.ts --snapshot-file airdrop/coston2/data/export.csv --transaction-file airdrop/coston2/files/trans/unsigned_call_transactions.json --override -h true -d deployment/deploys/coston2.json --deployment-config deployment/chain-config/coston2.json --gas-price 50000000000 -i 14",
+    "create_airdrop_transactions_testnet": "yarn ts-node -r dotenv/config airdrop/coston2/createAirdropTransactions.ts --snapshot-file airdrop/coston2/data/export.csv --transaction-file airdrop/coston2/files/trans/unsigned_call_transactions.json --override -h true -d deployment/deploys/coston2.json --deployment-config deployment/chain-config/coston2.json --gas-price 50000000000 -i 141",
     "sign_airdrop_transactions_testnet": "yarn ts-node -r dotenv/config airdrop/coston2/signAirdropTransactions.ts -f airdrop/coston2/files/trans/unsigned_call_transactions.json -o airdrop/coston2/files/trans/signed_call_transactions.json",
     "send_airdrop_transactions_testnet": "yarn ts-node -r dotenv/config airdrop/coston2/sendAirdropTransactions.ts -f airdrop/coston2/files/trans/signed_call_transactions.json",
     "test_middle_airdrop_state_testnet": "yarn test deployment/test/coston2/airdropMiddleDataTest.ts",
-    "disable_airdrop_distribution_testnet": "yarn ts-node -r dotenv/config airdrop/coston2/disableAirdropAndDistribution.ts -d deployment/deploys/coston2.json --deployment-config deployment/chain-config/coston2.json --gas-price 50000000000 -i 14",
+    "disable_airdrop_distribution_testnet": "yarn ts-node -r dotenv/config airdrop/coston2/disableAirdropAndDistribution.ts -d deployment/deploys/coston2.json --deployment-config deployment/chain-config/coston2.json --gas-price 50000000000 -i 141",
     "test_final_airdrop_state_testnet": "yarn test deployment/test/coston2/airdropDataTest.ts",
     "coston2_airdrop": "yarn test_initial_airdrop_state_testnet && yarn create_airdrop_transactions_testnet && yarn sign_airdrop_transactions_testnet && yarn send_airdrop_transactions_testnet && yarn test_middle_airdrop_state_testnet && yarn disable_airdrop_distribution_testnet && yarn test_final_airdrop_state_testnet",
 

@@ -3,7 +3,7 @@ import { GenesisAccount } from "../genesis-lib";
 
 // 15 billion SGB
 const TARGET_TOTAL_SUPPLY = "100,000,000,000,000.000 000 000 000 000 000" 
-const P_CHAIN_FUNDS = "200,000.000 000 000 000 000 000" 
+const P_CHAIN_FUNDS = "50,000.000 000 000 000 000 000" 
 
 export const coston2TargetTotalSupply = BigNumber.from(TARGET_TOTAL_SUPPLY.replace(/[., ]/g, ""));
 export const coston2PChainFunds = BigNumber.from(P_CHAIN_FUNDS.replace(/[., ]/g, ""));
