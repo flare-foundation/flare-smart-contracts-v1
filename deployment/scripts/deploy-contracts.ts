@@ -330,6 +330,15 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const escrow = await Escrow.new(deployerAccount.address, addressUpdater.address, parameters.distributionLatestEntitlementStart);
   spewNewContractInfo(contracts, addressUpdaterContracts, Escrow.contractName, `Escrow.sol`, escrow.address, quiet);
 
+  const validatorRewardManager = await ValidatorRewardManager.new(
+    deployerAccount.address,
+    addressUpdater.address,
+    "0x0000000000000000000000000000000000000000"); // old reward manager
+  spewNewContractInfo(contracts, addressUpdaterContracts, ValidatorRewardManager.contractName, `ValidatorRewardManager.sol`, validatorRewardManager.address, quiet);
+  await validatorRewardManager.setRewardDistributor(parameters.governancePublicKey);
+  // Supply contract needs to know about token pool
+  await supply.addTokenPool(validatorRewardManager.address, 0);
+
   // Inflation allocation needs to know about reward managers
   let receiversAddresses = []
   for (let a of parameters.inflationReceivers) {
@@ -394,15 +403,6 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
 
   const validatorRegistry = await ValidatorRegistry.new();
   spewNewContractInfo(contracts, addressUpdaterContracts, ValidatorRegistry.contractName, `ValidatorRegistry.sol`, validatorRegistry.address, quiet);
-
-  const validatorRewardManager = await ValidatorRewardManager.new(
-    deployerAccount.address,
-    addressUpdater.address,
-    "0x0000000000000000000000000000000000000000"); // old reward manager
-  spewNewContractInfo(contracts, addressUpdaterContracts, ValidatorRewardManager.contractName, `ValidatorRewardManager.sol`, validatorRewardManager.address, quiet);
-  await validatorRewardManager.setRewardDistributor(parameters.governancePublicKey);
-  // Supply contract needs to know about token pool
-  await supply.addTokenPool(validatorRewardManager.address, 0);
 
   // Get the timestamp for the just mined block
   let currentBlock = await web3.eth.getBlock(await web3.eth.getBlockNumber());
