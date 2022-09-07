@@ -94,6 +94,8 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
     let inflationAllocation: InflationAllocationInstance;
     let FtsoRewardManager: FtsoRewardManagerContract;
     let ftsoRewardManager: FtsoRewardManagerInstance;
+    let ValidatorRewardManager: ValidatorRewardManagerContract;
+    let validatorRewardManager: ValidatorRewardManagerInstance;
 
     beforeEach(async () => {
       InflationAllocation = artifacts.require("InflationAllocation");
@@ -101,6 +103,10 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       if (parameters.inflationReceivers.indexOf("FtsoRewardManager") >= 0) {
         FtsoRewardManager = artifacts.require("FtsoRewardManager");
         ftsoRewardManager = await FtsoRewardManager.at(contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER));
+      }
+      if (parameters.inflationReceivers.indexOf("ValidatorRewardManager") >= 0) {
+        ValidatorRewardManager = artifacts.require("ValidatorRewardManager");
+        validatorRewardManager = await ValidatorRewardManager.at(contracts.getContractAddress(Contracts.VALIDATOR_REWARD_MANAGER));
       }
     });
 
@@ -117,6 +123,9 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         switch (receiverName) {
           case "FtsoRewardManager":
             receiverAddress = ftsoRewardManager.address
+            break;
+          case "ValidatorRewardManager":
+            receiverAddress = validatorRewardManager.address
             break;
           default:
             throw Error(`Unknown inflation receiver name ${receiverName}`)
