@@ -1,8 +1,8 @@
 {
-    "nativeSymbol": "CFLR",
+    "nativeSymbol": "C2FLR",
     "nativeFtsoDecimals": 5,
-    "wrappedNativeName": "Wrapped CostonFlare",
-    "wrappedNativeSymbol": "WCFLR",
+    "wrappedNativeName": "Wrapped Coston2Flare",
+    "wrappedNativeSymbol": "WC2FLR",
     "stateConnectorAddress": "0x1000000000000000000000000000000000000001",
     "flareDaemonAddress": "0x1000000000000000000000000000000000000002",
     "priceSubmitterAddress": "0x1000000000000000000000000000000000000003",
@@ -43,7 +43,7 @@
     "lowNatTurnoutThresholdBIPS": 0,
     "priceDeviationThresholdBIPS": 1000,
     "trustedAddresses": [
-
+        "0xb849b93b585effb7ce4b522ff88d9b3b24955f24"
     ],
     "rewardFeePercentageUpdateOffsetEpochs": 1,
     "defaultRewardFeePercentageBIPS": 2000,
@@ -52,8 +52,8 @@
     "priceEpochCyclicBufferSize": 200,
     "inflationReceivers": ["FtsoRewardManager", "ValidatorRewardManager"],
     "inflationSharingBIPS": [8000, 2000],
-    "inflationTopUpTypes": [0],
-    "inflationTopUpFactorsx100": [400],
+    "inflationTopUpTypes": [0, 0],
+    "inflationTopUpFactorsx100": [400, 400],
     "inflationGasLimit": 2000000,
     "ftsoManagerGasLimit": 40000000,
     "incentivePoolGasLimit": 3000000,
