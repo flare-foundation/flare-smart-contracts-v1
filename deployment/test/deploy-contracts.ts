@@ -12,7 +12,7 @@ import {
   FtsoRewardManagerInstance, GovernanceSettingsContract, GovernanceSettingsInstance, GovernanceVotePowerContract, GovernanceVotePowerInstance, IncentivePoolContract, IncentivePoolInstance, IncentivePoolTreasuryContract, IncentivePoolTreasuryInstance, InflationAllocationContract,
   InflationAllocationInstance, InflationContract,
   InflationInstance, InitialAirdropContract, InitialAirdropInstance, SupplyContract,
-  SupplyInstance, EscrowContract, EscrowInstance, WNatContract, WNatInstance
+  SupplyInstance, EscrowContract, EscrowInstance, WNatContract, WNatInstance, ValidatorRewardManagerContract, ValidatorRewardManagerInstance
 } from "../../typechain-truffle";
 import { Contracts } from "../scripts/Contracts";
 import { findAssetFtso, findFtso } from '../scripts/deploy-utils';
@@ -579,6 +579,32 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
     });
   });
 
+  describe(Contracts.VALIDATOR_REWARD_MANAGER, async () => {
+    let ValidatorRewardManager: ValidatorRewardManagerContract;
+    let validatorRewardManager: ValidatorRewardManagerInstance;
+
+    beforeEach(async () => {
+      ValidatorRewardManager = artifacts.require("ValidatorRewardManager");
+      validatorRewardManager = await ValidatorRewardManager.at(contracts.getContractAddress(Contracts.VALIDATOR_REWARD_MANAGER));
+    });
+
+    it("Should know about Inflation", async () => {
+      // Assemble
+      // Act
+      const inflation = await validatorRewardManager.getInflationAddress();
+      // Assert
+      assert.equal(inflation, contracts.getContractAddress(Contracts.INFLATION));
+    });
+
+    it("Should have correct reward distributor address", async () => {
+      // Assemble
+      // Act
+      const rewardDistributor = await validatorRewardManager.rewardDistributor();
+      // Assert
+      assert.equal(rewardDistributor, parameters.governancePublicKey);
+    });
+  });
+
   describe(Contracts.GOVERNANCE_VOTE_POWER, async () => {
     let GovernanceVotePower: GovernanceVotePowerContract;
     let governanceVotePower: GovernanceVotePowerInstance;
@@ -843,7 +869,8 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       let contractNames = [Contracts.STATE_CONNECTOR, Contracts.FLARE_DAEMON, Contracts.PRICE_SUBMITTER, Contracts.WNAT, Contracts.DISTRIBUTION_TREASURY,
         Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.ESCROW,
         Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.GOVERNANCE_VOTE_POWER,
-        Contracts.INCENTIVE_POOL_TREASURY, Contracts.INCENTIVE_POOL, Contracts.INCENTIVE_POOL_ALLOCATION, Contracts.INITIAL_AIRDROP, Contracts.GOVERNANCE_SETTINGS];
+        Contracts.INCENTIVE_POOL_TREASURY, Contracts.INCENTIVE_POOL, Contracts.INCENTIVE_POOL_ALLOCATION, Contracts.INITIAL_AIRDROP, Contracts.GOVERNANCE_SETTINGS,
+        Contracts.VALIDATOR_REGISTRY, Contracts.VALIDATOR_REWARD_MANAGER];
 
       if (parameters.deployDistributionContract) {
         contractNames.push(Contracts.DELEGATION_ACCOUNT_MANAGER);
@@ -862,7 +889,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
     it("Address updatable contracts should know about address updater", async () => {
       let contractNames = [Contracts.FLARE_DAEMON, Contracts.PRICE_SUBMITTER,Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, 
         Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.FTSO_MANAGER,
-        Contracts.INCENTIVE_POOL, Contracts.INCENTIVE_POOL_ALLOCATION, Contracts.ESCROW];
+        Contracts.INCENTIVE_POOL, Contracts.INCENTIVE_POOL_ALLOCATION, Contracts.ESCROW, Contracts.VALIDATOR_REWARD_MANAGER];
 
       if (parameters.deployDistributionContract) {
         contractNames.push(Contracts.DELEGATION_ACCOUNT_MANAGER);

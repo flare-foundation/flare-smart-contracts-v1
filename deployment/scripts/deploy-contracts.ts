@@ -17,7 +17,7 @@ import {
   GovernanceVotePowerContract, IncentivePoolAllocationContract, IncentivePoolContract, IncentivePoolTreasuryContract,
   IncentivePoolTreasuryInstance, InflationAllocationContract, InflationContract, InitialAirdropContract, InitialAirdropInstance,
   PriceSubmitterContract, PriceSubmitterInstance, StateConnectorContract, StateConnectorInstance, SuicidalMockContract, SupplyContract,
-  EscrowContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract
+  EscrowContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract, ValidatorRegistryContract, ValidatorRewardManagerContract
 } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
@@ -93,6 +93,8 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const DelegationAccountClonable: DelegationAccountClonableContract = artifacts.require("DelegationAccountClonable");
   const DelegationAccountManager: DelegationAccountManagerContract = artifacts.require("DelegationAccountManager");
   const SuicidalMock: SuicidalMockContract = artifacts.require("SuicidalMock");
+  const ValidatorRegistry: ValidatorRegistryContract = artifacts.require("ValidatorRegistry");
+  const ValidatorRewardManager: ValidatorRewardManagerContract = artifacts.require("ValidatorRewardManager");
 
   // Initialize the state connector
   let stateConnector: StateConnectorInstance;
@@ -324,7 +326,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   );
   spewNewContractInfo(contracts, addressUpdaterContracts, CleanupBlockNumberManager.contractName, `CleanupBlockNumberManager.sol`, cleanupBlockNumberManager.address, quiet);
 
-  // Team escrow contract
+  // Escrow contract
   const escrow = await Escrow.new(deployerAccount.address, addressUpdater.address, parameters.distributionLatestEntitlementStart);
   spewNewContractInfo(contracts, addressUpdaterContracts, Escrow.contractName, `Escrow.sol`, escrow.address, quiet);
 
@@ -390,6 +392,18 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   // Supply contract needs to know about token pool
   await supply.addTokenPool(incentivePool.address, 0);
 
+  const validatorRegistry = await ValidatorRegistry.new();
+  spewNewContractInfo(contracts, addressUpdaterContracts, ValidatorRegistry.contractName, `ValidatorRegistry.sol`, validatorRegistry.address, quiet);
+
+  const validatorRewardManager = await ValidatorRewardManager.new(
+    deployerAccount.address,
+    addressUpdater.address,
+    "0x0000000000000000000000000000000000000000"); // old reward manager
+  spewNewContractInfo(contracts, addressUpdaterContracts, ValidatorRewardManager.contractName, `ValidatorRewardManager.sol`, validatorRewardManager.address, quiet);
+  await validatorRewardManager.setRewardDistributor(parameters.governancePublicKey);
+  // Supply contract needs to know about token pool
+  await supply.addTokenPool(validatorRewardManager.address, 0);
+
   // Get the timestamp for the just mined block
   let currentBlock = await web3.eth.getBlock(await web3.eth.getBlockNumber());
   let ftsoStartTs = BN(currentBlock.timestamp);
@@ -448,7 +462,8 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     supply.address,
     incentivePoolAllocation.address,
     incentivePool.address,
-    escrow.address
+    escrow.address,
+    validatorRewardManager.address
   ];
   if (parameters.deployDistributionContract) {
     addressUpdatableContracts.push(delegationAccountManager!.address);
