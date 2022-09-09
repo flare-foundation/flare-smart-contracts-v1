@@ -93,7 +93,7 @@ async function main( deploymentName: string, logPath:string,  quiet:boolean = tr
 
     // TODO parametrize
     const numOfAcc = 142473
-    const initialAirdropBatchSize = 100
+    const initialAirdropBatchSize = 50
 
     const numOfCalls = Math.ceil(numOfAcc/initialAirdropBatchSize)
     const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
