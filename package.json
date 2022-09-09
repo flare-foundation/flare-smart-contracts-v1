@@ -115,7 +115,7 @@
     "test_final_airdrop_state_testnet": "yarn test deployment/test/coston2/airdropDataTest.ts",
     "coston2_airdrop": "yarn test_initial_airdrop_state_testnet && yarn create_airdrop_transactions_testnet && yarn sign_airdrop_transactions_testnet && yarn send_airdrop_transactions_testnet && yarn test_middle_airdrop_state_testnet && yarn disable_airdrop_distribution_testnet && yarn test_final_airdrop_state_testnet",
 
-    "distribute_initial_airdrop": "yarn ts-node -r dotenv/config airdrop/coston2/distributeInitialAirdrop.ts -d deployment/deploys/coston2.json",
+    "distribute_initial_airdrop": "yarn ts-node -r dotenv/config airdrop/coston2/distributeInitialAirdrop.ts -d deployment/deploys/coston2.json -i 114",
 
     "---------DEPLOY---SCRIPTS": "",
     "deploy_local_scdev": "yarn deploy_contracts_local_scdev && yarn daemonize_contracts_local_scdev && yarn activate_managers_local_scdev && yarn switch_to_production_mode_local_scdev && yarn test_final_verification_local_scdev",
