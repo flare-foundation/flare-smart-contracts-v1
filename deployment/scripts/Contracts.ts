@@ -66,6 +66,8 @@ export class Contracts {
   public static readonly DGB = `${Contracts.WRAP_SYMBOL}DGB`;
   public static readonly DUMMY_DGB_MINTER = `Dummy${Contracts.WRAP_SYMBOL_MINT}DgbMinter`;
   public static readonly FTSO_DGB = "FtsoDgb";
+  public static readonly POLLING_ACCEPT = "PollingAccept";
+  public static readonly POLLING_REJECT = "PollingReject";
   // NOTE: this is not exhaustive list. Constants here are defined on on-demand basis (usually motivated by tests).
 
   constructor() {

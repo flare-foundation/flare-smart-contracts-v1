@@ -70,6 +70,8 @@ export async function switchToProductionMode(
     const Escrow = artifacts.require("Escrow");
     const DelegationAccountManager = artifacts.require("DelegationAccountManager");
     const ValidatorRewardManager = artifacts.require("ValidatorRewardManager");
+    const PollingAccept = artifacts.require("PollingAccept");
+    const PollingReject = artifacts.require("PollingReject");
 
     // Get deployed contracts
     const governanceSettings = await GovernanceSettings.at(contracts.getContractAddress(Contracts.GOVERNANCE_SETTINGS));
@@ -92,6 +94,8 @@ export async function switchToProductionMode(
     const wNat = await WNat.at(contracts.getContractAddress(Contracts.WNAT));
     const escrow = await Escrow.at(contracts.getContractAddress(Contracts.ESCROW));
     const validatorRewardManager = await ValidatorRewardManager.at(contracts.getContractAddress(Contracts.VALIDATOR_REWARD_MANAGER));
+    const pollingAccept = await PollingAccept.at(contracts.getContractAddress(Contracts.POLLING_ACCEPT));
+    const pollingReject = await PollingReject.at(contracts.getContractAddress(Contracts.POLLING_REJECT));
 
     // switch to production mode
     await flareDaemon.switchToProductionMode({ from: genesisGovernanceAccount.address });
@@ -121,4 +125,6 @@ export async function switchToProductionMode(
     await wNat.switchToProductionMode();
     await escrow.switchToProductionMode();
     await validatorRewardManager.switchToProductionMode();
+    await pollingAccept.switchToProductionMode();
+    await pollingReject.switchToProductionMode();
 }
