@@ -380,6 +380,64 @@ export interface ChainParameters {
     // Other currency settings
 
     assets: AssetParameters[];
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Governance settings
+
+    /**
+     * Share of total vote power needed for creating (rejection) proposal, in BIPS.
+     */
+    rejectProposalThresholdBIPS: integer;
+
+    /**
+     * Share of total vote power needed for creating (acceptance) proposal, in BIPS.
+     */
+    acceptProposalThresholdBIPS: integer;
+
+    /**
+     * Time between proposal creation and a start of a voting period, in seconds.
+     */
+    votingDelaySeconds: integer;
+
+    /**
+     * Length of a voting period, in seconds.
+     */
+    votingPeriodSeconds: integer;
+
+    /**
+     * Time between an end of a voting period and a start of an execution period, in seconds.
+     */
+    executionDelaySeconds: integer;
+
+    /**
+     * Length of an execution period, in seconds.
+     */
+    executionPeriodSeconds: integer;
+
+    /**
+     * Share of circulating supply that needs to be wrapped for a proposal to be valid, in BIPS.
+     */
+    wrappingThresholdBIPS: integer;
+
+    /**
+     * Share of a total vote power that needs to vote in favor (against) for a proposal to be accepted (rejected), in BIPS.
+     */
+    absoluteThresholdBIPS: integer;
+
+    /**
+     * Share of voter that needs to be in favor (against) for a proposal to be accepted (rejected), in BIPS.
+     */
+    relativeThresholdBIPS: integer;
+
+    /**
+     * Minimal length of a period from which vote power block is selected, in seconds.
+     */
+    vpBlockPeriodSeconds: integer;
+
+    /**
+     * Array of proposers that can create a proposal (for rejection proposals).
+     */
+    proposers: string[];
 }
 
 export interface AssetParameters {

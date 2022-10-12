@@ -57,6 +57,12 @@
             },
             "type": "array"
         },
+        "absoluteThresholdBIPS": {
+            "type": "integer"
+        },
+        "acceptProposalThresholdBIPS": {
+            "type": "integer"
+        },
         "assets": {
             "items": {
                 "$ref": "#/definitions/AssetParameters"
@@ -98,6 +104,12 @@
         "distributionTreasuryAddress": {
             "description": "Distribution treasury contract address. It is deployed to the genesis block with the fixed address  \"0x1000000000000000000000000000000000000004\".",
             "type": "string"
+        },
+        "executionDelaySeconds": {
+            "type": "integer"
+        },
+        "executionPeriodSeconds": {
+            "type": "integer"
         },
         "flareDaemonAddress": {
             "description": "Flare daemon contract address. It is deployed in the genesis block with the fixed address \"0x1000000000000000000000000000000000000002\".",
@@ -259,6 +271,18 @@
             "description": "Price submiter contract address. It is deployed to the genesis block with the fixed address  \"0x1000000000000000000000000000000000000003\".",
             "type": "string"
         },
+        "proposers": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "rejectProposalThresholdBIPS": {
+            "type": "integer"
+        },
+        "relativeThresholdBIPS": {
+            "type": "integer"
+        },
         "revealEpochDurationSeconds": {
             "description": "Reveal epoch duration, in seconds. Usually, it should be at most half of `priceEpochDurationSeconds` (90 seconds).",
             "type": "integer"
@@ -309,6 +333,15 @@
             "description": "Defines interval from which vote power block is randomly selected as a fraction of previous reward epoch. \nThe new vote power block is randomly chosen during finalization block from the last\n`(finalization_block_number - start_epoch_block_number) / votePowerIntervalFraction`\nblocks. Larger value of `votePowerIntervalFraction` means shorter interval, which gives 'fresher' vote power block, but less chance for randomization.\nFor example, if `votePowerIntervalFraction=7` and reward epoch duration is 7 days, vote power block is chosen from the last day of the epoch being finalized.",
             "type": "integer"
         },
+        "votingDelaySeconds": {
+            "type": "integer"
+        },
+        "votingPeriodSeconds": {
+            "type": "integer"
+        },
+        "vpBlockPeriodSeconds": {
+            "type": "integer"
+        },
         "wrappedNativeName": {
             "description": "The name of the wrapped currency (e.g. Wrapped Flare / Wrapped Songbird).",
             "type": "string"
@@ -316,10 +349,15 @@
         "wrappedNativeSymbol": {
             "description": "The symbol of the wrapped currency (e.g. wFLR/wSGB).",
             "type": "string"
+        },
+        "wrappingThresholdBIPS": {
+            "type": "integer"
         }
     },
     "required": [
         "NATMultiAssets",
+        "absoluteThresholdBIPS",
+        "acceptProposalThresholdBIPS",
         "assets",
         "defaultRewardFeePercentageBIPS",
         "defaultVoterWhitelistSize",
@@ -330,6 +368,8 @@
         "distributionLatestEntitlementStart",
         "distributionTotalEntitlementWei",
         "distributionTreasuryAddress",
+        "executionDelaySeconds",
+        "executionPeriodSeconds",
         "flareDaemonAddress",
         "flareDaemonGasExceededHoldoffBlocks",
         "ftsoManagerGasLimit",
@@ -367,6 +407,9 @@
         "priceEpochCyclicBufferSize",
         "priceEpochDurationSeconds",
         "priceSubmitterAddress",
+        "proposers",
+        "rejectProposalThresholdBIPS",
+        "relativeThresholdBIPS",
         "revealEpochDurationSeconds",
         "rewardEpochDurationSeconds",
         "rewardEpochsStartDelayPriceEpochs",
@@ -378,8 +421,12 @@
         "totalNativeSupplyNAT",
         "trustedAddresses",
         "votePowerIntervalFraction",
+        "votingDelaySeconds",
+        "votingPeriodSeconds",
+        "vpBlockPeriodSeconds",
         "wrappedNativeName",
-        "wrappedNativeSymbol"
+        "wrappedNativeSymbol",
+        "wrappingThresholdBIPS"
     ],
     "type": "object"
 }

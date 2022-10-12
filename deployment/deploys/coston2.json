@@ -193,5 +193,15 @@
     "name": "FtsoTestFil",
     "contractName": "Ftso.sol",
     "address": "0x9335FE948E38433D2c50109aDa6fF70EfD61575B"
+  },
+  {
+    "name": "PollingReject",
+    "contractName": "PollingReject.sol",
+    "address": "0x5c1b3D6dBd2D1C30B14CA20919A34Fe36eFECbCC"
+  },
+  {
+    "name": "PollingAccept",
+    "contractName": "PollingAccept.sol",
+    "address": "0x0dC26E31aff8ac4B5e3D7B21bFcF8fDfD1C96d50"
   }
 ]

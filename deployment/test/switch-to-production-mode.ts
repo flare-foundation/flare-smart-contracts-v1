@@ -204,6 +204,18 @@ contract(`switch-to-production-mode.ts system tests`, async accounts => {
     });
   });
 
+  describe(Contracts.POLLING_ACCEPT, async () => {
+    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.POLLING_ACCEPT);
+    });
+  });
+
+  describe(Contracts.POLLING_REJECT, async () => {
+    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.POLLING_REJECT);
+    });
+  });
+
   describe(Contracts.DELEGATION_ACCOUNT_MANAGER, async () => {
     it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async function() {
       if (!parameters.deployDistributionContract) return this.skip();
