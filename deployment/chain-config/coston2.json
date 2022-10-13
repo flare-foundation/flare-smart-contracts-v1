@@ -45,6 +45,9 @@
     "trustedAddresses": [
         "0xb849b93b585effb7ce4b522ff88d9b3b24955f24"
     ],
+    "executorFeeValueUpdateOffsetEpochs": 3,
+    "executorMaxFeeValueNAT": 100,
+    "executorRegisterFeeValueNAT": 100,
     "rewardFeePercentageUpdateOffsetEpochs": 1,
     "defaultRewardFeePercentageBIPS": 2000,
     "ftsoRewardExpiryOffsetDays": 7,
