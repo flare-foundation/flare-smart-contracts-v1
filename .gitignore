@@ -58,7 +58,6 @@ flattened
 ## Test deploys info
 deployment/deploys/*
 !deployment/deploys/staging.json
-!deployment/deploys/flare.json
 !deployment/deploys/coston2.json
 
 ## .env

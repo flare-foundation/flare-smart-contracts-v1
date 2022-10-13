@@ -368,7 +368,13 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   let distributionToDelegators: DistributionToDelegatorsInstance;
   if (parameters.deployDistributionContract) {
     // DelegationAccountManager
-    delegationAccountManager = await DelegationAccountManager.new(deployerAccount.address, addressUpdater.address);
+    delegationAccountManager = await DelegationAccountManager.new(
+      deployerAccount.address,
+      addressUpdater.address,
+      parameters.executorFeeValueUpdateOffsetEpochs,
+      BN(parameters.executorMaxFeeValueNAT).mul(BN(10).pow(BN(18))),
+      BN(parameters.executorRegisterFeeValueNAT).mul(BN(10).pow(BN(18)))
+    );
     spewNewContractInfo(contracts, addressUpdaterContracts, DelegationAccountManager.contractName, `DelegationAccountManager.sol`, delegationAccountManager.address, quiet);
 
     const delegationAccountClonable = await DelegationAccountClonable.new();
