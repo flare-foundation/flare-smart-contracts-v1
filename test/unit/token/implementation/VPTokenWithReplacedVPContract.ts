@@ -50,8 +50,6 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; VPToken with replaced VPContr
             assertNumberEqual(await vpToken.votePowerOf(accounts[3]), 0);
             assertNumberEqual(await vpToken.votePowerOfAt(accounts[1], initBlk1), 200);
             assertNumberEqual(await vpToken.votePowerOfAt(accounts[2], initBlk1), 0);
-            assertNumberEqual(await vpToken.votePowerOfAtIgnoringRevocation(accounts[1], initBlk1), 200);
-            assertNumberEqual(await vpToken.votePowerOfAtIgnoringRevocation(accounts[2], initBlk1), 0);
             assertNumberEqual(await vpToken.votePowerFromTo(accounts[1], accounts[2]), 0);
             assertNumberEqual(await vpToken.votePowerFromTo(accounts[2], accounts[3]), 0);
             assertNumberEqual(await vpToken.votePowerFromToAt(accounts[1], accounts[2], initBlk3), 0);
@@ -100,12 +98,6 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; VPToken with replaced VPContr
             assertNumberEqual(await vpToken.votePowerOf(accounts[3]), 10);
         });
 
-        it("Errors for zero delegation should not come from _initializeVotePower", async () => {
-            // Assert
-            await expectRevert(vpToken.delegate(constants.ZERO_ADDRESS, 4000, { from: accounts[1] }),
-                "Cannot delegate to zero");
-        });
-        
         it("Batch vote power should work after delegate", async () => {
             // Assemble
             // Act
@@ -166,9 +158,6 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; VPToken with replaced VPContr
             assertNumberEqual(await vpToken.votePowerOfAt(accounts[1], initBlk3), 100);
             assertNumberEqual(await vpToken.votePowerOfAt(accounts[2], initBlk3), 100);
             assertNumberEqual(await vpToken.votePowerOfAt(accounts[3], initBlk3), 0);
-            assertNumberEqual(await vpToken.votePowerOfAtIgnoringRevocation(accounts[1], initBlk3), 100);
-            assertNumberEqual(await vpToken.votePowerOfAtIgnoringRevocation(accounts[2], initBlk3), 100);
-            assertNumberEqual(await vpToken.votePowerOfAtIgnoringRevocation(accounts[3], initBlk3), 0);
         });
 
         it("Should revoke delegation after replacement", async () => {

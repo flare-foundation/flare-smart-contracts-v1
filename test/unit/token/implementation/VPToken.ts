@@ -87,20 +87,6 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Check point unit tests`, asyn
     assert.equal(_delegationMode, 1);
   });
 
-  it("Should un-delegate for delegate bips of 0 - not last", async () => {
-    // Assemble
-    await vpToken.delegate(accounts[2], 50, { from: accounts[1] });
-    await vpToken.delegate(accounts[3], 60, { from: accounts[1] });
-    await vpToken.delegate(accounts[2], 0, { from: accounts[1] });
-    // Act
-    const { _delegateAddresses, _bips, _count, _delegationMode } = await vpToken.delegatesOf(accounts[1]) as any;
-    // Assert
-    compareArrays(_delegateAddresses, [accounts[3]])
-    compareNumberArrays(_bips, [60])
-    assert.equal(_count, 1);
-    assert.equal(_delegationMode, 1);
-  });
-
   it("Should return value of delegation", async () => {
     // Assemble
     await vpToken.mint(accounts[1], 100);
@@ -914,15 +900,6 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Check point unit tests`, asyn
     assert.isTrue(await readVpContract.isReplacement());
   });
 
-  it("After setting VPContract, vpContractInitialized is true", async () => {
-    // Assemble
-    const vpToken1 = await VPToken.new(accounts[0], "A token without VPContract", "ATOK");
-    // Assert
-    assert.isFalse(await vpToken1.vpContractInitialized());
-    await setDefaultVPContract(vpToken1, accounts[0]);
-    assert.isTrue(await vpToken1.vpContractInitialized());
-  });
-
   it("After transfer without VPContract, VPContract must have isReplacement true", async () => {
     // Assemble
     const vpToken1 = await VPToken.new(accounts[0], "A token without VPContract", "ATOK");
@@ -1031,53 +1008,6 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Check point unit tests`, asyn
     // Assert
     await expectRevert(vpToken.batchVotePowerOfAt([accounts[1], accounts[2], accounts[3]], blk1 + 2),
       "a");
-  });
-
-  it("Cannot mint more than 2^128", async () => {
-    const maxuint192 = toBN(2).pow(toBN(192)).subn(1);
-    // can mint 2^128-1
-    await vpToken.mint(accounts[1], maxuint192);
-    // cannot mint total supply of 2^128
-    await expectRevert(vpToken.mint(accounts[2], 1), 
-      "value doesn't fit in 192 bits");
-    // after burn, can mint again
-    await vpToken.burn(1000, { from: accounts[1] });
-    await vpToken.mint(accounts[2], 1000);
-    // can transfer any minted amount
-    await expectRevert(vpToken.transfer(accounts[2], maxuint192, { from: accounts[1] }), 
-      "ERC20: transfer amount exceeds balance");
-    const maxTransferValue = maxuint192.subn(1000);
-    await vpToken.transfer(accounts[2], maxTransferValue, { from: accounts[1] });
-  });
-
-  it("Can read batch vote powers", async () => {
-    // Assemble
-    await vpToken.mint(accounts[1], 100);
-    await vpToken.mint(accounts[2], 200);
-    await vpToken.delegate(accounts[3], 5000, { from: accounts[1] });
-    const blk1 = await web3.eth.getBlockNumber();
-    await time.advanceBlock();
-    // Act
-    const result = await vpToken.batchVotePowerOfAt([accounts[1], accounts[2], accounts[3]], blk1);
-    // Assert
-    compareNumberArrays(result, [50, 200, 50]);
-  });
-
-  it("Value of votePowerOfAtIgnoringRevocation should remain the same after revocation", async () => {
-    // Assemble
-    await vpToken.mint(accounts[1], 200);
-    // Act
-    await vpToken.delegate(accounts[2], 3000, { from: accounts[1] });
-    const blockAfterDelegate1 = await web3.eth.getBlockNumber();
-    await vpToken.mint(accounts[1], 100);
-    await vpToken.delegate(accounts[2], 4000, { from: accounts[1] });
-    // revoke
-    await vpToken.revokeDelegationAt(accounts[2], blockAfterDelegate1, { from: accounts[1] });
-    // Assert
-    assert.equal((await vpToken.votePowerOfAt(accounts[1], blockAfterDelegate1)).toNumber(), 140);
-    assert.equal((await vpToken.votePowerOfAt(accounts[2], blockAfterDelegate1)).toNumber(), 0);
-    assert.equal((await vpToken.votePowerOfAtIgnoringRevocation(accounts[1], blockAfterDelegate1)).toNumber(), 140);
-    assert.equal((await vpToken.votePowerOfAtIgnoringRevocation(accounts[2], blockAfterDelegate1)).toNumber(), 60);
   });
 
 });

@@ -6,7 +6,6 @@ import "../../tokenPools/interface/IITokenPool.sol";
 import "../../token/lib/CheckPointHistory.sol";
 import "../../token/lib/CheckPointHistoryCache.sol";
 import "../../governance/implementation/Governed.sol";
-import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
@@ -14,7 +13,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  * @notice This contract maintains and computes various native token supply totals.
  **/
 
-contract Supply is IISupply, Governed, AddressUpdatable {
+contract Supply is Governed, IISupply {
     using CheckPointHistory for CheckPointHistory.CheckPointHistoryState;
     using CheckPointHistoryCache for CheckPointHistoryCache.CacheState;
     using SafeMath for uint256;
@@ -27,6 +26,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
     }
 
     string internal constant ERR_INFLATION_ONLY = "inflation only";
+    string internal constant ERR_INFLATION_ZERO = "inflation zero";
     string internal constant ERR_TOKEN_POOL_ALREADY_ADDED = "token pool already added";
     string internal constant ERR_INITIAL_GENESIS_AMOUNT_ZERO = "initial genesis amount zero";
 
@@ -41,7 +41,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
     SupplyData[] public tokenPools;
 
     address public inflation;
-    address immutable public burnAddress;
+    address public burnAddress;
 
     // balance of burn address at last check - needed for updating circulating supply
     uint256 private burnAddressBalance;
@@ -56,16 +56,18 @@ contract Supply is IISupply, Governed, AddressUpdatable {
 
     constructor(
         address _governance,
-        address _addressUpdater,
         address _burnAddress,
+        address _inflation,
         uint256 _initialGenesisAmountWei,
         uint256 _totalFoundationSupplyWei,
         IITokenPool[] memory _tokenPools
     )
-        Governed(_governance) AddressUpdatable(_addressUpdater)
+        Governed(_governance)
     {
+        require(_inflation != address(0), ERR_INFLATION_ZERO);
         require(_initialGenesisAmountWei > 0, ERR_INITIAL_GENESIS_AMOUNT_ZERO);
         burnAddress = _burnAddress;
+        inflation = _inflation;
         initialGenesisAmountWei = _initialGenesisAmountWei;
         totalFoundationSupplyWei = _totalFoundationSupplyWei;
 
@@ -75,7 +77,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
             _addTokenPool(_tokenPools[i]);
         }
 
-        _updateCirculatingSupply(_burnAddress);
+        _updateCirculatingSupply();
     }
 
     /**
@@ -92,13 +94,21 @@ contract Supply is IISupply, Governed, AddressUpdatable {
         // Save old total inflation authorized value to compare with after update.
         uint256 oldTotalInflationAuthorizedWei = totalInflationAuthorizedWei;
         
-        _updateCirculatingSupply(burnAddress);
+        _updateCirculatingSupply();
         
         // Check if new authorized inflation was distributed and updated correctly.
         if (totalInflationAuthorizedWei != oldTotalInflationAuthorizedWei.add(_inflationAuthorizedWei)) {
             emit AuthorizedInflationUpdateError(totalInflationAuthorizedWei - oldTotalInflationAuthorizedWei,
                 _inflationAuthorizedWei);
         }
+    }
+
+    /**
+     * @notice Sets inflation contract. Only governance can call this method.
+     */
+    function setInflation(address _inflation) external override onlyGovernance {
+        require(_inflation != address(0), ERR_INFLATION_ZERO);
+        inflation = _inflation;
     }
 
     /**
@@ -117,7 +127,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
     {
         _decreaseFoundationSupply(_decreaseFoundationSupplyByAmountWei);
         _addTokenPool(_tokenPool);
-        _updateCirculatingSupply(burnAddress);
+        _updateCirculatingSupply();
     }
 
     /**
@@ -126,7 +136,19 @@ contract Supply is IISupply, Governed, AddressUpdatable {
      */
     function decreaseFoundationSupply(uint256 _amountWei) external onlyGovernance {
         _decreaseFoundationSupply(_amountWei);
-        _updateCirculatingSupply(burnAddress);
+        _updateCirculatingSupply();
+    }
+
+    /**
+     * @notice Change burn address
+     * @param _burnAddress                          New burn address
+     * @dev Updates burn value for current address, changes to new address and updates again
+     */
+    function changeBurnAddress(address _burnAddress) external onlyGovernance {
+        _updateCirculatingSupply();
+        burnAddressBalance = 0;
+        burnAddress = _burnAddress;
+        _updateBurnAddressAmount();
     }
     
     /**
@@ -167,18 +189,6 @@ contract Supply is IISupply, Governed, AddressUpdatable {
         return initialGenesisAmountWei.add(totalInflationAuthorizedWei);
     }
 
-    /**
-     * @notice Implementation of the AddressUpdatable abstract method.
-     */
-    function _updateContractAddresses(
-        bytes32[] memory _contractNameHashes,
-        address[] memory _contractAddresses
-    )
-        internal override
-    {
-        inflation = _getContractAddress(_contractNameHashes, _contractAddresses, "Inflation");
-    }
-
     function _increaseCirculatingSupply(uint256 _increaseBy) internal {
         circulatingSupplyWei.writeValue(circulatingSupplyWei.valueAtNow().add(_increaseBy));
     }
@@ -187,7 +197,7 @@ contract Supply is IISupply, Governed, AddressUpdatable {
         circulatingSupplyWei.writeValue(circulatingSupplyWei.valueAtNow().sub(_descreaseBy));
     }
 
-    function _updateCirculatingSupply(address _burnAddress) internal {
+    function _updateCirculatingSupply() internal {
         uint256 len = tokenPools.length;
         for (uint256 i = 0; i < len; i++) {
             SupplyData storage data = tokenPools[i];
@@ -214,11 +224,11 @@ contract Supply is IISupply, Governed, AddressUpdatable {
             data.totalClaimedWei = newTotalClaimedWei;
         }
 
-        _updateBurnAddressAmount(_burnAddress);
+        _updateBurnAddressAmount();
     }
 
-    function _updateBurnAddressAmount(address _burnAddress) internal {
-        uint256 newBalance = _burnAddress.balance;
+    function _updateBurnAddressAmount() internal {
+        uint256 newBalance = burnAddress.balance;
         _decreaseCirculatingSupply(newBalance.sub(burnAddressBalance));
         burnAddressBalance = newBalance;
     }

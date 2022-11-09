@@ -1,11 +1,8 @@
 import { FtsoContract, FtsoInstance, MockContractContract, MockContractInstance, PriceSubmitterContract, PriceSubmitterInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatContract, WNatInstance } from "../../../../typechain-truffle";
-import { compareArrays, increaseTimeTo, lastOf, submitPriceHash, toBN, encodeContractNames } from "../../../utils/test-helpers";
+import { compareArrays, increaseTimeTo, lastOf, submitPriceHash, toBN } from "../../../utils/test-helpers";
 import { setDefaultVPContract } from "../../../utils/token-test-helpers";
 import {constants, expectRevert, expectEvent, time} from '@openzeppelin/test-helpers';
 import { defaultPriceEpochCyclicBufferSize } from "../../../utils/constants";
-
-import { Contracts } from "../../../../deployment/scripts/Contracts";
-
 const getTestFile = require('../../../utils/constants').getTestFile;
 
 const Wnat = artifacts.require("WNat") as WNatContract;
@@ -51,7 +48,6 @@ async function setGetFtsosMock(ftsoIndices: number[]) {
 contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit tests`, async accounts => {
 
     const FTSO_MANAGER_ADDRESS = accounts[12];
-    const ADDRESS_UPDATER = accounts[16];
 
     describe("submit and reveal price", async() => {
         beforeEach(async() => {
@@ -63,14 +59,10 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             mockFtsoRegistry = await MockRegistry.new();
             priceSubmitter = await PriceSubmitter.new();
             await priceSubmitter.initialiseFixedAddress();
-            voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, ADDRESS_UPDATER, priceSubmitter.address, 10);
+            voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, priceSubmitter.address, 10);
             
             // Have an exisitng address just to set up FtsoManager and can act like it in {from: _}
-            // await voterWhitelister.setContractAddresses(mockFtsoRegistry.address, FTSO_MANAGER_ADDRESS, { from: GOVERNANCE_GENESIS_ADDRESS });
-            await voterWhitelister.updateContractAddresses(
-              encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
-              [ADDRESS_UPDATER, mockFtsoRegistry.address, FTSO_MANAGER_ADDRESS], {from: ADDRESS_UPDATER});
-
+            await voterWhitelister.setContractAddresses(mockFtsoRegistry.address, FTSO_MANAGER_ADDRESS, { from: GOVERNANCE_GENESIS_ADDRESS });
             await priceSubmitter.setContractAddresses(mockFtsoRegistry.address, voterWhitelister.address, FTSO_MANAGER_ADDRESS, { from: GOVERNANCE_GENESIS_ADDRESS });
 
             

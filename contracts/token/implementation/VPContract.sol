@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../governance/implementation/GovernedBase.sol";
 import "./Delegatable.sol";
 import "../interface/IIVPContract.sol";
+import "../interface/IIVPContract.sol";
 import "../interface/IIVPToken.sol";
 import "../../userInterfaces/IVPToken.sol";
 
@@ -331,23 +332,6 @@ contract VPContract is IIVPContract, Delegatable {
             return ownerToken.balanceOfAt(_who, _blockNumber);
         }
     }
-
-    /**
-    * @notice Get the vote power of `_who` at block `_blockNumber`, ignoring revocation information (and cache).
-    * @param _who The address to get voting power.
-    * @param _blockNumber The block number at which to fetch.
-    * @return Vote power of `_who` at `_blockNumber`. Result doesn't change if vote power is revoked.
-    */
-    function votePowerOfAtIgnoringRevocation(address _who, uint256 _blockNumber) 
-        external view override 
-        returns(uint256) 
-    {
-        if (!isReplacement || _votePowerInitializedAt(_who, _blockNumber)) {
-            return _votePowerOfAtIgnoringRevocation(_who, _blockNumber);
-        } else {
-            return ownerToken.balanceOfAt(_who, _blockNumber);
-        }
-    }
     
     /**
      * Return vote powers for several addresses in a batch.
@@ -534,7 +518,6 @@ contract VPContract is IIVPContract, Delegatable {
      */
     function _initializeVotePower(address _owner, uint256 _balance) internal {
         if (!isReplacement) return;
-        if (_owner == address(0)) return;    // 0 address is special (usually marks no source/dest - no init needed)
         if (votePowerInitializationBlock[_owner] == 0) {
             // consistency check - no delegations should be made from or to owner before vote power is initialized
             // (that would be dangerous, because vote power would have been delegated incorrectly)

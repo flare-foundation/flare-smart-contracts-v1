@@ -14,11 +14,8 @@ contract VotePowerMock {
 
     function _burn(
         address _owner, 
-        uint256 _amount
-    )
-        public
-    {
-        self.changeValue(_owner, 0, _amount);
+        uint256 _amount) public {
+        self._burn(_owner, _amount);
     }
 
     function delegate(
@@ -30,11 +27,8 @@ contract VotePowerMock {
 
     function _mint(
         address _owner, 
-        uint256 _amount
-    )
-        public
-    {
-        self.changeValue(_owner, _amount, 0);
+        uint256 _amount) public {
+        self._mint(_owner, _amount);
     }
 
     function transmit(
@@ -44,8 +38,7 @@ contract VotePowerMock {
     )
         public
     {
-        self.changeValue(_from, 0, _amount);
-        self.changeValue(_to, _amount, 0);
+        self.transmit(_from, _to, _amount);
     }
 
     function undelegate(

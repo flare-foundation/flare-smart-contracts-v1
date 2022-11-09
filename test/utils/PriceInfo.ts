@@ -8,10 +8,10 @@ export class PriceInfo {
   private _epochId!: string;
   private _priceRevealed!: number;
   private _priceSubmitted!: number;
-  private _random!: BN;
+  private _random!: number;
   private _status: string = this.SUBMITTING_STATUS;
 
-  constructor(epochId: string, priceSubmitted: number, random: BN) {
+  constructor(epochId: string, priceSubmitted: number, random: number) {
       this._epochId = epochId;
       this._priceSubmitted = priceSubmitted;
       this._random = random;
@@ -37,7 +37,7 @@ export class PriceInfo {
       this._priceRevealed = value;
   }
 
-  public get random(): BN {
+  public get random(): number {
       return this._random;
   }
 

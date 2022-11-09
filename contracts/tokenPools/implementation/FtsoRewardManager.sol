@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */    
 
 //solhint-disable-next-line max-states-count
-contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard {
+contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenPool, Governed, ReentrancyGuard {
     using SafePct for uint256;
     using SafeMath for uint256;
 
@@ -55,14 +55,14 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard {
     uint256 constant internal MAX_BIPS = 1e4;
     uint256 constant internal ALMOST_FULL_DAY_SEC = 86399;
 
-    bool public override active;
+    bool public active;
 
     uint256 public immutable feePercentageUpdateOffset; // fee percentage update timelock measured in reward epochs
     uint256 public immutable defaultFeePercentage; // default value for fee percentage
         
     // id of the first epoch to expire. Closed = expired and unclaimed funds sent back
     uint256 private nextRewardEpochToExpire; 
-
+    
     /**
      * @dev Provides a mapping of reward epoch ids to an address mapping of unclaimed rewards.
      */
@@ -89,7 +89,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard {
     /// addresses
     IIFtsoManager public ftsoManager;
     address private inflation;
-    WNat public wNat;
+    WNat public wNat; 
 
     modifier mustBalance {
         _;
@@ -602,13 +602,6 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard {
         return (0, totalInflationAuthorizedWei, totalClaimedWei);
     }
 
-    /**
-     * @notice Implement this function for updating inflation receiver contracts through AddressUpdater.
-     */
-    function getContractName() external pure override returns (string memory) {
-        return "FtsoRewardManager";
-    }
-
     function _handleSelfDestructProceeds() internal returns (uint256 _currentBalance, uint256 _expectedBalance) {
         _expectedBalance = lastBalance.add(msg.value);
         _currentBalance = address(this).balance;
@@ -683,7 +676,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard {
         if (_rewardAmount > 0) {
             // transfer total amount (state is updated and events are emitted in _claimReward)
             /* solhint-disable avoid-low-level-calls */
-            //slither-disable-next-line arbitrary-send          // amount always calculated by _claimReward
+            //slither-disable-next-line arbitrary-send-eth      // amount always calculated by _claimReward
             (bool success, ) = _recipient.call{value: _rewardAmount}("");
             /* solhint-enable avoid-low-level-calls */
             require(success, ERR_CLAIM_FAILED);

@@ -101,20 +101,12 @@ contract InflationReceiverAndTokenPoolMock is IIInflationReceiver, IITokenPool, 
     {
         return (foundationAllocatedFundsWei, totalInflationAuthorizedWei, totalClaimedWei);
     }
-    
-    function getInflationAddress() external view override returns(address) {
-        return inflation;
-    }
-
-    function getContractName() external pure override returns (string memory) {
-        return "InflationReceiverAndTokenPoolMock";
-    }
 
     function _transferReward(address payable _recipient, uint256 _rewardAmount) internal {
         if (_rewardAmount > 0) {
             // transfer total amount (state is updated and events are emitted in _claimReward)
             /* solhint-disable avoid-low-level-calls */
-            //slither-disable-next-line arbitrary-send          // amount always calculated by _claimReward
+            //slither-disable-next-line arbitrary-send-eth      // amount always calculated by _claimReward
             (bool success, ) = _recipient.call{value: _rewardAmount}("");
             /* solhint-enable avoid-low-level-calls */
             require(success, ERR_CLAIM_FAILED);
@@ -138,5 +130,9 @@ contract InflationReceiverAndTokenPoolMock is IIInflationReceiver, IITokenPool, 
             .add(totalInflationReceivedWei)
             .add(totalSelfDestructReceivedWei)
             .sub(totalClaimedWei);
+    }
+
+    function getInflationAddress() external view override returns(address) {
+        return inflation;
     }
 }

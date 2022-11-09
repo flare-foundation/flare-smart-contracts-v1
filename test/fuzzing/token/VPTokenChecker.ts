@@ -1,6 +1,5 @@
 import { WNatInstance } from "../../../typechain-truffle";
-import { BN_ZERO, Nullable } from "../../utils/fuzzing-utils";
-import { toBN } from "../../utils/test-helpers";
+import { BN_ZERO, Nullable, toBN } from "./FuzzingUtils";
 import { VPTokenState } from "./VPTokenState";
 
 export class VPTokenChecker {
@@ -72,7 +71,7 @@ export class VPTokenChecker {
     }
 
     async totalBalance() {
-        let total = BN_ZERO;
+        let total = toBN(0);
         for (const account of this.accounts) {
             total = total.add(await this.balanceOf(account));
         }
@@ -80,7 +79,7 @@ export class VPTokenChecker {
     }
 
     async totalVotePowerCalculated() {
-        let total = BN_ZERO;
+        let total = toBN(0);
         for (const account of this.accounts) {
             const vp = await this.votePowerOf(account);
             const revoked = this.state.revokedVotePower(account);

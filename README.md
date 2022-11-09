@@ -1,15 +1,3 @@
-![coverage](https://gitlab.com/flarenetwork/flare-smart-contracts/badges/master/coverage.svg?job=coverage:on-schedule) 
-![pipeline](https://gitlab.com/flarenetwork/flare-smart-contracts/badges/master/pipeline.svg)
-
-![licence](https://img.shields.io/badge/Licence-MIT-green?style=plastic)
-
-# Testing report
-![Slither_badge](https://img.shields.io/endpoint?style=plastic&url=https%3A%2F%2Fgitlab.com%2Fflarenetwork%2Fflare-smart-contracts%2F-%2Fjobs%2Fartifacts%2Fmaster%2Fraw%2Fslither_badge.json%3Fjob%3Dslither-check%26file_type%3Darchive)
-![Linter_badge](https://img.shields.io/endpoint?style=plastic&url=https%3A%2F%2Fgitlab.com%2Fflarenetwork%2Fflare-smart-contracts%2F-%2Fjobs%2Fartifacts%2Fmaster%2Fraw%2Fsolhint_badge.json%3Fjob%3Dtest-linter%26file_type%3Darchive)
-![Fuzzer_token](https://img.shields.io/endpoint?style=plastic&url=https%3A%2F%2Fgitlab.com%2Fflarenetwork%2Fflare-smart-contracts%2F-%2Fjobs%2Fartifacts%2Fmaster%2Fraw%2Ffuzzer_token_badge.json%3Fjob%3Dtest-fuzzing-token%26file_type%3Darchive)
-![Fuzzer_e2e](https://img.shields.io/endpoint?url=https%3A%2F%2Fgitlab.com%2Fflarenetwork%2Fflare-smart-contracts%2F-%2Fjobs%2Fartifacts%2Fmaster%2Fraw%2Fe2e_fuzzer_badge.json%3Fjob%3De2e-fuzzer%3Aon-schedule%26file_type%3Darchive)
-
-
 # Flare Network smart contracts repository
 
 Contracts cover the following *Flare network* building blocks:
@@ -18,9 +6,10 @@ Contracts cover the following *Flare network* building blocks:
 - [FTSO Manager](contracts/ftso/implementation/FtsoManager.sol).
 - Token pools for reward and distribution.
    - [FTSO Reward manager](contracts/tokenPools/implementation/FtsoRewardManager.sol).
-   - [Distribution contract](contracts/tokenPools/Distribution.sol)
+   - [Data availability reward manager] (contracts/tokenPools/DataAvailabilityRewardManager.sol)
+   - [Distribution contract] (contracts/tokenPools/Distribution.sol)
 - [Flare Daemon](contracts/genesis/implementation/FlareDaemon.sol), a special system trigger contract.
-- [Flare Inflation](contracts/inflation/implementation/Inflation.sol) tracking and [allocation](contracts/inflation/implementation/InflationAllocation.sol).
+- [Flare Inflation](contracts/inflation/implementation/Inflation.sol) tracking and [allocation](contracts/governance/implementation/InflationAllocation.sol).
 - [Supply accounting system](contracts/inflation/implementation/Supply.sol) of FLR tokens.
 
 ## Token contracts 

@@ -83,20 +83,20 @@ async function main() {
 
     // Get submission config
     const {
-        0: firstEpochStartTsBN,
-        1: submitPeriodSecondsBN,
-        2: revealPeriodSecondsBN,
+        0: firstEpochStartTimeBN,
+        1: submitPeriodBN,
+        2: revealPeriodBN,
     } = (await ftsos[0].getPriceEpochConfiguration());
 
-    const [firstEpochStartTs, submitPeriodSeconds, revealPeriodSeconds] = 
-        [firstEpochStartTsBN, submitPeriodSecondsBN, revealPeriodSecondsBN].map(x => x.toNumber());
+    const [firstEpochStartTime, submitPeriod, revealPeriod] = 
+        [firstEpochStartTimeBN, submitPeriodBN, revealPeriodBN].map(x => x.toNumber());
 
     // Sync time to start on next full transaction id
     // For a real setting, make sure that computer time is synced with a reliable time provider
     // Take blockchain time
     let now = await getTime();
-    const startingEpoch = (Math.floor((now - firstEpochStartTs) / submitPeriodSeconds) + 1);
-    let next = startingEpoch * submitPeriodSeconds + firstEpochStartTs;
+    const startingEpoch = (Math.floor((now - firstEpochStartTime) / submitPeriod) + 1);
+    let next = startingEpoch * submitPeriod + firstEpochStartTime;
     let diff = Math.floor(next - now) + 1;
     console.log(`Waiting for ${diff} seconds until first start`); 
     await sleep(diff * 1000);
@@ -125,7 +125,7 @@ async function main() {
         currentEpoch = currentEpoch + 1;
 
         now = await getTime();
-        next = currentEpoch * submitPeriodSeconds + firstEpochStartTs;
+        next = currentEpoch * submitPeriod + firstEpochStartTime;
         diff = Math.floor(next - now);
         console.log(`Waiting for ${diff} seconds until reveal`); 
         await sleep(diff * 1000);

@@ -118,7 +118,7 @@ contract(`PriceSubmitter gas usage tests`, async accounts => {
             try {
                 // will always revert
                 await priceSubmitter.revealPrices(epochId, [index], [price + 1], [random], { from: account, gasPrice: gasPrice, gas: gas });
-            } catch(e: any) {
+            } catch(e) {
                 gasUsed = toBN(e.receipt.gasUsed);
             }
             console.log(gasUsed.toString());

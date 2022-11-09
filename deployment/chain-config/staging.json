@@ -1,6 +1,5 @@
 {
-    "nativeSymbol": "SGB",
-    "nativeFtsoDecimals": 5,
+    "nativeSymbol": "SGB",     
     "wrappedNativeName": "Wrapped Songbird",
     "wrappedNativeSymbol": "WSGB",
     "stateConnectorAddress": "0x1000000000000000000000000000000000000001",
@@ -13,6 +12,7 @@
     "burnAddress": "0x0000000000000000000000000000000000000000",
     "totalNativeSupplyNAT": 100000000000,
     "totalFoundationSupplyNAT": 15000000000,
+    "initialInflationPercentageBIPS": 1000,
     "scheduledInflationPercentageBIPS": [1000, 800, 600],
     "rewardEpochDurationSeconds": 540,
     "revealEpochDurationSeconds": 90,
@@ -38,12 +38,13 @@
     "rewardFeePercentageUpdateOffsetEpochs": 3,
     "defaultRewardFeePercentageBIPS": 0,
     "ftsoRewardExpiryOffsetDays": 30,
+    "dataAvailabilityRewardExpiryOffsetEpochs": 26,
     "initialWnatPriceUSDDec5": 0,
     "priceEpochCyclicBufferSize": 10,
-    "inflationReceivers": ["FtsoRewardManager"],
-    "inflationSharingBIPS": [10000],
-    "inflationTopUpTypes": [0],
-    "inflationTopUpFactorsx100": [300],
+    "inflationReceivers" : ["FtsoRewardManager","DataAvailabilityRewardManager"],
+    "inflationSharingBIPS": [8000, 2000],
+    "inflationTopUpTypes": [0, 0],
+    "inflationTopUpFactorsx100": [300, 300],
     "inflationGasLimit": 2000000,
     "ftsoManagerGasLimit": 40000000,
     "deployDistributionContract": true,
@@ -54,7 +55,6 @@
         {
             "assetSymbol": "XRP",
             "assetDecimals": 6,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset XRP",
             "xAssetSymbol": "sXRP",            
             "dummyAssetMinterMax": 7000000000,
@@ -63,7 +63,6 @@
         {
             "assetSymbol": "LTC",
             "assetDecimals": 8,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset Litecoin",
             "xAssetSymbol": "sLTC",            
             "dummyAssetMinterMax": 4000000000,
@@ -72,7 +71,6 @@
         {
             "assetSymbol": "XLM",
             "assetDecimals": 6,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset XLM (Lumen)",
             "xAssetSymbol": "sXLM",            
             "dummyAssetMinterMax": 7000000000,
@@ -81,7 +79,6 @@
         {
             "assetSymbol": "DOGE",
             "assetDecimals": 8,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset Dogecoin",
             "xAssetSymbol": "sDOGE",            
             "dummyAssetMinterMax": 13000000000000,
@@ -90,7 +87,6 @@
         {
             "assetSymbol": "ADA",
             "assetDecimals": 8,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset ADA (Cardano)",
             "xAssetSymbol": "sADA",            
             "dummyAssetMinterMax": 45000000000,
@@ -99,7 +95,6 @@
         {
             "assetSymbol": "ALGO",
             "assetDecimals": 8,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset Algorand",
             "xAssetSymbol": "sALGO",         
             "dummyAssetMinterMax": 5000000000,
@@ -108,7 +103,6 @@
         {
             "assetSymbol": "BCH",
             "assetDecimals": 8,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset Bitcoin Cash",
             "xAssetSymbol": "sBCH",            
             "dummyAssetMinterMax": 21000000000,
@@ -117,7 +111,6 @@
         {
             "assetSymbol": "DGB",
             "assetDecimals": 8,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset Digibyte",
             "xAssetSymbol": "sDGB",         
             "dummyAssetMinterMax": 10000000000,
@@ -126,7 +119,6 @@
         {
             "assetSymbol": "BTC",
             "assetDecimals": 6,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset BTC",
             "xAssetSymbol": "sBTC",            
             "dummyAssetMinterMax": 7000000000,
@@ -135,7 +127,6 @@
         {
             "assetSymbol": "ETH",
             "assetDecimals": 18,
-            "ftsoDecimals": 5,
             "xAssetName": "sAsset ETH",
             "xAssetSymbol": "sETH",            
             "dummyAssetMinterMax": 10000000000,
@@ -144,8 +135,7 @@
         {
             "assetSymbol": "FIL",
             "assetDecimals": 18,
-            "ftsoDecimals": 5,
-            "xAssetName": "sAsset FIL",
+            "xAssetName": "xAsset FIL",
             "xAssetSymbol": "sFIL",            
             "dummyAssetMinterMax": 10000000000,
             "initialPriceUSDDec5": 0

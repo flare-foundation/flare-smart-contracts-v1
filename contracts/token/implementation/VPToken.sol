@@ -43,7 +43,7 @@ contract VPToken is IIVPToken, ERC20, CheckPointable, Governed {
      * When true, the argument to `setWriteVpContract` must be a vpContract
      * with `isReplacement` set to `true`. To be used for creating the correct VPContract.
      */
-    bool public vpContractInitialized = false;
+    bool public needsReplacementVPContract = false;
 
     /**
      * Event used to track history of VPToken -> VPContract / GovernanceVotePower 
@@ -291,19 +291,6 @@ contract VPToken is IIVPToken, ERC20, CheckPointable, Governed {
     }
 
     /**
-    * @notice Get the vote power of `_owner` at block `_blockNumber`, ignoring revocation information (and cache).
-    * @param _owner The address to get voting power.
-    * @param _blockNumber The block number at which to fetch.
-    * @return Vote power of `_owner` at `_blockNumber`. Result doesn't change if vote power is revoked.
-    */
-    function votePowerOfAtIgnoringRevocation(address _owner, uint256 _blockNumber)
-        external view override
-        returns(uint256) 
-    {
-        return _checkReadVpContract().votePowerOfAtIgnoringRevocation(_owner, _blockNumber);
-    }
-
-    /**
      * Return vote powers for several addresses in a batch.
      * @param _owners The list of addresses to fetch vote power of.
      * @param _blockNumber The block number at which to fetch.
@@ -391,17 +378,17 @@ contract VPToken is IIVPToken, ERC20, CheckPointable, Governed {
     {
         require(_from != _to, "Cannot transfer to self");
         
-        uint256 fromBalance = _from != address(0) ? balanceOf(_from) : 0;
-        uint256 toBalance = _to != address(0) ? balanceOf(_to) : 0;
+        uint256 fromBalance = balanceOf(_from);
+        uint256 toBalance = balanceOf(_to);
         
         // update vote powers
         IIVPContract vpc = writeVpContract;
         if (address(vpc) != address(0)) {
             vpc.updateAtTokenTransfer(_from, _to, fromBalance, toBalance, _amount);
-        } else if (!vpContractInitialized) {
+        } else if (!needsReplacementVPContract) {
             // transfers without vpcontract are allowed, but after they are made
             // any added vpcontract must have isReplacement set
-            vpContractInitialized = true;
+            needsReplacementVPContract = true;
         }
         
         // update governance vote powers
@@ -445,12 +432,12 @@ contract VPToken is IIVPToken, ERC20, CheckPointable, Governed {
         if (address(_vpContract) != address(0)) {
             require(address(_vpContract.ownerToken()) == address(this),
                 "VPContract not owned by this token");
-            require(!vpContractInitialized || _vpContract.isReplacement(),
+            require(!needsReplacementVPContract || _vpContract.isReplacement(),
                 "VPContract not configured for replacement");
             // set contract's cleanup block
             _vpContract.setCleanupBlockNumber(_cleanupBlockNumber());
             // once a non-null vpcontract is set, every other has to have isReplacement flag set
-            vpContractInitialized = true;
+            needsReplacementVPContract = true;
         }
         emit VotePowerContractChanged(1, address(writeVpContract), address(_vpContract));
         writeVpContract = _vpContract;
