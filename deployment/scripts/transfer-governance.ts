@@ -7,6 +7,7 @@ export async function transferGovernance(
   deployerPrivateKey: string, 
   genesisGovernancePrivateKey: string,
   newGovernanceAccountAddress: string,
+  dataAvailabilityRewardManagerDeployed: boolean,
   distributionDeployed: boolean,
   quiet: boolean = false) {
 
@@ -37,12 +38,12 @@ export async function transferGovernance(
   web3.eth.defaultAccount = deployerAccount.address;
   
   // Contract definitions
-  const AddressUpdater = artifacts.require("AddressUpdater");
   const InflationAllocation = artifacts.require("InflationAllocation");
   const FlareDaemon = artifacts.require("FlareDaemon");
   const FtsoManager = artifacts.require("FtsoManager");
   const Inflation = artifacts.require("Inflation");
   const FtsoRewardManager = artifacts.require("FtsoRewardManager");
+  const DataAvailabilityRewardManager = artifacts.require("DataAvailabilityRewardManager");
   const PriceSubmitter = artifacts.require("PriceSubmitter");
   const Supply = artifacts.require("Supply");
   const VoterWhitelister = artifacts.require("VoterWhitelister");
@@ -52,7 +53,6 @@ export async function transferGovernance(
   const WNat = artifacts.require("WNat");
 
   // Get deployed contracts
-  const addressUpdater = await AddressUpdater.at(contracts.getContractAddress(Contracts.ADDRESS_UPDATER));
   const supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
   const inflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
   const inflationAllocation = await InflationAllocation.at(contracts.getContractAddress(Contracts.INFLATION_ALLOCATION));
@@ -66,12 +66,15 @@ export async function transferGovernance(
   const wNat = await WNat.at(contracts.getContractAddress(Contracts.WNAT));
 
   // Transfer
-  await addressUpdater.transferGovernance(newGovernanceAccountAddress);
   await supply.transferGovernance(newGovernanceAccountAddress);
   await inflation.transferGovernance(newGovernanceAccountAddress);
   await inflationAllocation.transferGovernance(newGovernanceAccountAddress);
   await flareDaemon.transferGovernance(newGovernanceAccountAddress);
   await ftsoRewardManager.transferGovernance(newGovernanceAccountAddress);
+  if (dataAvailabilityRewardManagerDeployed) {
+    const dataAvailabilityRewardManager = await DataAvailabilityRewardManager.at(contracts.getContractAddress(Contracts.DATA_AVAILABILITY_REWARD_MANAGER));
+    await dataAvailabilityRewardManager.transferGovernance(newGovernanceAccountAddress);
+  }
   if (distributionDeployed) {
     const distribution = await Distribution.at(contracts.getContractAddress(Contracts.DISTRIBUTION));
     await distribution.transferGovernance(newGovernanceAccountAddress);

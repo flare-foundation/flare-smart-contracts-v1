@@ -6,10 +6,11 @@ import  "../../genesis/implementation/FlareDaemon.sol";
 import "../../genesis/interface/IFlareDaemonize.sol";
 import "../../genesis/interface/IInflationGenesis.sol";
 import "../../utils/implementation/GovernedAndFlareDaemonized.sol";
-import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "../lib/InflationAnnum.sol";
 import "../lib/InflationAnnums.sol";
-import "../interface/IIInflationAllocation.sol";
+import "../interface/IIInflationPercentageProvider.sol";
+import "../interface/IIInflationReceiver.sol";
+import "../interface/IIInflationSharingPercentageProvider.sol";
 import "../lib/RewardService.sol"; 
 import "../interface/IISupply.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -21,13 +22,14 @@ import "../../utils/implementation/SafePct.sol";
  *   native tokens for Flare services that are rewardable by inflation.
  * @dev Please see docs/specs/Inflation.md to better understand this terminology.
  **/
-contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemonize, AddressUpdatable {
+contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemonize {
     using InflationAnnums for InflationAnnums.InflationAnnumsState;
     using SafeMath for uint256;
     using SafePct for uint256;
 
     // Composable contracts
-    IIInflationAllocation public inflationAllocation;
+    IIInflationPercentageProvider public inflationPercentageProvider;
+    IIInflationSharingPercentageProvider public inflationSharingPercentageProvider;
     IISupply public supply;
 
     // The annums
@@ -39,6 +41,8 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         internal topupConfigurations;                                   // A topup configuration for a contract
                                                                         //   receiving inflation.
     uint256 public totalSelfDestructReceivedWei;
+    //slither-disable-next-line uninitialized-state                     // no problem, will be zero initialized anyway
+    uint256 public totalSelfDestructWithdrawnWei;
     uint256 immutable public rewardEpochStartTs;                        // Do not start inflation annums before this
     uint256 public rewardEpochStartedTs;                                // When the first reward epoch was started
 
@@ -58,7 +62,9 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
     event InflationAuthorized(uint256 amountWei);
     event MintingReceived(uint256 amountWei, uint256 selfDestructAmountWei);
     event TopupRequested(uint256 amountWei);
-    event InflationAllocationSet(IIInflationAllocation inflationAllocation);
+    event InflationPercentageProviderSet(IIInflationPercentageProvider inflationPercentageProvider);
+    event InflationSharingPercentageProviderSet(
+        IIInflationSharingPercentageProvider inflationSharingPercentageProvider);
     event RewardServiceTopupComputed(IIInflationReceiver inflationReceiver, uint256 amountWei);
     event RewardServiceDailyAuthorizedInflationComputed(IIInflationReceiver inflationReceiver, uint256 amountWei);
     event RewardServiceTopupRequestReceived(IIInflationReceiver inflationReceiver, uint256 amountWei);
@@ -92,12 +98,16 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
     constructor (
         address _governance, 
         FlareDaemon _flareDaemon,
-        address _addressUpdater,
+        IIInflationPercentageProvider _inflationPercentageProvider,
+        IIInflationSharingPercentageProvider _inflationSharingPercentageProvider,
         uint256 _rewardEpochStartTs
     )
         GovernedAndFlareDaemonized(_governance, _flareDaemon)
-        AddressUpdatable(_addressUpdater)
+        notZero(address(_inflationPercentageProvider))
+        notZero(address(_inflationSharingPercentageProvider))
     {
+        inflationPercentageProvider = _inflationPercentageProvider;
+        inflationSharingPercentageProvider = _inflationSharingPercentageProvider;
         rewardEpochStartTs = _rewardEpochStartTs;
     }
 
@@ -109,6 +119,7 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
      * @return _totalInflationTopupWithdrawnWei Total inflation used for funding reward services
      * @return _totalRecognizedInflationWei     Total inflation recognized for rewarding
      * @return _totalSelfDestructReceivedWei    Total balance received as a self-destruct recipient
+     * @return _totalSelfDestructWithdrawnWei   Total self-destruct balance withdrawn
      */
     function getTotals()
         external view 
@@ -118,7 +129,8 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
             uint256 _totalInflationTopupReceivedWei,
             uint256 _totalInflationTopupWithdrawnWei,
             uint256 _totalRecognizedInflationWei,
-            uint256 _totalSelfDestructReceivedWei
+            uint256 _totalSelfDestructReceivedWei,
+            uint256 _totalSelfDestructWithdrawnWei
         )
     {
         _totalAuthorizedInflationWei = inflationAnnums.totalAuthorizedInflationWei;
@@ -127,6 +139,7 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         _totalInflationTopupWithdrawnWei = inflationAnnums.totalInflationTopupWithdrawnWei;
         _totalRecognizedInflationWei = inflationAnnums.totalRecognizedInflationWei;
         _totalSelfDestructReceivedWei = totalSelfDestructReceivedWei;
+        _totalSelfDestructWithdrawnWei = totalSelfDestructWithdrawnWei;
     }
 
     /**
@@ -166,6 +179,51 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
             totalSelfDestructReceivedWei = totalSelfDestructReceivedWei.add(selfDestructProceeds);
         }
         emit MintingReceived(amountPostedWei, selfDestructProceeds);
+    }
+
+    /**
+     * @notice Set a reference to a provider of the annual inflation percentage.
+     * @param _inflationPercentageProvider  A contract providing the annual inflation percentage.
+     * @dev Assume that referencing contract has reasonablness limitations on percentages.
+     */
+    function setInflationPercentageProvider(
+        IIInflationPercentageProvider _inflationPercentageProvider
+    )
+        external
+        notZero(address(_inflationPercentageProvider))
+        onlyGovernance
+    {
+        inflationPercentageProvider = _inflationPercentageProvider;
+
+        emit InflationPercentageProviderSet(_inflationPercentageProvider);
+    }
+
+    /**
+     * @notice Set a reference to a provider of sharing percentages by inflation receiver.
+     * @param _inflationSharingPercentageProvider   A contract providing sharing percentages.
+     * @dev Assume that sharing percentages sum to 100% if at least one exists, but
+     *   if no sharing percentages are defined, then no inflation will be authorized.
+     */
+    function setInflationSharingPercentageProvider(
+        IIInflationSharingPercentageProvider _inflationSharingPercentageProvider
+    )
+        external
+        notZero(address(_inflationSharingPercentageProvider))
+        onlyGovernance
+    {
+        inflationSharingPercentageProvider = _inflationSharingPercentageProvider;
+
+        emit InflationSharingPercentageProviderSet(_inflationSharingPercentageProvider);
+    }
+
+    /**
+     * @notice Set a reference to the Supply contract.
+     * @param _supply   The Supply contract.
+     * @dev The supply contract is used to get and update the inflatable balance.
+     */
+    function setSupply(IISupply _supply) external notZero(address(_supply)) onlyGovernance {
+        emit SupplySet(supply, _supply);
+        supply = _supply;
     }
 
     /**
@@ -259,7 +317,7 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         }
 
         // Is it time to authorize new inflation? Do it daily.
-        if (lastAuthorizationTs.add(AUTHORIZE_TIME_FRAME_SEC) <= block.timestamp) {
+        if (lastAuthorizationTs.add(AUTHORIZE_TIME_FRAME_SEC) < block.timestamp) {
 
             // Update time we last authorized.
             lastAuthorizationTs = block.timestamp;
@@ -267,7 +325,7 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
             // Authorize inflation for current sharing percentges.
             uint256 amountAuthorizedWei = inflationAnnums.authorizeDailyInflation(
                 block.timestamp,
-                inflationAllocation.getSharingPercentages()
+                inflationSharingPercentageProvider.getSharingPercentages()
             );
 
             emit InflationAuthorized(amountAuthorizedWei);
@@ -301,51 +359,10 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         return false;
     }
 
-    /**
-     * @notice Implement this function for updating daemonized contracts through AddressUpdater.
-     */
-    function getContractName() external pure override returns (string memory) {
-        return "Inflation";
-    }
-
-    /**
-     * @notice Returns next expected inflation topup time stamp which is also inflation authorization time. 
-     *     The returned time from this API is actually the time of the block in which the topup is requested. 
-     *     The Actual topup will take place in the next block. 
-     *     Expected diff is up to a few seconds (max is less then a minute).
-     */
-    function getNextExpectedTopupTs () external view returns (uint256 _nextTopupTs) {
-        _nextTopupTs = lastAuthorizationTs.add(AUTHORIZE_TIME_FRAME_SEC);
-    }
-
-    /**
-     * @notice Implementation of the AddressUpdatable abstract method - updates supply and inflation allocation.
-     * @notice Set a reference to a provider of sharing percentages by inflation receiver.
-     * @dev Assume that sharing percentages sum to 100% if at least one exists, but
-     *   if no sharing percentages are defined, then no inflation will be authorized.
-     * @notice Set a reference to a provider of the annual inflation percentage.
-     * @dev Assume that referencing contract has reasonablness limitations on percentages.
-     */
-    function _updateContractAddresses(
-        bytes32[] memory _contractNameHashes,
-        address[] memory _contractAddresses
-    )
-        internal override
-    {
-        IISupply _supply = IISupply(_getContractAddress(_contractNameHashes, _contractAddresses, "Supply"));
-        emit SupplySet(supply, _supply);
-        supply = _supply;
-
-        inflationAllocation = IIInflationAllocation(
-            _getContractAddress(_contractNameHashes, _contractAddresses, "InflationAllocation"));
-
-        emit InflationAllocationSet(inflationAllocation);
-    }
-
     function _initNewAnnum(uint256 startTs) internal {
         uint256 inflatableSupply = supply.getInflatableBalance();
 
-        try inflationAllocation.getAnnualPercentageBips() returns(uint256 annualPercentBips) {
+        try inflationPercentageProvider.getAnnualPercentageBips() returns(uint256 annualPercentBips) {
             inflationAnnums.initializeNewAnnum(startTs, inflatableSupply, annualPercentBips);
         } catch Error(string memory message) {
             revert(message);
@@ -375,6 +392,7 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
     function getExpectedBalance() private view returns(uint256 _balanceExpectedWei) {
         return inflationAnnums.totalInflationTopupReceivedWei        
             .sub(inflationAnnums.totalInflationTopupWithdrawnWei)
-            .add(totalSelfDestructReceivedWei);
+            .add(totalSelfDestructReceivedWei)
+            .sub(totalSelfDestructWithdrawnWei);
     }
 }

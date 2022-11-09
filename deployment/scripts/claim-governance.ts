@@ -5,6 +5,7 @@ export async function claimGovernance(
   hre: HardhatRuntimeEnvironment,
   contracts: Contracts,
   governanceClaimaintPrivateKey: string,
+  dataAvailabilityRewardManagerDeployed: boolean,
   distributionDeployed: boolean,
   quiet: boolean = false) {
 
@@ -34,12 +35,12 @@ export async function claimGovernance(
   }
   
   // Contract definitions
-  const AddressUpdater = artifacts.require("AddressUpdater");
   const InflationAllocation = artifacts.require("InflationAllocation");
   const FlareDaemon = artifacts.require("FlareDaemon");
   const FtsoManager = artifacts.require("FtsoManager");
   const Inflation = artifacts.require("Inflation");
   const FtsoRewardManager = artifacts.require("FtsoRewardManager");
+  const DataAvailabilityRewardManager = artifacts.require("DataAvailabilityRewardManager");
   const PriceSubmitter = artifacts.require("PriceSubmitter");
   const Supply = artifacts.require("Supply");
   const VoterWhitelister = artifacts.require("VoterWhitelister");
@@ -49,7 +50,6 @@ export async function claimGovernance(
   const WNat = artifacts.require("WNat");
 
   // Get deployed contracts
-  const addressUpdater = await AddressUpdater.at(contracts.getContractAddress(Contracts.ADDRESS_UPDATER));
   const supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
   const inflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
   const inflationAllocation = await InflationAllocation.at(contracts.getContractAddress(Contracts.INFLATION_ALLOCATION));
@@ -60,15 +60,18 @@ export async function claimGovernance(
   const voterWhitelister = await VoterWhitelister.at(contracts.getContractAddress(Contracts.VOTER_WHITELISTER));
   const cleanupBlockNumberManager = await CleanupBlockNumberManager.at(contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER));
   const ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
-  const wNat = await WNat.at(contracts.getContractAddress(Contracts.WNAT));
+  const wNat = await FtsoRegistry.at(contracts.getContractAddress(Contracts.WNAT));
 
   // Claim
-  await addressUpdater.claimGovernance({from: claimantAccount.address});
   await supply.claimGovernance({from: claimantAccount.address});
   await inflation.claimGovernance({from: claimantAccount.address});
   await inflationAllocation.claimGovernance({from: claimantAccount.address});
   await flareDaemon.claimGovernance({from: claimantAccount.address});
   await ftsoRewardManager.claimGovernance({from: claimantAccount.address});
+  if (dataAvailabilityRewardManagerDeployed) {
+    const dataAvailabilityRewardManager = await DataAvailabilityRewardManager.at(contracts.getContractAddress(Contracts.DATA_AVAILABILITY_REWARD_MANAGER));
+    await dataAvailabilityRewardManager.claimGovernance({from: claimantAccount.address});
+  }
   if (distributionDeployed) {
     const distribution = await Distribution.at(contracts.getContractAddress(Contracts.DISTRIBUTION));
     await distribution.claimGovernance({from: claimantAccount.address});

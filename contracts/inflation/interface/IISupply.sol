@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6 <0.9;
+pragma solidity 0.7.6;
 
 
 interface IISupply {
+
+    /**
+     * @notice Sets inflation contract. Only governance can call this method.
+     */
+    function setInflation(address _inflation) external;
 
     /**
      * @notice Updates authorized inflation and circulating supply - emits event if error

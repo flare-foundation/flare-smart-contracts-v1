@@ -1,19 +1,20 @@
-import { time } from '@openzeppelin/test-helpers';
-import {
-    FlareDaemonInstance,
-    MockContractInstance,
-    PriceSubmitterInstance
-} from "../../../typechain-truffle";
-import { FLARE_DAEMON_ADDRESS, PRICE_SUBMITTER_ADDRESS } from "../../utils/constants";
-import { spewDaemonErrors } from "../../utils/FlareDaemonTestUtils";
-import { advanceBlock } from '../../utils/test-helpers';
+import { FlareDaemonInstance, 
+  MockContractInstance, 
+  PriceSubmitterInstance} from "../../../typechain-truffle";
 
+import {constants, time} from '@openzeppelin/test-helpers';
 const getTestFile = require('../../utils/constants').getTestFile;
 const GOVERNANCE_GENESIS_ADDRESS = require('../../utils/constants').GOVERNANCE_GENESIS_ADDRESS;
+import { advanceBlock, waitFinalize, waitFinalize3 } from '../../utils/test-helpers';
+import { spewDaemonErrors } from "../../utils/FlareDaemonTestUtils";
+import { FLARE_DAEMON_ADDRESS, PRICE_SUBMITTER_ADDRESS } from "../../utils/constants";
+
+const BN = web3.utils.toBN;
 
 const FlareDaemon = artifacts.require("FlareDaemon");
 const PriceSubmitter = artifacts.require("PriceSubmitter");
 const FtsoManager = artifacts.require("FtsoManager");
+const RewardManagerMock = artifacts.require("MockContract");
 const MockContract = artifacts.require("MockContract");
 
 
@@ -23,16 +24,13 @@ const MockContract = artifacts.require("MockContract");
  * It does not assume that contracts are deployed, other than the FlareDaemon, which should
  * already be loaded in the genesis block.
  */
-contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`, async accounts => {
+ contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`, async accounts => {
     // Static address of the daemon and price submitter on a local network
     let flareDaemon: FlareDaemonInstance;
     let priceSubmitter: PriceSubmitterInstance;
 
     // fresh contracts for each test
     let rewardManagerMock: MockContractInstance;
-    let voterWhitelisterMock: MockContractInstance;
-    let supplyMock: MockContractInstance;
-    let cleanupBlockNumberManagerMock: MockContractInstance;
     let inflationMock: MockContractInstance;
     let ftsoRegistryMock: MockContractInstance;
     let startTs: any;
@@ -47,7 +45,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`
         // Make sure daemon is initialized with a governance address...if may revert if already done.
         try {
             await flareDaemon.initialiseFixedAddress();
-            await flareDaemon.setInflation(inflationMock.address, { from: GOVERNANCE_GENESIS_ADDRESS });
+            await flareDaemon.setInflation(inflationMock.address, {from: GOVERNANCE_GENESIS_ADDRESS});
         } catch (e) {
             const governanceAddress = await flareDaemon.governance();
             if (GOVERNANCE_GENESIS_ADDRESS != governanceAddress) {
@@ -67,10 +65,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`
     });
 
     beforeEach(async() => {
-        rewardManagerMock = await MockContract.new();
-        voterWhitelisterMock = await MockContract.new();
-        supplyMock = await MockContract.new();
-        cleanupBlockNumberManagerMock = await MockContract.new();
+        rewardManagerMock = await RewardManagerMock.new();
         // Force a block in order to get most up to date time
         await time.advanceBlock();
         // Get the timestamp for the just mined block
@@ -91,12 +86,23 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`
               600,
               4
             );
+            await ftsoManager.setContractAddresses(
+              rewardManagerMock.address,
+              ftsoRegistryMock.address,
+              constants.ZERO_ADDRESS,
+              constants.ZERO_ADDRESS,
+              constants.ZERO_ADDRESS,
+              {from: GOVERNANCE_GENESIS_ADDRESS}
+            );
 
-            await ftsoManager.setContractAddresses(rewardManagerMock.address, ftsoRegistryMock.address, voterWhitelisterMock.address, supplyMock.address, cleanupBlockNumberManagerMock.address, {from: GOVERNANCE_GENESIS_ADDRESS});
-        
             await ftsoManager.setGovernanceParameters(10, 10, 500, 100000, 5000, 300, 50000, [], {from: GOVERNANCE_GENESIS_ADDRESS});
 
-            await priceSubmitter.setContractAddresses(ftsoRegistryMock.address, voterWhitelisterMock.address, ftsoManager.address, {from: GOVERNANCE_GENESIS_ADDRESS});
+            await priceSubmitter.setContractAddresses(
+              ftsoRegistryMock.address, 
+              constants.ZERO_ADDRESS, 
+              ftsoManager.address, 
+              {from: GOVERNANCE_GENESIS_ADDRESS}
+            );
 
             await flareDaemon.registerToDaemonize([{daemonizedContract: ftsoManager.address, gasLimit: 0}], {from: GOVERNANCE_GENESIS_ADDRESS});
             // Act
@@ -113,8 +119,8 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; FtsoManager system tests`
             // an active reward epoch.
             await spewDaemonErrors(flareDaemon);
             //assert.equal(await spewDaemonErrors(flareDaemon), 0);
-            const { 0: votepowerBlock } = await ftsoManager.rewardEpochs(0);
-            assert(votepowerBlock.toNumber() != 0);
+            const { 1: rewardEpochStartBlock } = await ftsoManager.rewardEpochs(0);
+            assert(rewardEpochStartBlock.toNumber() != 0);
         });
     });
 });

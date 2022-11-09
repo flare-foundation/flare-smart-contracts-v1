@@ -2,7 +2,7 @@
  * End-to-end system test running the validator. Assumes validator is running and contracts are deployed.
  * Contract json file is to be fed in to stdin.
  */
- import { 
+import { 
   FlareDaemonContract, 
   FlareDaemonInstance, 
   FtsoContract, 
@@ -179,7 +179,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     FtsoManager = artifacts.require("FtsoManager");
     ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
     FtsoRegistry = artifacts.require("FtsoRegistry");
-    ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
+    ftsoRegistry = await FtsoRegistry.at(await ftsoManager.ftsoRegistry());
     PriceSubmitter = artifacts.require("PriceSubmitter");
     priceSubmiter = await PriceSubmitter.at(contracts.getContractAddress(Contracts.PRICE_SUBMITTER));
     VoterWhitelister = artifacts.require("VoterWhitelister");
@@ -202,8 +202,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
     rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
+    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
 
     console.log("Depositing and delegating NAT...");
 
@@ -291,6 +291,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
 
     console.log("Waiting for reward finalization to start...");
 
+    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
     const rewardEpochId = await ftsoManager.getCurrentRewardEpoch();
 
     await waitTillRewardFinalizeStart(

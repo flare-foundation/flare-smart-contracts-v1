@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6 <0.9;
+pragma solidity 0.7.6;
 
 interface IIInflationReceiver {
     /**
@@ -17,9 +17,4 @@ interface IIInflationReceiver {
      * Inflation receivers have a reference to the Inflation contract.
      */
     function getInflationAddress() external returns(address);
-    
-    /**
-     * Implement this function for updating inflation receiver contracts through AddressUpdater.
-     */
-    function getContractName() external view returns (string memory);
 }

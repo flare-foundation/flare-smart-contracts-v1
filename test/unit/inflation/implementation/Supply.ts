@@ -1,8 +1,8 @@
 import { FtsoRewardManagerInstance, MockContractInstance, SupplyInstance } from "../../../../typechain-truffle";
-import { encodeContractNames, getAddressWithZeroBalance, increaseTimeTo, toBN } from "../../../utils/test-helpers";
+import { increaseTimeTo, toBN } from "../../../utils/test-helpers";
 import {constants, expectRevert, expectEvent, time} from '@openzeppelin/test-helpers';
-import { Contracts } from "../../../../deployment/scripts/Contracts";
 const getTestFile = require('../../../utils/constants').getTestFile;
+const Wallet = require('ethereumjs-wallet').default;
 
 const Supply = artifacts.require("Supply");
 const MockTokenPool = artifacts.require("MockContract");
@@ -35,8 +35,16 @@ async function updateTokenPoolReturnData(tokenPool: MockContractInstance, totalS
     await tokenPool.givenMethodReturn(getTokenPoolSupplyData, getTokenPoolSupplyDataReturn);
 }
 
+async function getAddressWithZeroBalance() {
+    let wallet = Wallet.generate();
+    while(toBN(await web3.eth.getBalance(wallet.getChecksumAddressString())).gtn(0)) {
+        wallet = Wallet.generate();
+    }
+    return wallet.getChecksumAddressString();
+}
+
 contract(`Supply.sol; ${getTestFile(__filename)}; Supply unit tests`, async accounts => {
-    const ADDRESS_UPDATER = accounts[16];
+
     const governanceAddress = accounts[10];
     const inflationAddress = accounts[9];
     // contains a fresh contract for each test 
@@ -45,14 +53,15 @@ contract(`Supply.sol; ${getTestFile(__filename)}; Supply unit tests`, async acco
 
     beforeEach(async() => {
         burnAddress = await getAddressWithZeroBalance();
-        supply = await Supply.new(governanceAddress, ADDRESS_UPDATER, burnAddress, initialGenesisAmountWei, totalFoundationSupplyWei, []);
-        await supply.updateContractAddresses(
-            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-            [ADDRESS_UPDATER, inflationAddress], {from: ADDRESS_UPDATER});
+        supply = await Supply.new(governanceAddress, burnAddress, inflationAddress, initialGenesisAmountWei, totalFoundationSupplyWei, []);
+    });
+
+    it("Should revert deploying supply - inflation zero", async() => {
+        await expectRevert(Supply.new(governanceAddress, burnAddress, constants.ZERO_ADDRESS, initialGenesisAmountWei, totalFoundationSupplyWei, []), "inflation zero");
     });
 
     it("Should revert deploying supply - initial genesis amount zero", async() => {
-        await expectRevert(Supply.new(governanceAddress, ADDRESS_UPDATER, burnAddress, 0, totalFoundationSupplyWei, []), "initial genesis amount zero");
+        await expectRevert(Supply.new(governanceAddress, burnAddress, inflationAddress, 0, totalFoundationSupplyWei, []), "initial genesis amount zero");
     });
 
     it("Should know about inflation", async() => {
@@ -69,17 +78,13 @@ contract(`Supply.sol; ${getTestFile(__filename)}; Supply unit tests`, async acco
 
     it("Should change inflation", async() => {
         expect(await supply.inflation()).to.equals(inflationAddress);
-        await supply.updateContractAddresses(
-            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-            [ADDRESS_UPDATER, accounts[8]], {from: ADDRESS_UPDATER});
+        await supply.setInflation(accounts[8], { from: governanceAddress});
         expect(await supply.inflation()).to.not.equals(inflationAddress);
         expect(await supply.inflation()).to.equals(accounts[8]);
     });
 
-    it("Should revert changing inflation if not from address updater", async() => {
-        await expectRevert(supply.updateContractAddresses(
-            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-            [ADDRESS_UPDATER, accounts[8]], {from: accounts[1]}), "only address updater");
+    it("Should revert changing inflation if not from governance", async() => {
+        await expectRevert(supply.setInflation(accounts[8], { from: accounts[1]}), "only governance");
     });
 
     it("Should get circulating supply", async() => {
@@ -188,14 +193,44 @@ contract(`Supply.sol; ${getTestFile(__filename)}; Supply unit tests`, async acco
 
     it("Should deploy supply with token pools", async() => {
         await createTokenPools([500, 1000], [0, 0], [200, 50]);
-        supply = await Supply.new(governanceAddress, ADDRESS_UPDATER, burnAddress, initialGenesisAmountWei, totalFoundationSupplyWei, mockTokenPools.map(rp => rp.address));
+        supply = await Supply.new(governanceAddress, constants.ZERO_ADDRESS, inflationAddress, initialGenesisAmountWei, totalFoundationSupplyWei, mockTokenPools.map(rp => rp.address));
         expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply - 500 - 1000 + 200 + 50);
     });
 
     it("Should deploy supply with some burn address balance", async() => {
         await web3.eth.sendTransaction({ to: burnAddress, value: toBN(100), from: accounts[1] });
-        supply = await Supply.new(governanceAddress, ADDRESS_UPDATER, burnAddress, initialGenesisAmountWei, totalFoundationSupplyWei, []);
+        supply = await Supply.new(governanceAddress, burnAddress, inflationAddress, initialGenesisAmountWei, totalFoundationSupplyWei, []);
         expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply - 100);
+    });
+    
+    it("Should change burn address", async() => {
+        const burnAddress2 = await getAddressWithZeroBalance();
+        await supply.changeBurnAddress(burnAddress2, {from: governanceAddress});
+        expect((await supply.burnAddress())).to.equals(burnAddress2);
+    });
+
+    it("Should revert changing burn address if not from governance", async() => {
+        const burnAddress2 = await getAddressWithZeroBalance();
+        await expectRevert(supply.changeBurnAddress(burnAddress2, {from: accounts[0]}), "only governance");
+    });
+
+    it("Should change burn address and update circulating balance", async() => {
+        await web3.eth.sendTransaction({ to: burnAddress, value: toBN(100), from: accounts[1] });
+        expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply);
+        const newBurnAddress = await getAddressWithZeroBalance();
+        await supply.changeBurnAddress(newBurnAddress, {from: governanceAddress});
+
+        expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply - 100);
+    });
+
+    it("Should change burn address and update circulating balance 2", async() => {
+        await web3.eth.sendTransaction({ to: burnAddress, value: toBN(100), from: accounts[1] });
+        expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply);
+        const newBurnAddress = await getAddressWithZeroBalance();
+        await web3.eth.sendTransaction({ to: newBurnAddress, value: toBN(200), from: accounts[1] });
+        await supply.changeBurnAddress(newBurnAddress, {from: governanceAddress});
+
+        expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply - 100 - 200);
     });
 
     it("Should decrease foundation supply", async() => {

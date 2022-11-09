@@ -103,36 +103,32 @@ contract Delegatable is IVPContractEvents {
      * @param _owner The address of the vote power owner.
      * @param _priorBalance The owner's balance before change.
      * @param _newBalance The owner's balance after change.
-     * @dev precondition: delegationModes[_owner] == DelegationMode.PERCENTAGE
      */
     function _allocateVotePower(address _owner, uint256 _priorBalance, uint256 _newBalance) private {
-        // Get the voting delegation for the _owner
-        PercentageDelegation.DelegationState storage delegation = percentageDelegations[_owner];
-        // Track total owner vp change
-        uint256 ownerVpAdd = _newBalance;
-        uint256 ownerVpSub = _priorBalance;
-        // Iterate over the delegates
-        (uint256 length, mapping(uint256 => DelegationHistory.Delegation) storage delegations) = 
-            delegation.getDelegationsRaw();
-        for (uint256 i = 0; i < length; i++) {
-            DelegationHistory.Delegation storage dlg = delegations[i];
-            address delegatee = dlg.delegate;
-            uint256 value = dlg.value;
-            // Compute the delegated vote power for the delegatee
-            uint256 priorValue = _priorBalance.mulDiv(value, PercentageDelegation.MAX_BIPS);
-            uint256 newValue = _newBalance.mulDiv(value, PercentageDelegation.MAX_BIPS);
-            ownerVpAdd = ownerVpAdd.add(priorValue);
-            ownerVpSub = ownerVpSub.add(newValue);
-            // could optimize next lines by checking that priorValue != newValue, but that can only happen
-            // for the transfer of 0 amount, which is prevented by the calling function
-            votePower.changeValue(delegatee, newValue, priorValue);
-            votePower.cleanupOldCheckpoints(delegatee, CLEANUP_COUNT, cleanupBlockNumber);
-            emit Delegate(_owner, delegatee, priorValue, newValue);
-        }
-        // (ownerVpAdd - ownerVpSub) is how much the owner vp changes - will be 0 if delegation is 100%
-        if (ownerVpAdd != ownerVpSub) {
-            votePower.changeValue(_owner, ownerVpAdd, ownerVpSub);
-            votePower.cleanupOldCheckpoints(_owner, CLEANUP_COUNT, cleanupBlockNumber);    
+        // Only proceed if we have a delegation by percentage
+        if (delegationModes[_owner] == DelegationMode.PERCENTAGE) {
+            // Get the voting delegation for the _owner
+            PercentageDelegation.DelegationState storage delegation = percentageDelegations[_owner];
+            // Iterate over the delegates
+            (address[] memory delegates, uint256[] memory bipses) = delegation.getDelegations();
+            for (uint256 i = 0; i < delegates.length; i++) {
+                address delegatee = delegates[i];
+                // Compute the delegated vote power for the delegatee
+                uint256 priorValue = _priorBalance.mulDiv(bipses[i], PercentageDelegation.MAX_BIPS);
+                uint256 newValue = _newBalance.mulDiv(bipses[i], PercentageDelegation.MAX_BIPS);
+                // Compute new voting power
+                if (newValue > priorValue) {
+                    // increase (subtraction is safe as newValue > priorValue)
+                    votePower.delegate(_owner, delegatee, newValue - priorValue);
+                } else {
+                    // decrease (subtraction is safe as newValue < priorValue)
+                    votePower.undelegate(_owner, delegatee, priorValue - newValue);
+                }
+                votePower.cleanupOldCheckpoints(_owner, CLEANUP_COUNT, cleanupBlockNumber);
+                votePower.cleanupOldCheckpoints(delegatee, CLEANUP_COUNT, cleanupBlockNumber);
+                
+                emit Delegate(_owner, delegatee, priorValue, newValue);
+            }
         }
     }
 
@@ -143,18 +139,15 @@ contract Delegatable is IVPContractEvents {
      * @param _amount The amount of vote power to burn.
      */
     function _burnVotePower(address _owner, uint256 _ownerCurrentBalance, uint256 _amount) internal {
+        // for PERCENTAGE delegation: reduce owner vote power allocations
         // revert with the same error as ERC20 in case transfer exceeds balance
         uint256 newOwnerBalance = _ownerCurrentBalance.sub(_amount, "ERC20: transfer amount exceeds balance");
-        if (delegationModes[_owner] == DelegationMode.PERCENTAGE) {
-            // for PERCENTAGE delegation: reduce owner vote power allocations
-            _allocateVotePower(_owner, _ownerCurrentBalance, newOwnerBalance);
-        } else {
-            // for AMOUNT delegation: is there enough unallocated VP _to burn if explicitly delegated?
-            require(_isTransmittable(_owner, _ownerCurrentBalance, _amount), UNDELEGATED_VP_TOO_SMALL_MSG);
-            // burn vote power
-            votePower.changeValue(_owner, 0, _amount);
-            votePower.cleanupOldCheckpoints(_owner, CLEANUP_COUNT, cleanupBlockNumber);
-        }
+        _allocateVotePower(_owner, _ownerCurrentBalance, newOwnerBalance);
+        // for AMOUNT delegation: is there enough unallocated VP _to burn if explicitly delegated?
+        require(_isTransmittable(_owner, _ownerCurrentBalance, _amount), UNDELEGATED_VP_TOO_SMALL_MSG);
+        // burn vote power
+        votePower._burn(_owner, _amount);
+        votePower.cleanupOldCheckpoints(_owner, CLEANUP_COUNT, cleanupBlockNumber);
     }
 
     /**
@@ -384,13 +377,10 @@ contract Delegatable is IVPContractEvents {
      * @param _amount The amount of vote power to mint.
      */
     function _mintVotePower(address _owner, uint256 _ownerCurrentBalance, uint256 _amount) internal {
-        if (delegationModes[_owner] == DelegationMode.PERCENTAGE) {
-            // Allocate newly minted vote power over delegates
-            _allocateVotePower(_owner, _ownerCurrentBalance, _ownerCurrentBalance.add(_amount));
-        } else {
-            votePower.changeValue(_owner, _amount, 0);
-            votePower.cleanupOldCheckpoints(_owner, CLEANUP_COUNT, cleanupBlockNumber);
-        }
+        votePower._mint(_owner, _amount);
+        votePower.cleanupOldCheckpoints(_owner, CLEANUP_COUNT, cleanupBlockNumber);
+        // Allocate newly minted vote power over delegates
+        _allocateVotePower(_owner, _ownerCurrentBalance, _ownerCurrentBalance.add(_amount));
     }
     
     /**
@@ -438,8 +428,17 @@ contract Delegatable is IVPContractEvents {
     )
         internal
     {
-        _burnVotePower(_from, _fromCurrentBalance, _amount);
-        _mintVotePower(_to, _toCurrentBalance, _amount);
+        // for PERCENTAGE delegation: reduce sender vote power allocations
+        // revert with the same error as ERC20 in case transfer exceeds balance
+        uint256 newFromBalance = _fromCurrentBalance.sub(_amount, "ERC20: transfer amount exceeds balance");
+        _allocateVotePower(_from, _fromCurrentBalance, newFromBalance);
+        // for AMOUNT delegation: transmit vote power _to receiver
+        require(_isTransmittable(_from, _fromCurrentBalance, _amount), UNDELEGATED_VP_TOO_SMALL_MSG);
+        votePower.transmit(_from, _to, _amount);
+        votePower.cleanupOldCheckpoints(_from, CLEANUP_COUNT, cleanupBlockNumber);
+        votePower.cleanupOldCheckpoints(_to, CLEANUP_COUNT, cleanupBlockNumber);
+        // Allocate receivers new vote power according _to their delegates
+        _allocateVotePower(_to, _toCurrentBalance, _toCurrentBalance.add(_amount));
     }
 
     /**
@@ -612,15 +611,8 @@ contract Delegatable is IVPContractEvents {
         internal view 
         returns(uint256 _votePower)
     {
-        DelegationMode delegationMode = delegationModes[_from];
-        if (delegationMode == DelegationMode.NOTSET) {
-            return 0;
-        } else if (delegationMode == DelegationMode.PERCENTAGE) {
-            uint256 _bips = percentageDelegations[_from].getDelegatedValue(_to);
-            return _currentFromBalance.mulDiv(_bips, PercentageDelegation.MAX_BIPS);
-        } else { // delegationMode == DelegationMode.AMOUNT
-            return explicitDelegations[_from].getDelegatedValue(_to);
-        }
+        // no need for revocation check at current block
+        return _votePowerFromToAtNoRevokeCheck(_from, _to, _currentFromBalance, block.number);
     }
 
     /**
@@ -705,23 +697,6 @@ contract Delegatable is IVPContractEvents {
         } else {
             return votePower.votePowerOfAtNow(_who);
         }
-    }
-
-    /**
-    * @notice Get the vote power of `_who` at block `_blockNumber`, ignoring revocation information (and cache).
-    * @param _who The address to get voting power.
-    * @param _blockNumber The block number at which to fetch.
-    * @return Vote power of `_who` at `_blockNumber`. Result doesn't change if vote power is revoked.
-    */
-    function _votePowerOfAtIgnoringRevocation(
-        address _who, 
-        uint256 _blockNumber
-    )
-        internal view 
-        notBeforeCleanupBlock(_blockNumber) 
-        returns(uint256)
-    {
-        return votePower.votePowerOfAt(_who, _blockNumber);
     }
 
     /**

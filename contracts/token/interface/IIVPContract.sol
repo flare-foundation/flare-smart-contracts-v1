@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.7.6 <0.9;
+pragma solidity 0.7.6;
 
 import "../../userInterfaces/IVPToken.sol";
 import "../../userInterfaces/IVPContractEvents.sol";
@@ -115,14 +115,6 @@ interface IIVPContract is IICleanable, IVPContractEvents {
     * @return Vote power of `_who` at `_blockNumber`.
     */
     function votePowerOfAt(address _who, uint256 _blockNumber) external view returns(uint256);
-
-    /**
-    * @notice Get the vote power of `_who` at block `_blockNumber`, ignoring revocation information (and cache).
-    * @param _who The address to get voting power.
-    * @param _blockNumber The block number at which to fetch.
-    * @return Vote power of `_who` at `_blockNumber`. Result doesn't change if vote power is revoked.
-    */
-    function votePowerOfAtIgnoringRevocation(address _who, uint256 _blockNumber) external view returns(uint256);
 
     /**
      * Return vote powers for several addresses in a batch.

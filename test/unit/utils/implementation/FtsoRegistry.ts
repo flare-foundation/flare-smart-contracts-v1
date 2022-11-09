@@ -1,9 +1,7 @@
 
 import { constants, expectRevert } from '@openzeppelin/test-helpers';
-import { Contracts } from '../../../../deployment/scripts/Contracts';
-import { FtsoRegistryInstance } from '../../../../typechain-truffle';
+import { FtsoRegistryInstance, MockContractInstance } from "../../../../typechain-truffle";
 import { defaultPriceEpochCyclicBufferSize } from "../../../utils/constants";
-import { encodeContractNames } from '../../../utils/test-helpers';
 
 const getTestFile = require('../../../utils/constants').getTestFile;
 const MockFtso = artifacts.require("MockFtso");
@@ -11,29 +9,29 @@ const FtsoRegistryContract = artifacts.require("FtsoRegistry");
 const MockContract = artifacts.require("MockContract");
 
 
-const ONLY_ADDRESS_UPDATER_MSG = "only address updater";
+const ONLY_GOVERNANCE_MSG = "only governance";
 const ONLY_FTSO_MANAGER_MSG = "FTSO manager only";
 const ERR_TOKEN_NOT_SUPPORTED = "FTSO index not supported";
 
-let MOCK_FTSO_MANAGER_ADDRESS: string;
 
 async function mockFtso(symbol: string){
-  return await MockFtso.new(symbol, constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, MOCK_FTSO_MANAGER_ADDRESS, 0, 0, 0, 0, 0, defaultPriceEpochCyclicBufferSize);
+  return await MockFtso.new(symbol, constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, 0, 0, 0, 0, 0, defaultPriceEpochCyclicBufferSize);
 }
 
 
 contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract unit tests`, async accounts => {
   let ftsoRegistryContract: FtsoRegistryInstance;
+  let mockFtsoContract: MockContractInstance;
   const GOVERNANCE_ADDRESS = accounts[0];
-  const ADDRESS_UPDATER = accounts[16];
-  MOCK_FTSO_MANAGER_ADDRESS = accounts[123];
+  const MOCK_FTSO_ADDRESS = accounts[123]
 
   beforeEach(async() => {
-    ftsoRegistryContract = await FtsoRegistryContract.new(GOVERNANCE_ADDRESS, ADDRESS_UPDATER);
+    ftsoRegistryContract = await FtsoRegistryContract.new(GOVERNANCE_ADDRESS);
     
-    await ftsoRegistryContract.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
-      [ADDRESS_UPDATER, MOCK_FTSO_MANAGER_ADDRESS], {from: ADDRESS_UPDATER});
+    await ftsoRegistryContract.setFtsoManagerAddress(MOCK_FTSO_ADDRESS, {from: GOVERNANCE_ADDRESS});
+
+    mockFtsoContract = await MockContract.new();
+
   });
 
   it("Should revert for unsupported index ", async() => {
@@ -47,11 +45,11 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
 
   it("Should add new symbol to registry ", async() => {
     // Assemble
-    let BTC_FTSO_promise = ftsoRegistryContract.getFtso(0);
-    await expectRevert(BTC_FTSO_promise, ERR_TOKEN_NOT_SUPPORTED);
+    let BTC_FTSO_promisse = ftsoRegistryContract.getFtso(0);
+    await expectRevert(BTC_FTSO_promisse, ERR_TOKEN_NOT_SUPPORTED);
     // Act
     let BTCFtsoContractMock = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     const BTC_FTSO_address = await ftsoRegistryContract.getFtso(await ftsoRegistryContract.getFtsoIndex("BTC"));
     // Assert
     assert.equal(BTC_FTSO_address, BTCFtsoContractMock.address);
@@ -60,9 +58,9 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
   it("Should get correct symbol for index", async() => {
     // Assemble
     let BTCFtsoContractMock = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     let XRPFtsoContractMock = await mockFtso("XRP");
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     // Act
     const BTC_SYMBOL = await ftsoRegistryContract.getFtsoSymbol(0);
     // Assert
@@ -74,8 +72,8 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     const btcMock = await mockFtso("BTC");
     const ltcMock = await mockFtso("LTC");
 
-    await ftsoRegistryContract.addFtso(btcMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ltcMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(btcMock.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(ltcMock.address, {from: MOCK_FTSO_ADDRESS});
 
     // Act
     const btcIndex = await ftsoRegistryContract.getFtsoIndex("BTC");
@@ -84,43 +82,11 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     assert.isTrue(btcIndex.eqn(0));
     assert.isTrue(ltcIndex.eqn(1));
 
-    await ftsoRegistryContract.removeFtso(btcMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(btcMock.address, {from: MOCK_FTSO_ADDRESS});
 
     await expectRevert(ftsoRegistryContract.getFtsoIndex("BTC"), ERR_TOKEN_NOT_SUPPORTED);
     const ltcIndex2 = await ftsoRegistryContract.getFtsoIndex("LTC");
     assert.isTrue(ltcIndex.eq(ltcIndex2));
-
-    await expectRevert(ftsoRegistryContract.getFtsos([0]), ERR_TOKEN_NOT_SUPPORTED);
-  });
-
-  it("Should get current price by index", async() => {
-    // Assemble
-    let BTCFtsoContractMock = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    let XRPFtsoContractMock = await mockFtso("XRP");
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-
-    await XRPFtsoContractMock.updateInitialPrice(1256, 256, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    // Act
-    const {0: price, 1: timestamp } = await ftsoRegistryContract.methods["getCurrentPrice(uint256)"](1);
-    // Assert
-    assert.equal(price.toString(), "1256");
-    assert.equal(timestamp.toString(), "256");
-  });
-
-  it("Should get current price by symbol", async() => {
-    // Assemble
-    let BTCFtsoContractMock = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    let XRPFtsoContractMock = await mockFtso("XRP");
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-
-    await XRPFtsoContractMock.updateInitialPrice(1256, 256, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    // Act
-    const {0: price, 1: timestamp } = await ftsoRegistryContract.methods["getCurrentPrice(string)"]("XRP");
-    // Assert
-    assert.equal(price.toString(), "1256");
-    assert.equal(timestamp.toString(), "256");
   });
 
   it("Should get all supported tokens ", async() => {
@@ -129,7 +95,7 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     assert.equal(supported_indices.length, 0);
     // Act
     let BTCFtsoContractMock = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     const [btcIndex] = await ftsoRegistryContract.getSupportedIndices();
     // Assert
     assert.isTrue(btcIndex.eqn(0));
@@ -138,24 +104,24 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
   it("Should update the address of existing active Ftso contract ", async() => {
     // Assemble
     const BTCFtsoContractMock = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     const BTC_FTSO_address = await ftsoRegistryContract.getFtso(await ftsoRegistryContract.getFtsoIndex("BTC"));
     assert.equal(BTC_FTSO_address, BTCFtsoContractMock.address);
     // Act
     const newBTCFtsoContractMock = await mockFtso("BTC");
-    const XRPFtsoContractMock = await mockFtso("XRP");
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(newBTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    const XPRFtsoContractMock = await mockFtso("XPR");
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(newBTCFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     const {0: [ind1, ind2], 1: [f1, f2]} = await ftsoRegistryContract.getSupportedIndicesAndFtsos();
     const new_BTC_FTSO = await ftsoRegistryContract.getFtso(await ftsoRegistryContract.getFtsoIndex("BTC"));
-    const XRP_FTSO = await ftsoRegistryContract.getFtso(await ftsoRegistryContract.getFtsoIndex("XRP"));
+    const XPR_FTSO = await ftsoRegistryContract.getFtso(await ftsoRegistryContract.getFtsoIndex("XPR"));
     // Assert
     assert.isTrue(ind1.eqn(0));
     assert.isTrue(ind2.eqn(1));
     assert.equal(f1, newBTCFtsoContractMock.address);
-    assert.equal(f2, XRPFtsoContractMock.address);
+    assert.equal(f2, XPRFtsoContractMock.address);
     assert.equal(new_BTC_FTSO, newBTCFtsoContractMock.address);
-    assert.equal(XRP_FTSO, XRPFtsoContractMock.address);
+    assert.equal(XPR_FTSO, XPRFtsoContractMock.address);
   });
 
   it("Should record history ", async() => {
@@ -163,27 +129,27 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
     const BTCFtsoContractMock_2 = await mockFtso("BTC");
     const BTCFtsoContractMock_3 = await mockFtso("BTC");
-    const XRPFtsoContractMock_1 = await mockFtso("XRP");
-    const XRPFtsoContractMock_2 = await mockFtso("XRP");
+    const XPRFtsoContractMock_1 = await mockFtso("XPR");
+    const XPRFtsoContractMock_2 = await mockFtso("XPR");
     const ADAFtsoContractMock_1 = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
     // Act
     const BTC_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("BTC"));
-    const XRP_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("XRP"));
+    const XPR_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("XPR"));
     const ADA_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("ADA"));
     // Assert
     assert.equal(BTC_history[0],BTCFtsoContractMock_3.address);
     assert.equal(BTC_history[1],BTCFtsoContractMock_2.address);
     assert.equal(BTC_history[2],BTCFtsoContractMock_1.address);
     assert.equal(BTC_history[3],constants.ZERO_ADDRESS);
-    assert.equal(XRP_history[0],XRPFtsoContractMock_2.address);
-    assert.equal(XRP_history[1],XRPFtsoContractMock_1.address);
-    assert.equal(XRP_history[2],constants.ZERO_ADDRESS);
+    assert.equal(XPR_history[0],XPRFtsoContractMock_2.address);
+    assert.equal(XPR_history[1],XPRFtsoContractMock_1.address);
+    assert.equal(XPR_history[2],constants.ZERO_ADDRESS);
     assert.equal(ADA_history[0],ADAFtsoContractMock_1.address);
     assert.equal(ADA_history[1],constants.ZERO_ADDRESS);
   });
@@ -191,34 +157,34 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
   it("Should revert on invalid history index", async() => {
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
 
-    const XRPFtsoContractMock_1 = await mockFtso("XRP");
+    const XPRFtsoContractMock_1 = await mockFtso("XPR");
     
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
 
 
     // Act
     const BTC_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("BTC"));
-    const XRP_historyPromise = ftsoRegistryContract.getFtsoHistory(1);
+    const XPR_historyPromise = ftsoRegistryContract.getFtsoHistory(1);
 
-    await expectRevert(XRP_historyPromise, ERR_TOKEN_NOT_SUPPORTED);
+    await expectRevert(XPR_historyPromise, ERR_TOKEN_NOT_SUPPORTED);
 
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    const XRP_history = await ftsoRegistryContract.getFtsoHistory(1);
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    const XPR_history = await ftsoRegistryContract.getFtsoHistory(1);
     // Assert
     assert.equal(BTC_history[0],BTCFtsoContractMock_1.address);
     
-    assert.equal(XRP_history[0],XRPFtsoContractMock_1.address);
+    assert.equal(XPR_history[0],XPRFtsoContractMock_1.address);
 
   });
 
   it("Should get all supported tokens and their addresses ", async() => {
     // Assemble
     let BTCFtsoContractMock = await mockFtso("BTC");
-    let XRPFtsoContractMock = await mockFtso("XRP");
+    let XPRFtsoContractMock = await mockFtso("XPR");
     let ADAFtsoContractMock = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(ADAFtsoContractMock.address, {from: MOCK_FTSO_ADDRESS});
     // Act
     const {
       0: indices,
@@ -226,24 +192,18 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     } = await ftsoRegistryContract.getSupportedIndicesAndFtsos();
     // Assert
     assert.equal(indices.length, 3);
-    assert.equal(indices[0].toNumber(), 0);
-    assert.equal(indices[1].toNumber(), 1);
-    assert.equal(indices[2].toNumber(), 2);
-    assert.equal(addresses.length, 3);
     assert.equal(addresses[0],BTCFtsoContractMock.address);
-    assert.equal(addresses[1],XRPFtsoContractMock.address);
+    assert.equal(addresses[1],XPRFtsoContractMock.address);
     assert.equal(addresses[2],ADAFtsoContractMock.address);
   });
 
-  it("Should not allow to change ftso manager if not address updater", async() => {
+  it("Should not allow non governance to change ftso manager", async() => {
     // Assemble
     const mockFtsoManager = await MockContract.new();
     // Act
-    let promise = ftsoRegistryContract.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
-      [ADDRESS_UPDATER, MOCK_FTSO_MANAGER_ADDRESS], {from: accounts[1]});
+    let promise = ftsoRegistryContract.setFtsoManagerAddress(mockFtsoManager.address, {from: accounts[1]});
     // Assert
-    await expectRevert(promise, ONLY_ADDRESS_UPDATER_MSG);
+    await expectRevert(promise, ONLY_GOVERNANCE_MSG);
 
   });
 
@@ -251,9 +211,7 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     // Assemble
 
     // Act
-    await ftsoRegistryContract.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
-      [ADDRESS_UPDATER, accounts[15]], {from: ADDRESS_UPDATER});
+    await ftsoRegistryContract.setFtsoManagerAddress(accounts[15], {from: accounts[0]});
     // Use different address
     const promise = ftsoRegistryContract.addFtso(accounts[15], {from: accounts[14]});
     // Assert
@@ -264,7 +222,7 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
   it("Should revert on non supported symbol removal", async() => {
     // Use different address
 
-    const promise = ftsoRegistryContract.removeFtso((await mockFtso("NO_TOKEN")).address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    const promise = ftsoRegistryContract.removeFtso((await mockFtso("NO_TOKEN")).address, {from: MOCK_FTSO_ADDRESS});
     // Assert
     await expectRevert(promise, ERR_TOKEN_NOT_SUPPORTED);
   });
@@ -274,17 +232,17 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
     const BTCFtsoContractMock_2 = await mockFtso("BTC");
     const BTCFtsoContractMock_3 = await mockFtso("BTC");
-    const XRPFtsoContractMock_1 = await mockFtso("XRP");
-    const XRPFtsoContractMock_2 = await mockFtso("XRP");
+    const XPRFtsoContractMock_1 = await mockFtso("XPR");
+    const XPRFtsoContractMock_2 = await mockFtso("XPR");
     const ADAFtsoContractMock_1 = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
 
-    await ftsoRegistryContract.removeFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
 
     await expectRevert(ftsoRegistryContract.getFtsoIndex("ADA"), ERR_TOKEN_NOT_SUPPORTED);
     await expectRevert(ftsoRegistryContract.getFtso(2), ERR_TOKEN_NOT_SUPPORTED);
@@ -298,36 +256,36 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
     const BTCFtsoContractMock_2 = await mockFtso("BTC");
     const BTCFtsoContractMock_3 = await mockFtso("BTC");
-    const XRPFtsoContractMock_1 = await mockFtso("XRP");
-    const XRPFtsoContractMock_2 = await mockFtso("XRP");
+    const XPRFtsoContractMock_1 = await mockFtso("XPR");
+    const XPRFtsoContractMock_2 = await mockFtso("XPR");
     const ADAFtsoContractMock_1 = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
     
     const BTC_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("BTC"));
-    const XRP_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("XRP"));
+    const XPR_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("XPR"));
     const ADA_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("ADA"));
     
     assert.equal(BTC_history[0], BTCFtsoContractMock_3.address);
     assert.equal(BTC_history[1], BTCFtsoContractMock_2.address);
     assert.equal(BTC_history[2], BTCFtsoContractMock_1.address);
     assert.equal(BTC_history[3], constants.ZERO_ADDRESS);
-    assert.equal(XRP_history[0], XRPFtsoContractMock_2.address);
-    assert.equal(XRP_history[1], XRPFtsoContractMock_1.address);
-    assert.equal(XRP_history[2], constants.ZERO_ADDRESS);
+    assert.equal(XPR_history[0], XPRFtsoContractMock_2.address);
+    assert.equal(XPR_history[1], XPRFtsoContractMock_1.address);
+    assert.equal(XPR_history[2], constants.ZERO_ADDRESS);
     assert.equal(ADA_history[0], ADAFtsoContractMock_1.address);
     assert.equal(ADA_history[1], constants.ZERO_ADDRESS);
     // Act
-    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_ADDRESS});
     // Assert
     // Others should stay the same
-    assert.equal(XRP_history[0], XRPFtsoContractMock_2.address);
-    assert.equal(XRP_history[1], XRPFtsoContractMock_1.address);
-    assert.equal(XRP_history[2], constants.ZERO_ADDRESS);
+    assert.equal(XPR_history[0], XPRFtsoContractMock_2.address);
+    assert.equal(XPR_history[1], XPRFtsoContractMock_1.address);
+    assert.equal(XPR_history[2], constants.ZERO_ADDRESS);
     assert.equal(ADA_history[0], ADAFtsoContractMock_1.address);
     assert.equal(ADA_history[1], constants.ZERO_ADDRESS);
 
@@ -346,7 +304,7 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
 
     const [f1, f2, f3] = await ftsoRegistryContract.getAllFtsos();
     assert.equal(f1, constants.ZERO_ADDRESS);
-    assert.equal(f2, XRPFtsoContractMock_2.address);
+    assert.equal(f2, XPRFtsoContractMock_2.address);
     assert.equal(f3, ADAFtsoContractMock_1.address);
 
     const {
@@ -354,9 +312,9 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
       1: [ft1, ft2],
     } = await ftsoRegistryContract.getSupportedSymbolsAndFtsos();
 
-    assert.equal(sy1, "XRP");
+    assert.equal(sy1, "XPR");
     assert.equal(sy2, "ADA");
-    assert.equal(ft1, XRPFtsoContractMock_2.address);
+    assert.equal(ft1, XPRFtsoContractMock_2.address);
     assert.equal(ft2, ADAFtsoContractMock_1.address);
   });
 
@@ -365,25 +323,25 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
     const BTCFtsoContractMock_2 = await mockFtso("BTC");
     const BTCFtsoContractMock_3 = await mockFtso("BTC");
-    const XRPFtsoContractMock_1 = await mockFtso("XRP");
-    const XRPFtsoContractMock_2 = await mockFtso("XRP");
+    const XPRFtsoContractMock_1 = await mockFtso("XPR");
+    const XPRFtsoContractMock_2 = await mockFtso("XPR");
     const ADAFtsoContractMock_1 = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
+    await ftsoRegistryContract.addFtso(XPRFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
     
-    const XRP_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("XRP"));
+    const XPR_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("XPR"));
     const ADA_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("ADA"));
     
     // Act
-    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_2.address, {from: MOCK_FTSO_ADDRESS});
     // Assert
     // Others should stay the same
-    assert.equal(XRP_history[0], XRPFtsoContractMock_2.address);
-    assert.equal(XRP_history[1], XRPFtsoContractMock_1.address);
-    assert.equal(XRP_history[2], constants.ZERO_ADDRESS);
+    assert.equal(XPR_history[0], XPRFtsoContractMock_2.address);
+    assert.equal(XPR_history[1], XPRFtsoContractMock_1.address);
+    assert.equal(XPR_history[2], constants.ZERO_ADDRESS);
     assert.equal(ADA_history[0], ADAFtsoContractMock_1.address);
     assert.equal(ADA_history[1], constants.ZERO_ADDRESS);
 
@@ -392,7 +350,7 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     assert.isTrue(i1.eqn(1));
     assert.isTrue(i2.eqn(2));
     // Reinsert
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_3.address, {from: MOCK_FTSO_ADDRESS});
     const BTC_history = await ftsoRegistryContract.getFtsoHistory(await ftsoRegistryContract.getFtsoIndex("BTC"));
     assert.equal(BTC_history[0], BTCFtsoContractMock_3.address);
     assert.equal(BTC_history[1], constants.ZERO_ADDRESS);
@@ -401,10 +359,10 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
   it("Should correctly return supported indices", async() => {
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
 
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
     let [supp] = await ftsoRegistryContract.getSupportedIndices();
     let [suppF] = await ftsoRegistryContract.getSupportedFtsos();
-    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
 
     let supp0 = await ftsoRegistryContract.getSupportedIndices();
     let suppF0 = await ftsoRegistryContract.getSupportedFtsos();
@@ -413,11 +371,11 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     assert.isEmpty(suppF0);
 
     const ADAFtsoContractMock_1 = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
 
     [supp] = await ftsoRegistryContract.getSupportedIndices();
     [suppF] = await ftsoRegistryContract.getSupportedFtsos();
-    await ftsoRegistryContract.removeFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(ADAFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
 
     supp0 = await ftsoRegistryContract.getSupportedIndices();
     suppF0 = await ftsoRegistryContract.getSupportedFtsos();
@@ -431,13 +389,13 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
   it("Should error on duplicate remove", async() => {
     // Assemble
     const BTCFtsoContractMock_1 = await mockFtso("BTC");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.addFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
     const [supp] = await ftsoRegistryContract.getSupportedIndices();
     const [suppF] = await ftsoRegistryContract.getSupportedFtsos();
-    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    await ftsoRegistryContract.removeFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
 
     // Act 
-    const revertPromise = ftsoRegistryContract.removeFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    const revertPromise = ftsoRegistryContract.removeFtso(BTCFtsoContractMock_1.address, {from: MOCK_FTSO_ADDRESS});
     // Assert
     await expectRevert(revertPromise, ERR_TOKEN_NOT_SUPPORTED);
   });
@@ -447,62 +405,9 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
     const emptyFtso = await mockFtso("BTC");
     // Act 
    
-    const revertPromise = ftsoRegistryContract.removeFtso(emptyFtso.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
+    const revertPromise = ftsoRegistryContract.removeFtso(emptyFtso.address, {from: MOCK_FTSO_ADDRESS});
     // Assert
     await expectRevert(revertPromise, ERR_TOKEN_NOT_SUPPORTED);
-  });
-
-  it("Should get all supported indices and their symbols", async() => {
-    // Assemble
-    let BTCFtsoContractMock = await mockFtso("BTC");
-    let XRPFtsoContractMock = await mockFtso("XRP");
-    let ADAFtsoContractMock = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    // Act
-    const {
-      0: indices,
-      1: symbols
-    } = await ftsoRegistryContract.getSupportedIndicesAndSymbols();
-    // Assert
-    assert.equal(indices.length, 3);
-    assert.equal(indices[0].toNumber(), 0);
-    assert.equal(indices[1].toNumber(), 1);
-    assert.equal(indices[2].toNumber(), 2);
-    assert.equal(symbols.length, 3);
-    assert.equal(symbols[0], "BTC");
-    assert.equal(symbols[1], "XRP");
-    assert.equal(symbols[2], "ADA");
-  });
-
-  it("Should get all supported indices, their symbols and addresses", async() => {
-    // Assemble
-    let BTCFtsoContractMock = await mockFtso("BTC");
-    let XRPFtsoContractMock = await mockFtso("XRP");
-    let ADAFtsoContractMock = await mockFtso("ADA");
-    await ftsoRegistryContract.addFtso(BTCFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(XRPFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    await ftsoRegistryContract.addFtso(ADAFtsoContractMock.address, {from: MOCK_FTSO_MANAGER_ADDRESS});
-    // Act
-    const {
-      0: indices,
-      1: symbols,
-      2: addresses
-    } = await ftsoRegistryContract.getSupportedIndicesSymbolsAndFtsos();
-    // Assert
-    assert.equal(indices.length, 3);
-    assert.equal(indices[0].toNumber(), 0);
-    assert.equal(indices[1].toNumber(), 1);
-    assert.equal(indices[2].toNumber(), 2);
-    assert.equal(symbols.length, 3);
-    assert.equal(symbols[0], "BTC");
-    assert.equal(symbols[1], "XRP");
-    assert.equal(symbols[2], "ADA");
-    assert.equal(addresses.length, 3);
-    assert.equal(addresses[0],BTCFtsoContractMock.address);
-    assert.equal(addresses[1],XRPFtsoContractMock.address);
-    assert.equal(addresses[2],ADAFtsoContractMock.address);
   });
 
 });

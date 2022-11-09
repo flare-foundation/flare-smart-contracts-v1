@@ -1,20 +1,18 @@
 import { constants, time } from "@openzeppelin/test-helpers";
-import { Contracts } from "../../../deployment/scripts/Contracts";
 import { 
   FlareDaemonMockInstance,
   InflationInstance,
   MockContractInstance, 
   SupplyInstance, 
   FtsoRewardManagerInstance, 
-  PercentageProviderMockInstance } from "../../../typechain-truffle";
-import { encodeContractNames } from "../../utils/test-helpers";
+  SharingPercentageProviderMockInstance } from "../../../typechain-truffle";
 
 const getTestFile = require('../../utils/constants').getTestFile;
 const cliProgress = require('cli-progress');
 
 const Inflation = artifacts.require("Inflation");
 const MockContract = artifacts.require("MockContract");
-const PercentageProviderMock = artifacts.require("PercentageProviderMock");
+const SharingPercentageProviderMock = artifacts.require("SharingPercentageProviderMock");
 const FlareDaemonMock = artifacts.require("FlareDaemonMock");
 const FtsoRewardManager = artifacts.require("FtsoRewardManager");
 const Supply = artifacts.require("Supply");
@@ -23,7 +21,8 @@ const BN = web3.utils.toBN;
 
 contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation and Supply integration tests`, async accounts => {
   // contains a fresh contract set for each test
-  let mockInflationPercentageProvider: PercentageProviderMockInstance;
+  let mockInflationPercentageProvider: MockContractInstance;
+  let mockInflationSharingPercentageProvider: SharingPercentageProviderMockInstance;
   let inflation: InflationInstance;
   let mockFlareDaemon: FlareDaemonMockInstance;
   let supply: SupplyInstance;
@@ -33,7 +32,7 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
   const inflationBips = 1000;
 
   beforeEach(async() => {
-    const ADDRESS_UPDATER = accounts[16];
+    mockInflationPercentageProvider = await MockContract.new();
     mockFlareDaemon = await FlareDaemonMock.new();
 
     // Set up the ftsoRewardManager
@@ -44,41 +43,42 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
     );
 
     // Set up mock inflation percentage provider
+    const getAnnualPercentageBips = web3.utils.sha3("getAnnualPercentageBips()")!.slice(0,10);
+    await mockInflationPercentageProvider.givenMethodReturnUint(getAnnualPercentageBips, inflationBips);
+
     // Set up mock one sharing percentage provider for 100%
     const sharingPercentages = [];
     sharingPercentages[0] = {inflationReceiver: ftsoRewardManager.address, percentBips: 10000};
-    mockInflationPercentageProvider = await PercentageProviderMock.new(sharingPercentages, inflationBips);
+    mockInflationSharingPercentageProvider = await SharingPercentageProviderMock.new(sharingPercentages);
     
     // Set up inflation...inflation sharing percentage provider will be reset.
     inflation = await Inflation.new(
       accounts[0],
       mockFlareDaemon.address,
-      ADDRESS_UPDATER,
+      mockInflationPercentageProvider.address,
+      mockInflationSharingPercentageProvider.address,
       0
     );
 
     // Wire up supply contract
     supply = await Supply.new(
       accounts[0],
-      ADDRESS_UPDATER,
       constants.ZERO_ADDRESS,
+      inflation.address,
       initialGenesisAmountWei,
       foundationSupplyWei,
       [ftsoRewardManager.address]
     );
 
-    // Tell supply about inflation
-    await supply.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
-      [ADDRESS_UPDATER, inflation.address], {from: ADDRESS_UPDATER});
     // Tell inflation about supply
-    await inflation.updateContractAddresses(
-      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION]),
-      [ADDRESS_UPDATER, supply.address, mockInflationPercentageProvider.address], {from: ADDRESS_UPDATER});
+    await inflation.setSupply(supply.address);
     // Register inflation to mock daemon contract so we can trigger inflation
     await mockFlareDaemon.registerToDaemonize(inflation.address);
     // Tell ftso reward manager about inflation
-    await ftsoRewardManager.setContractAddresses(inflation.address, (await MockContract.new()).address, (await MockContract.new()).address, {from: accounts[0]});
+    await ftsoRewardManager.setContractAddresses(
+      inflation.address, 
+      (await MockContract.new()).address, 
+      (await MockContract.new()).address);
   });
 
   describe("daily roll", async() => {
@@ -124,15 +124,12 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
   });
 
   describe("annual roll", async() => {
-    it("Should recognize 2nd year annual inflation, update inflatable balance on supply, and issue new daily authorized", async() => {
+    it("Should recognize 2nd year annual inflation and update inflatable balance on supply", async() => {
       // Assemble
       const firstYearAnnualInflationAuthorized = initialGenesisAmountWei.mul(BN(inflationBips)).div(BN(10000));
       const firstDayYear2InflationAuthorized = initialGenesisAmountWei.add(firstYearAnnualInflationAuthorized).mul(BN(inflationBips)).div(BN(10000)).div(BN(365));
       // Total inflation authorized over 1 year + 1 day
       const totalInflationAuthorizedWei = firstYearAnnualInflationAuthorized.add(firstDayYear2InflationAuthorized);
-
-      let firstAnnumStart: BN = BN(0);
-      let firstAnnum: any = null;
 
       // Act
       // Force a block in order to get most up to date time
@@ -148,25 +145,7 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
         // Pulse inflation for that day by calling daemon
         await mockFlareDaemon.trigger();
         progressBar.update(i);
-        if(i == 1){
-          firstAnnum = await inflation.getCurrentAnnum();
-          firstAnnumStart = BN(firstAnnum.startTimeStamp.toString());
-        }
       }
-
-      const secondAnnum = await inflation.getCurrentAnnum();
-
-      // New annum should be initialized
-      assert.isTrue(firstAnnumStart.lt(BN(secondAnnum.startTimeStamp.toString())));
-      // Should recognize more inflation
-      assert.equal(
-        secondAnnum.recognizedInflationWei.toString(), 
-        initialGenesisAmountWei.muln(110).divn(100).divn(10).toString()) // 10 percent of 110% percent of initial
-
-      assert.equal(
-        (await ftsoRewardManager.dailyAuthorizedInflation()).toString(), 
-        firstDayYear2InflationAuthorized.toString()) 
-
 
       // Assert
       // Supply should have a new inflatable balance for original supply, plus 1 year of inflation, plus 1 day

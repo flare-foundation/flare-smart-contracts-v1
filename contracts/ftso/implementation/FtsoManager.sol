@@ -462,21 +462,6 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonized, IFlareDaemoni
             _ftsoInFallbackMode[i] = ftsoInFallbackMode[_ftsos[i]];
         }
     }
-    
-    /**
-     * @notice Implement this function for updating daemonized contracts through AddressUpdater.
-     */
-    function getContractName() external pure override returns (string memory) {
-        return "FtsoManager";
-    }
-
-    /**
-     * @notice Return reward epoch that will expire, when new reward epoch is initialized
-     * @return Reward epoch id that will expire next
-     */
-    function getRewardEpochToExpireNext() external view override returns (uint256) {
-        return nextRewardEpochToExpire;
-    }
         
     /**
      * @notice Returns current reward epoch index (one currently running)

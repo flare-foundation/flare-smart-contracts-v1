@@ -1,4 +1,5 @@
-import { Readable } from "stream";
+// import { ReadStream } from "node:fs";
+import { ReadStream } from "fs";
 
 export class Contract {
   name: string;
@@ -13,12 +14,11 @@ export class Contract {
 }
 
 export class Contracts {
-  private contracts: Map<string, Contract>;
+  private contracts: Map<string, string>;
+  private collection: Contract[];
 
   private static WRAP_SYMBOL = "f";
   private static WRAP_SYMBOL_MINT = "";
-  public static readonly ADDRESS_UPDATER = "AddressUpdater";
-  public static readonly FTSO_V2_UPGRADER = "FtsoV2Upgrader";
   public static readonly CLEANUP_BLOCK_NUMBER_MANAGER = "CleanupBlockNumberManager";
   public static readonly FTSO_REGISTRY = "FtsoRegistry";
   public static readonly DISTRIBUTION = "Distribution";
@@ -26,6 +26,7 @@ export class Contracts {
   public static readonly INFLATION_ALLOCATION = "InflationAllocation";
   public static readonly INFLATION = "Inflation";
   public static readonly FTSO_REWARD_MANAGER = "FtsoRewardManager";
+  public static readonly DATA_AVAILABILITY_REWARD_MANAGER = "DataAvailabilityRewardManager";
   public static readonly PRICE_SUBMITTER = "PriceSubmitter";
   public static readonly FTSO_MANAGER = "FtsoManager";
   public static readonly STATE_CONNECTOR = "StateConnector";
@@ -57,64 +58,40 @@ export class Contracts {
   // NOTE: this is not exhaustive list. Constants here are defined on on-demand basis (usually motivated by tests).
 
   constructor() {
-    // Maps a contract name to a Contract object
-    this.contracts = new Map<string, Contract>();
+    // Maps a contract name to an address
+    this.contracts = new Map<string, string>();
+    this.collection = [];
   }
 
-  deserializeFile(filePath: string) {
-    const fs = require("fs");
-    if (!fs.existsSync(filePath)) return;
-    const contractsJson = fs.readFileSync(filePath);
-    if (contractsJson.length == 0) return;
-    this.deserializeJson(contractsJson);
-  }
-
-  async deserialize(stream: Readable) {
-    const contractsJson = await this.readStream(stream);
-    this.deserializeJson(contractsJson);
-  }
-  
-  deserializeJson(contractsJson: string) {
+  async deserialize(stream: any) {
+    const contractsJson = await this.read(stream);
     const parsedContracts = JSON.parse(contractsJson);
     parsedContracts.forEach((contract: { name: string; contractName: string, address: string; }) => {
-      this.contracts.set(contract.name, contract);
+      this.contracts.set(contract.name, contract.address);
+      this.collection.push(contract);
     })
-  }
-  
-  allContracts(): Contract[] {
-    return Array.from(this.contracts.values());
   }
 
   getContractAddress(name: string): string {
     if (this.contracts.has(name)) {
-      return this.contracts.get(name)!.address;
+      return this.contracts.get(name) as string;
     } else {
       throw new Error(`${name} not found`);
     }
   }
-  
-  async getContractsMap(hre: any): Promise<any> {
-    const contractsMap: any = {};
-    for (let con of this.allContracts()) {
-      const name = con.contractName.split(".")[0];
-      const alias = con.name[0].toLowerCase() + con.name.slice(1);
-      const contract = hre.artifacts.require(name as any);
-      contractsMap[alias] = await contract.at(con.address);
-    }
-    return contractsMap;
-  }
 
-  async readStream(stream: Readable) {
+  async read(stream: ReadStream) {
     const chunks = [];
     for await (const chunk of stream) chunks.push(chunk); 
     return Buffer.concat(chunks).toString('utf-8');
   }
 
   add(contract: Contract) {
-    this.contracts.set(contract.name, contract);
+    this.collection.push(contract);
+    this.contracts.set(contract.name, contract.address);
   }
 
   serialize(): string {
-    return JSON.stringify(this.allContracts(), null, 2);
+    return JSON.stringify(this.collection, null, 2);
   }
 }
