@@ -50,6 +50,7 @@ export async function proposeGovernance(
   const Distribution = artifacts.require("Distribution");
   const FtsoRegistry = artifacts.require("FtsoRegistry");
   const WNat = artifacts.require("WNat");
+  const PollingFoundation = artifacts.require("PollingFoundation");
 
   // Get deployed contracts
   const supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
@@ -63,6 +64,7 @@ export async function proposeGovernance(
   const cleanupBlockNumberManager = await CleanupBlockNumberManager.at(contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER));
   const ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY)); 
   const wNat = await FtsoRegistry.at(contracts.getContractAddress(Contracts.WNAT));
+  const pollingFoundation = await PollingFoundation.at(contracts.getContractAddress(Contracts.POLLING_FOUNDATION));
 
   if (!quiet) {
     console.error(`Proposed address is ${newGovernanceAccountAddress}`);
@@ -88,4 +90,5 @@ export async function proposeGovernance(
   await cleanupBlockNumberManager.proposeGovernance(newGovernanceAccountAddress);
   await ftsoRegistry.proposeGovernance(newGovernanceAccountAddress);
   await wNat.proposeGovernance(newGovernanceAccountAddress);
+  await pollingFoundation.proposeGovernance(newGovernanceAccountAddress);
 }

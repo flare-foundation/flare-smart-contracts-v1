@@ -5,7 +5,6 @@ import "../../ftso/interface/IIFtso.sol";
 import "../../userInterfaces/IFtsoManager.sol";
 import "../../token/interface/IIVPToken.sol";
 
-
 interface IIFtsoManager is IFtsoManager {
 
     event ClosingExpiredRewardEpochFailed(uint256 _rewardEpoch);
@@ -43,4 +42,24 @@ interface IIFtsoManager is IFtsoManager {
     function setFallbackMode(bool _fallbackMode) external;
 
     function setFtsoFallbackMode(IIFtso _ftso, bool _fallbackMode) external;
+
+    function settings() external view 
+        returns (
+            uint256 _maxVotePowerNatThresholdFraction,
+            uint256 _maxVotePowerAssetThresholdFraction,
+            uint256 _lowAssetUSDThreshold,
+            uint256 _highAssetUSDThreshold,
+            uint256 _highAssetTurnoutThresholdBIPS,
+            uint256 _lowNatTurnoutThresholdBIPS,
+            uint256 _rewardExpiryOffsetSeconds,
+            bool _initialized,
+            bool _changed
+    );
+
+    function rewardEpochs(uint256 _rewardEpochId) external view
+        returns (
+            uint256 _votepowerBlock,
+            uint256 _startBlock,
+            uint256 _startTimestamp
+    );
 }
