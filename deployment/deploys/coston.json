@@ -118,5 +118,15 @@
     "name": "FtsoTestFil",
     "contractName": "Ftso.sol",
     "address": "0x4e71F860b4Cb01AE091331089A33421FD81013d3"
+  },
+  {
+    "name": "GovernanceVotePower",
+    "contractName": "GovernanceVotePower.sol",
+    "address": "0xEb10E3a19Ae0e2564E2c86dBd89517fe7F24789d"
+  },
+  {
+    "name": "PollingFoundation",
+    "contractName": "PollingFoundation.sol",
+    "address": "0x260669AF91a406CB0A57EB8Db8A97Fc7Eab4dc06"
   }
 ]

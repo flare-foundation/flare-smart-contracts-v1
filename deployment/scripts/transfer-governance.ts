@@ -51,6 +51,7 @@ export async function transferGovernance(
   const Distribution = artifacts.require("Distribution");
   const FtsoRegistry = artifacts.require("FtsoRegistry");
   const WNat = artifacts.require("WNat");
+  const PollingFoundation = artifacts.require("PollingFoundation");
 
   // Get deployed contracts
   const supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
@@ -64,6 +65,7 @@ export async function transferGovernance(
   const cleanupBlockNumberManager = await CleanupBlockNumberManager.at(contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER));
   const ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
   const wNat = await WNat.at(contracts.getContractAddress(Contracts.WNAT));
+  const pollingFoundation = await PollingFoundation.at(contracts.getContractAddress(Contracts.POLLING_FOUNDATION));
 
   // Transfer
   await supply.transferGovernance(newGovernanceAccountAddress);
@@ -85,4 +87,5 @@ export async function transferGovernance(
   await cleanupBlockNumberManager.transferGovernance(newGovernanceAccountAddress);
   await ftsoRegistry.transferGovernance(newGovernanceAccountAddress);
   await wNat.transferGovernance(newGovernanceAccountAddress);
+  await pollingFoundation.transferGovernance(newGovernanceAccountAddress);
 }

@@ -11,7 +11,7 @@ contract(`transfer-governance.ts system tests`, async accounts => {
   let contracts: Contracts;
   let parameters: any;
   let GovernedBase: GovernedBaseContract;
-  const SHOULD_HAVE_TRANSERED_GOVERNANCE = "Should have transfered governance";
+  const SHOULD_HAVE_TRANSFERRED_GOVERNANCE = "Should have transfered governance";
 
   before(async () => {
     contracts = new Contracts();
@@ -30,37 +30,37 @@ contract(`transfer-governance.ts system tests`, async accounts => {
   }
   
   describe(Contracts.INFLATION_ALLOCATION, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.INFLATION_ALLOCATION);
     });
   });
 
   describe(Contracts.FTSO_MANAGER, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.FTSO_MANAGER);
     });
   });
 
   describe(Contracts.FLARE_DAEMON, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.FLARE_DAEMON);
     });
   });
 
   describe(Contracts.INFLATION, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.INFLATION);
     });
   });
 
   describe(Contracts.FTSO_REWARD_MANAGER, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.FTSO_REWARD_MANAGER);
     });
   });  
 
   describe(Contracts.DATA_AVAILABILITY_REWARD_MANAGER, async () => {    
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async function () {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async function () {
       if (!parameters.dataAvailabilityRewardManagerDeployed) return this.skip();
       await checkGovernance(Contracts.DATA_AVAILABILITY_REWARD_MANAGER);
     });
@@ -76,31 +76,31 @@ contract(`transfer-governance.ts system tests`, async accounts => {
   });    
 
   describe(Contracts.PRICE_SUBMITTER, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.PRICE_SUBMITTER);
     });
   });      
 
   describe(Contracts.SUPPLY, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.SUPPLY);
     });
   });      
 
   describe(Contracts.VOTER_WHITELISTER, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.VOTER_WHITELISTER);
     });
   });
 
   describe(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER);
     });
   });
 
   describe(Contracts.DISTRIBUTION, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async function() {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async function() {
       if (!parameters.deployDistributionContract) return this.skip();
       await checkGovernance(Contracts.DISTRIBUTION);
     });
@@ -116,14 +116,21 @@ contract(`transfer-governance.ts system tests`, async accounts => {
   });
 
   describe(Contracts.FTSO_REGISTRY, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.FTSO_REGISTRY);
     });
   });
 
   describe(Contracts.WNAT, async () => {
-    it(SHOULD_HAVE_TRANSERED_GOVERNANCE, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.WNAT);
     });
   });
+
+  describe(Contracts.POLLING_FOUNDATION, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkGovernance(Contracts.POLLING_FOUNDATION);
+    });
+  });
+
 });

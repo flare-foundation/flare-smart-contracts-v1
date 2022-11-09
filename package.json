@@ -85,6 +85,8 @@
     "daemonize_contracts_network_coston": "cat deployment/deploys/coston.json | env CHAIN_CONFIG=coston yarn --silent hardhat --network coston daemonize-contracts && yarn test_daemonize_network_coston",
     "deploy_contracts_network_coston": "yarn compile && env CHAIN_CONFIG=coston yarn --silent hardhat --network coston deploy-contracts > ./deployment/deploys/coston.json && yarn test_deploy_network_coston",
 
+    "deploy_contracts_network_coston_governance": "yarn compile && cat deployment/deploys/coston.json | env CHAIN_CONFIG=coston yarn --silent hardhat --network coston deploy-contracts-governance > ./deployment/deploys/coston_governance.json",
+
     "deploy_network_staging": "yarn deploy_contracts_network_staging && yarn daemonize_contracts_network_staging && yarn activate_managers_network_staging && yarn transfer_governance_network_staging",
     "transfer_governance_network_staging": "cat deployment/deploys/staging.json | env CHAIN_CONFIG=staging yarn --silent hardhat --network staging transfer-governance && yarn test_transfer_governance_network_staging",
     "claim_governance_network_staging": "cat deployment/deploys/staging.json | env CHAIN_CONFIG=staging yarn --silent hardhat --network staging claim-governance",

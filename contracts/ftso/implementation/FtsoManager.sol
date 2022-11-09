@@ -68,10 +68,10 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonized, IFlareDaemoni
     string internal constant ERR_FALLBACK_INIT_EPOCH_REVEAL_FAIL = "unknown fail. fallback init epoch for reveal";
 
     bool public override active;
-    RewardEpochData[] public rewardEpochs;
+    RewardEpochData[] public override rewardEpochs;
     address public lastRewardedFtsoAddress;
 
-    FtsoManagerSettings.State public settings;
+    FtsoManagerSettings.State public override settings;
 
     // price epoch data
     uint256 immutable internal firstPriceEpochStartTs;
