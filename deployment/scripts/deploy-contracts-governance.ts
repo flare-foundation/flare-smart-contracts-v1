@@ -31,12 +31,6 @@ export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment, 
   web3.eth.defaultAccount = deployerAccount.address;
 
   const PollingFoundation = artifacts.require("PollingFoundation");
-  const GovernanceVotePower = artifacts.require("GovernanceVotePower");
-
-  // Deploy governance vote power
-  const wNat = contracts.getContractAddress(Contracts.WNAT);
-  const governanceVotePower = await GovernanceVotePower.new(wNat);
-  spewNewContractInfo(contracts, GovernanceVotePower.contractName, `GovernanceVotePower.sol`, governanceVotePower.address, quiet);
 
   // Deploy polling foundation
   const pollingFoundation = await PollingFoundation.new(
@@ -55,8 +49,9 @@ export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment, 
   const ftsoManager = contracts.getContractAddress(Contracts.FTSO_MANAGER);
   const supply = contracts.getContractAddress(Contracts.SUPPLY);
   const ftsoRegistry = contracts.getContractAddress(Contracts.FTSO_REGISTRY);
+  const governanceVotePower = contracts.getContractAddress(Contracts.GOVERNANCE_VOTE_POWER);
 
-  await pollingFoundation.setContractAddresses(governanceVotePower.address, ftsoRegistry, ftsoManager, supply);
+  await pollingFoundation.setContractAddresses(governanceVotePower, ftsoRegistry, ftsoManager, supply);
 
   await pollingFoundation.transferGovernance(parameters.governancePublicKey);
 
