@@ -399,7 +399,7 @@ contract FlareDaemon is GovernedAtGenesis {
                 uint256 minted = expectedMintRequest;
                 totalMintingReceivedWei = totalMintingReceivedWei.add(minted);
                 emit MintingReceived(minted);
-                //slither-disable-next-line arbitrary-send          // only sent to inflation, set by governance
+                //slither-disable-next-line arbitrary-send-eth      // only sent to inflation, set by governance
                 try inflation.receiveMinting{ value: minted }() {
                     totalMintingWithdrawnWei = totalMintingWithdrawnWei.add(minted);
                     emit MintingWithdrawn(minted);
@@ -423,7 +423,7 @@ contract FlareDaemon is GovernedAtGenesis {
                 totalSelfDestructReceivedWei = totalSelfDestructReceivedWei.add(selfDestructReceived);
                 emit MintingReceived(expectedMintRequest);
                 emit SelfDestructReceived(selfDestructReceived);
-                //slither-disable-next-line arbitrary-send          // only sent to inflation, set by governance
+                //slither-disable-next-line arbitrary-send-eth      // only sent to inflation, set by governance
                 try inflation.receiveMinting{ value: expectedMintRequest }() {
                     totalMintingWithdrawnWei = totalMintingWithdrawnWei.add(expectedMintRequest);
                     emit MintingWithdrawn(expectedMintRequest);
