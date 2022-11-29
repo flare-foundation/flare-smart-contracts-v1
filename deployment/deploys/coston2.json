@@ -27,7 +27,7 @@
   {
     "name": "InitialAirdrop",
     "contractName": "InitialAirdrop.sol",
-    "address": "0x1000000000000000000000000000000000000006"
+    "address": "0x24f245f910c74f82447B8ebfF8B94275379e7E74"
   },
   {
     "name": "GovernanceSettings",
@@ -87,12 +87,12 @@
   {
     "name": "DelegationAccountManager",
     "contractName": "DelegationAccountManager.sol",
-    "address": "0xF151927A9ef1cCd797447b0e98c0CCc4E920B873"
+    "address": "0x56Bd34FF8DC809259377652167E365416E617a5f"
   },
   {
     "name": "DelegationAccountClonable",
     "contractName": "DelegationAccountClonable.sol",
-    "address": "0xe261e45898AC1ab49f2D1A45BA655069CE73d07f"
+    "address": "0xBbAadf3De431dbEdc2729C21D5Cad43ef2eb3516"
   },
   {
     "name": "Distribution",

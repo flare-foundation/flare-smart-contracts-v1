@@ -1,6 +1,5 @@
 import { constants, expectEvent, expectRevert, time } from '@openzeppelin/test-helpers';
 import { InitialAirdropInstance } from "../../../../typechain-truffle";
-import { GOVERNANCE_GENESIS_ADDRESS } from "../../../utils/constants";
 import { getAddressWithZeroBalance } from '../../../utils/test-helpers';
 
 const getTestFile = require('../../../utils/constants').getTestFile;
@@ -19,6 +18,7 @@ const ERR_ALREADY_STARTED = "already started";
 const ERR_WRONG_START_TIMESTAMP = "wrong start timestamp";
 const ERR_OUT_OF_BALANCE = "balance too low";
 const ERR_NOT_STARTED = "not started";
+const ERR_ACCOUNT_MISSING = "account missing";
 
 const EVENT_AIRDROP_START = "AirdropStart";
 const EVENT_ACCOUNTS_ADDED = "AccountsAdded";
@@ -27,11 +27,10 @@ contract(`InitialAirdrop.sol; ${getTestFile(__filename)}; InitialAirdrop unit te
   let initialAirdrop: InitialAirdropInstance;
   let claimants: string[] = [];
   let latestStart: BN;
-  let airdropGovernance = GOVERNANCE_GENESIS_ADDRESS;
+  let airdropGovernance = accounts[100];
 
   beforeEach(async () => {
-    initialAirdrop = await InitialAirdrop.new();
-    await initialAirdrop.initialiseFixedAddress();
+    initialAirdrop = await InitialAirdrop.new(airdropGovernance);
     latestStart = (await time.latest()).addn(10 * 24 * 60 * 60); // in 10 days
     await initialAirdrop.setLatestAirdropStart(latestStart, { from: airdropGovernance });
     
@@ -272,6 +271,102 @@ contract(`InitialAirdrop.sol; ${getTestFile(__filename)}; InitialAirdrop unit te
       const start_promise = initialAirdrop.setAirdropStart(later, { from: airdropGovernance });
       // Assert
       await expectRevert(start_promise, ERR_ALREADY_STARTED);
+    });
+
+    it("Should remove account and send funds to that account", async () => {
+      // Assemble
+      await bestowClaimableBalance(BN(1500));
+      const now = (await time.latest()).addn(10);
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      const openingBalance = BN(await web3.eth.getBalance(claimants[2]));
+      // Act
+      const remove = await initialAirdrop.removeAirdropAccount(claimants[2], true, { from: airdropGovernance });
+      // Assert
+      const closingBalance = BN(await web3.eth.getBalance(claimants[2]));
+      assert.equal(closingBalance.sub(openingBalance).toNumber(), 150);
+      expectEvent(remove, "AccountRemoved", { account: claimants[2] });
+      const airdropAccountsLength = await initialAirdrop.airdropAccountsLength();
+      assert.equal(airdropAccountsLength.toNumber(), claimants.length - 1);
+      const airdropAccount = await initialAirdrop.airdropAccounts(2);
+      assert.equal(airdropAccount, claimants[9]);
+      await expectRevert.unspecified(initialAirdrop.airdropAccounts(9));
+      const amount = await initialAirdrop.airdropAmountsWei(claimants[2]);
+      assert.equal(amount.toNumber(), 0);
+      const totalInitialAirdropWei = await initialAirdrop.totalInitialAirdropWei();
+      assert.equal(totalInitialAirdropWei.toNumber(), 1500);
+      const totalTransferredAirdropWei = await initialAirdrop.totalTransferredAirdropWei();
+      assert.equal(totalTransferredAirdropWei.toNumber(), 150);
+    });
+
+    it("Should remove account and send funds to distribution address", async () => {
+      // Assemble
+      await bestowClaimableBalance(BN(1500));
+      const now = (await time.latest()).addn(10);
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      const DISTRIBUTION_ADDRESS = "0x628B0E1A5215fb2610347eEDbf9ceE68043D7c92";
+      const openingBalance = BN(await web3.eth.getBalance(DISTRIBUTION_ADDRESS));
+      // Act
+      const remove = await initialAirdrop.removeAirdropAccount(claimants[9], false, { from: airdropGovernance });
+      // Assert
+      const closingBalance = BN(await web3.eth.getBalance(DISTRIBUTION_ADDRESS));
+      assert.equal(closingBalance.sub(openingBalance).toNumber(), 150);
+      expectEvent(remove, "AccountRemoved", { account: claimants[9] });
+      const airdropAccountsLength = await initialAirdrop.airdropAccountsLength();
+      assert.equal(airdropAccountsLength.toNumber(), claimants.length - 1);
+      const airdropAccount = await initialAirdrop.airdropAccounts(2);
+      assert.equal(airdropAccount, claimants[2]);
+      await expectRevert.unspecified(initialAirdrop.airdropAccounts(9));
+      const amount = await initialAirdrop.airdropAmountsWei(claimants[9]);
+      assert.equal(amount.toNumber(), 0);
+      const totalInitialAirdropWei = await initialAirdrop.totalInitialAirdropWei();
+      assert.equal(totalInitialAirdropWei.toNumber(), 1350);
+      const totalTransferredAirdropWei = await initialAirdrop.totalTransferredAirdropWei();
+      assert.equal(totalTransferredAirdropWei.toNumber(), 0);
+    });
+
+    it("Should not remove account if not from governance", async () => {
+      // Assemble
+      await bestowClaimableBalance(BN(1500));
+      const now = (await time.latest()).addn(10);
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      // Act
+      const remove = initialAirdrop.removeAirdropAccount(claimants[2], false, { from: accounts[0] });
+      // Assert
+      await expectRevert(remove, ERR_ONLY_GOVERNANCE);
+    });
+
+    it("Should revert when removing account twice", async () => {
+      // Assemble
+      await bestowClaimableBalance(BN(1500));
+      const now = (await time.latest()).addn(10);
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      await initialAirdrop.removeAirdropAccount(claimants[2], true, { from: airdropGovernance });
+      // Act
+      const remove = initialAirdrop.removeAirdropAccount(claimants[2], true, { from: airdropGovernance });
+      // Assert
+      await expectRevert(remove, ERR_ACCOUNT_MISSING);
+    });
+
+    it("Should revert when removing unexisting account", async () => {
+      // Assemble
+      await bestowClaimableBalance(BN(1500));
+      const now = (await time.latest()).addn(10);
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      // Act
+      const remove = initialAirdrop.removeAirdropAccount(accounts[20], false, { from: airdropGovernance });
+      // Assert
+      await expectRevert(remove, ERR_ACCOUNT_MISSING);
+    });
+
+    it("Should not remove account if distribution already started", async () => {
+      // Assemble
+      await bestowClaimableBalance(BN(1500));
+      const now = await time.latest();
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      // Act
+      const remove = initialAirdrop.removeAirdropAccount(claimants[2], false, { from: airdropGovernance });
+      // Assert
+      await expectRevert(remove, ERR_ALREADY_STARTED);
     });
   });
 
