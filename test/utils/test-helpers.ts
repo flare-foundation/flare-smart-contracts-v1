@@ -246,3 +246,8 @@ export function resultTuple(obj: any): any[] {
     keys.sort((a, b) => a - b);
     return keys.map(k => obj[k]);
 }
+
+
+export function isNotNull<T>(x: T): x is NonNullable<T> {
+    return x != null;
+}

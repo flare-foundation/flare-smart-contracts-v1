@@ -70,5 +70,6 @@ slither.json
 deployments
 
 ## Airdrop transactions
-
 airdrop/files
+
+/hardhat-link.config.ts

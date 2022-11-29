@@ -8,9 +8,10 @@
  */
 
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { pascalCase } from "pascal-case";
-import { Contract, Contracts } from "./Contracts";
+import { Contracts } from "./Contracts";
 import { verifyParameters } from './verify-parameters';
+import { spewNewContractInfo } from './deploy-utils';
+
 
 export interface AssetDefinition {
   name: string;
@@ -135,6 +136,8 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const VoterWhitelister = artifacts.require("VoterWhitelister");
   const WNAT = artifacts.require("WNat");
   const Distribution = artifacts.require("Distribution");
+  const GovernanceVotePower = artifacts.require("GovernanceVotePower");
+  const PollingFoundation = artifacts.require("PollingFoundation");
 
   // InflationAllocation contract
   // Inflation will be set to 0 for now...it will be set shortly.
@@ -352,6 +355,23 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   await cleanupBlockNumberManager.registerToken(wnat.address);
   await wnat.setCleanupBlockNumberManager(cleanupBlockNumberManager.address)
 
+  // Deploy governance vote power
+  const governanceVotePower = await GovernanceVotePower.new(wnat.address);
+  spewNewContractInfo(contracts, GovernanceVotePower.contractName, `GovernanceVotePower.sol`, governanceVotePower.address, quiet);
+
+  // Tell wNat contract about governance vote power
+  await wnat.setGovernanceVotePower(governanceVotePower.address);
+
+  // Deploy polling foundation
+  const pollingFoundation = await PollingFoundation.new(
+    deployerAccount.address,
+    parameters.proposers
+  );
+  spewNewContractInfo(contracts, PollingFoundation.contractName, `PollingFoundation.sol`, pollingFoundation.address, quiet);
+
+  // set contract addresses for polling foundation
+  await pollingFoundation.setContractAddresses(governanceVotePower.address, ftsoRegistry.address, ftsoManager.address, supply.address);
+
   // Tell reward manager about contracts
   await ftsoRewardManager.setContractAddresses(inflation.address, ftsoManager.address, wnat.address);
 
@@ -513,18 +533,6 @@ async function deployNewAsset(
 
   return { ftso }
 
-}
-
-function spewNewContractInfo(contracts: Contracts, name: string, contractName: string, address: string, quiet = false, pascal = true) {
-  if (!quiet) {
-    console.error(`${name} contract: `, address);
-  }
-  if (pascal) {
-    contracts.add(new Contract(pascalCase(name), contractName, address));
-  }
-  else {
-    contracts.add(new Contract(name.replace(/\s/g, ""), contractName, address));
-  }
 }
 
 function rewrapXassetParams(data: any): AssetDefinition {
