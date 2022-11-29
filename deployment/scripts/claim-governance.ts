@@ -48,6 +48,7 @@ export async function claimGovernance(
   const Distribution = artifacts.require("Distribution");
   const FtsoRegistry = artifacts.require("FtsoRegistry");
   const WNat = artifacts.require("WNat");
+  const PollingFoundation = artifacts.require("PollingFoundation");
 
   // Get deployed contracts
   const supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
@@ -61,6 +62,7 @@ export async function claimGovernance(
   const cleanupBlockNumberManager = await CleanupBlockNumberManager.at(contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER));
   const ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
   const wNat = await FtsoRegistry.at(contracts.getContractAddress(Contracts.WNAT));
+  const pollingFoundation = await PollingFoundation.at(contracts.getContractAddress(Contracts.POLLING_FOUNDATION));
 
   // Claim
   await supply.claimGovernance({from: claimantAccount.address});
@@ -82,4 +84,5 @@ export async function claimGovernance(
   await cleanupBlockNumberManager.claimGovernance({from: claimantAccount.address});
   await ftsoRegistry.claimGovernance({from: claimantAccount.address});
   await wNat.claimGovernance({from: claimantAccount.address});
+  await pollingFoundation.claimGovernance({from: claimantAccount.address});
 }

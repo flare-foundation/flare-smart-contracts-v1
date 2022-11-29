@@ -16,10 +16,6 @@ import { Contracts } from "../scripts/Contracts";
 const parameters = require(`../chain-config/${process.env.CHAIN_CONFIG}.json`)
 const BN = web3.utils.toBN;
 
-function capitalizeFirstLetter(st: string) {
-  return st.charAt(0).toUpperCase() + st.slice(1).toLocaleLowerCase();
-}
-
 async function findAssetFtso(contracts: Contracts, address: string): Promise<boolean> {
   const Ftso = artifacts.require("Ftso");
   const ftsoWnat = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_WNAT));
@@ -146,14 +142,14 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       assert(percentage.gt(BN(0)));
     });
 
-    it("Should new annual inflation percentage equal 10%", async () => {
+    it("Should new annual inflation percentage be correct", async () => {
       // Assemble
       // Act
       const percentage = await inflationAllocation.annualInflationPercentagesBips(0);
       const percentage2 = await inflationAllocation.lastAnnualInflationPercentageBips();
       // Assert
-      assert(percentage.eq(BN(1000)));
-      assert(percentage2.eq(BN(1000)));
+      assert(percentage.eq(BN(parameters.scheduledInflationPercentageBIPS[0])));
+      assert(percentage2.eq(BN(parameters.scheduledInflationPercentageBIPS[0])));
     });
   });
 
@@ -365,7 +361,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         it(`Should know about ${asset} Asset FTSO`, async () => {
           // Assemble
           // Act
-          const found = await findAssetFtso(contracts, contracts.getContractAddress(`Ftso${capitalizeFirstLetter(asset)}`));
+          const found = await findAssetFtso(contracts, contracts.getContractAddress(`Ftso${pascalCase(asset)}`));
           // Assert
           assert(found);
         });
@@ -380,7 +376,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
 
       beforeEach(async () => {
         FtsoAsset = artifacts.require("Ftso");
-        ftsoAsset = await FtsoAsset.at(contracts.getContractAddress(`Ftso${capitalizeFirstLetter(asset.assetSymbol)}`));
+        ftsoAsset = await FtsoAsset.at(contracts.getContractAddress(`Ftso${pascalCase(asset.assetSymbol)}`));
       });
 
       it(`Should be on oracle for ${asset.assetSymbol}`, async () => {
@@ -456,7 +452,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       it(`Should be managing an ${asset.assetSymbol} FTSO`, async () => {
         // Assemble
         // Act
-        const found = await findFtso(contracts, contracts.getContractAddress(`Ftso${capitalizeFirstLetter(asset.assetSymbol)}`));
+        const found = await findFtso(contracts, contracts.getContractAddress(`Ftso${pascalCase(asset.assetSymbol)}`));
         // Assert
         assert(found);
       });

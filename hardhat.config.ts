@@ -25,8 +25,7 @@ import { undaemonizeContracts } from "./deployment/scripts/undaemonize-contracts
 import { transferGovernance } from "./deployment/scripts/transfer-governance";
 import "./type-extensions";
 import { transferGovWorkingBalance } from "./deployment/scripts/transfer-gov-working-balance";
-import { inflationContractsFix } from "./deployment/scripts/inflation-contracts-fix";
-import { deployNatFtso } from "./deployment/scripts/deploy-nat-ftso";
+import { deployContractsGovernance } from "./deployment/scripts/deploy-contracts-governance";
 const intercept = require('intercept-stdout');
 
 // Override solc compile task and filter out useless warnings
@@ -96,6 +95,21 @@ task("deploy-contracts", "Deploy all contracts")
       throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
     }
   });
+
+  task("deploy-contracts-governance", "Deploy governance contracts")
+  .addFlag("quiet", "Suppress console output")
+  .setAction(async (args, hre, runSuper) => {
+    const fs = require("fs");
+    const parameters = getChainConfigParameters(process.env.CHAIN_CONFIG);
+    const contracts = new Contracts();
+    await contracts.deserialize(process.stdin);
+    if (parameters) {
+      await deployContractsGovernance(hre, contracts, parameters, args.quiet);
+    } else {
+      throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
+    }
+  });
+
 
 task("daemonize-contracts", "Register contracts to be daemonized with the FlareDaemon.")
   .addFlag("quiet", "Suppress console output")
@@ -249,33 +263,6 @@ task("undaemonize-contracts", "Remove daemonized contracts from the FlareDaemon.
     }
   });
 
-// Fix inflation deployment task
-task("inflation-contracts-fix", "Deploy Inflation, InflationAllocation, Supply and FtsoRewardManager contracts")
-.addFlag("quiet", "Suppress console output")
-.setAction(async (args, hre, runSuper) => {
-  const parameters = getChainConfigParameters(process.env.CHAIN_CONFIG);
-  if (parameters) {
-    const contracts = new Contracts();
-    await contracts.deserialize(process.stdin);
-    await inflationContractsFix(hre, contracts, parameters, args.quiet);
-  } else {
-    throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
-  }
-});
-
-// Deploy FTSO for NAT task
-task("deploy-nat-ftso", "Deploy FTSO for NAT")
-.addFlag("quiet", "Suppress console output")
-.setAction(async (args, hre, runSuper) => {
-  const parameters = getChainConfigParameters(process.env.CHAIN_CONFIG);
-  if (parameters) {
-    const contracts = new Contracts();
-    await contracts.deserialize(process.stdin);
-    await deployNatFtso(hre, contracts, parameters, args.quiet);
-  } else {
-    throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
-  }
-});
 
 let fs = require('fs');
 

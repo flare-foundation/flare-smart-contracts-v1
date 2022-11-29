@@ -123,5 +123,10 @@
     "name": "GovernanceVotePower",
     "contractName": "GovernanceVotePower.sol",
     "address": "0xC5F28A768eE12f46d82C7C5b3D94C97Da498157C"
+  },
+  {
+    "name": "PollingFoundation",
+    "contractName": "PollingFoundation.sol",
+    "address": "0xE2aFc8465C8Ff5af3BBEa8BBcA5471844D6a14df"
   }
 ]
