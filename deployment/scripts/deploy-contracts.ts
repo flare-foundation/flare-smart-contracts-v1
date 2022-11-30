@@ -17,7 +17,7 @@ import {
   GovernanceVotePowerContract, IncentivePoolAllocationContract, IncentivePoolContract, IncentivePoolTreasuryContract,
   IncentivePoolTreasuryInstance, InflationAllocationContract, InflationContract, InitialAirdropContract, InitialAirdropInstance,
   PriceSubmitterContract, PriceSubmitterInstance, StateConnectorContract, StateConnectorInstance, SuicidalMockContract, SupplyContract,
-  EscrowContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract, ValidatorRegistryContract, ValidatorRewardManagerContract, PollingRejectContract, PollingAcceptContract
+  EscrowContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract, ValidatorRegistryContract, ValidatorRewardManagerContract, PollingFoundationContract
 } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
@@ -95,8 +95,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const SuicidalMock: SuicidalMockContract = artifacts.require("SuicidalMock");
   const ValidatorRegistry: ValidatorRegistryContract = artifacts.require("ValidatorRegistry");
   const ValidatorRewardManager: ValidatorRewardManagerContract = artifacts.require("ValidatorRewardManager");
-  const PollingReject: PollingRejectContract = artifacts.require("PollingReject");
-  const PollingAccept: PollingAcceptContract = artifacts.require("PollingAccept");
+  const PollingFoundation: PollingFoundationContract = artifacts.require("PollingFoundation");
 
   // Initialize the state connector
   let stateConnector: StateConnectorInstance;
@@ -432,47 +431,16 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   // Tell wNat contract about governance vote power
   await wNat.setGovernanceVotePower(governanceVotePower.address);
 
-  // Deploy polling reject
-  const pollingReject = await PollingReject.new(
-    [
-      parameters.rejectProposalThresholdBIPS, 
-      parameters.votingDelaySeconds,
-      parameters.votingPeriodSeconds,
-      parameters.executionDelaySeconds,
-      parameters.executionPeriodSeconds,
-      parameters.ftsoRewardExpiryOffsetDays,
-      parameters.vpBlockPeriodSeconds,
-      parameters.wrappingThresholdBIPS,
-      parameters.absoluteThresholdBIPS,
-      parameters.relativeThresholdBIPS
-    ],
+  // Deploy polling foundation
+  const pollingFoundation = await PollingFoundation.new(
     deployerAccount.address,
     parameters.priceSubmitterAddress,
     addressUpdater.address,
     parameters.proposers
   );
-  spewNewContractInfo(contracts, addressUpdaterContracts, PollingReject.contractName, `PollingReject.sol`, pollingReject.address, quiet);
+  spewNewContractInfo(contracts, addressUpdaterContracts, PollingFoundation.contractName, `PollingFoundation.sol`, pollingFoundation.address, quiet);
 
-  // Deploy polling accept
-  const pollingAccept = await PollingAccept.new(
-    [
-      parameters.acceptProposalThresholdBIPS, 
-      parameters.votingDelaySeconds,
-      parameters.votingPeriodSeconds,
-      parameters.executionDelaySeconds,
-      parameters.executionPeriodSeconds,
-      parameters.ftsoRewardExpiryOffsetDays,
-      parameters.vpBlockPeriodSeconds,
-      parameters.wrappingThresholdBIPS,
-      parameters.absoluteThresholdBIPS,
-      parameters.relativeThresholdBIPS
-    ],
-    deployerAccount.address,
-    parameters.priceSubmitterAddress,
-    addressUpdater.address
-    );
-  spewNewContractInfo(contracts, addressUpdaterContracts, PollingAccept.contractName, `PollingAccept.sol`, pollingAccept.address, quiet);
-
+  
   // Tell address updater about all contracts
   await addressUpdater.addOrUpdateContractNamesAndAddresses(
     addressUpdaterContracts, addressUpdaterContracts.map(name => contracts.getContractAddress(name))
@@ -494,8 +462,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     incentivePool.address,
     escrow.address,
     validatorRewardManager.address,
-    pollingReject.address,
-    pollingAccept.address
+    pollingFoundation.address
   ];
   if (parameters.deployDistributionContract) {
     addressUpdatableContracts.push(delegationAccountManager!.address);

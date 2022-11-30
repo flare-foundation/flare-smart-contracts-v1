@@ -195,13 +195,8 @@
     "address": "0x34EEc1C4962bd7903A4538b718EC16Ba20E4eC02"
   },
   {
-    "name": "PollingReject",
-    "contractName": "PollingReject.sol",
-    "address": "0x5c1b3D6dBd2D1C30B14CA20919A34Fe36eFECbCC"
-  },
-  {
-    "name": "PollingAccept",
-    "contractName": "PollingAccept.sol",
-    "address": "0x0dC26E31aff8ac4B5e3D7B21bFcF8fDfD1C96d50"
+    "name": "PollingFoundation",
+    "contractName": "PollingFoundation.sol",
+    "address": "0x8382657eb70f996DCC255A62B77Dc24F65d0ad2f"
   }
 ]

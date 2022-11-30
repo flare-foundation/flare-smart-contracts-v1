@@ -169,16 +169,6 @@
             "initialPriceUSDDec5": 0
         }
     ],
-    "rejectProposalThresholdBIPS": 0,
-    "acceptProposalThresholdBIPS": 1,
-    "votingDelaySeconds": 300,
-    "votingPeriodSeconds": 345600,
-    "executionDelaySeconds": 500,
-    "executionPeriodSeconds": 36000,
-    "wrappingThresholdBIPS": 1,
-    "absoluteThresholdBIPS": 1,
-    "relativeThresholdBIPS": 5000,
-    "vpBlockPeriodSeconds": 86400,
     "proposers": [
         "0x1a16DC5ec4f48Ed769949855C3bC3a1d10c72A95",
         "0x893baB99798BCF5e0faB09Ad5CE61872B951F0a5"

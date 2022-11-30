@@ -879,7 +879,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.ESCROW,
         Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.GOVERNANCE_VOTE_POWER,
         Contracts.INCENTIVE_POOL_TREASURY, Contracts.INCENTIVE_POOL, Contracts.INCENTIVE_POOL_ALLOCATION, Contracts.INITIAL_AIRDROP, Contracts.GOVERNANCE_SETTINGS,
-        Contracts.VALIDATOR_REGISTRY, Contracts.VALIDATOR_REWARD_MANAGER, Contracts.POLLING_ACCEPT, Contracts.POLLING_REJECT];
+        Contracts.VALIDATOR_REGISTRY, Contracts.VALIDATOR_REWARD_MANAGER, Contracts.POLLING_FOUNDATION];
 
       if (parameters.deployDistributionContract) {
         contractNames.push(Contracts.DELEGATION_ACCOUNT_MANAGER);
@@ -899,7 +899,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       let contractNames = [Contracts.FLARE_DAEMON, Contracts.PRICE_SUBMITTER,Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, 
         Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.FTSO_MANAGER,
         Contracts.INCENTIVE_POOL, Contracts.INCENTIVE_POOL_ALLOCATION, Contracts.ESCROW, Contracts.VALIDATOR_REWARD_MANAGER,
-        Contracts.POLLING_ACCEPT, Contracts.POLLING_REJECT];
+        Contracts.POLLING_FOUNDATION];
 
       if (parameters.deployDistributionContract) {
         contractNames.push(Contracts.DELEGATION_ACCOUNT_MANAGER);
