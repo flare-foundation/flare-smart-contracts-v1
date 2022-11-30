@@ -1,5 +1,5 @@
 /**
- * This script will deploy all contracts for the FTSO MVP.
+ * This script will deploy PollingFoundation contract.
  * It will output, on stdout, a json encoded list of contracts
  * that were deployed. It will write out to stderr, status info
  * as it executes.
@@ -8,18 +8,15 @@
  */
 
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { PollingAcceptContract, PollingRejectContract } from '../../typechain-truffle';
+import { PollingFoundationContract } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
-import { DeployedFlareGovernanceContracts, spewNewContractInfo } from './deploy-utils';
+import { spewNewContractInfo } from './deploy-utils';
 
 export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment,  contracts: Contracts, parameters: ChainParameters, quiet: boolean = false) {
   const web3 = hre.web3;
   const artifacts = hre.artifacts;
 
-  // Define repository for created contracts
-  // Define address updater contracts names list
-  const addressUpdaterContracts: string[] = [];
   // Define accounts in play for the deployment process
   let deployerAccount: any;
 
@@ -33,51 +30,18 @@ export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment, 
   // Wire up the default account that will do the deployment
   web3.eth.defaultAccount = deployerAccount.address;
 
-  const PollingReject: PollingRejectContract = artifacts.require("PollingReject");
-  const PollingAccept: PollingAcceptContract = artifacts.require("PollingAccept");
+  const PollingFoundation: PollingFoundationContract = artifacts.require("PollingFoundation");
 
   const addressUpdater = contracts.getContractAddress(Contracts.ADDRESS_UPDATER);
 
-  // Deploy polling reject
-  const pollingReject = await PollingReject.new(
-    [
-      parameters.rejectProposalThresholdBIPS, 
-      parameters.votingDelaySeconds,
-      parameters.votingPeriodSeconds,
-      parameters.executionDelaySeconds,
-      parameters.executionPeriodSeconds,
-      parameters.ftsoRewardExpiryOffsetDays,
-      parameters.vpBlockPeriodSeconds,
-      parameters.wrappingThresholdBIPS,
-      parameters.absoluteThresholdBIPS,
-      parameters.relativeThresholdBIPS
-    ],
+  // Deploy polling foundation
+  const pollingFoundation = await PollingFoundation.new(
     deployerAccount.address,
     parameters.priceSubmitterAddress,
     addressUpdater,
     parameters.proposers
   );
-  spewNewContractInfo(contracts, addressUpdaterContracts, PollingReject.contractName, `PollingReject.sol`, pollingReject.address, quiet);
-
-  // Deploy polling reject
-  const pollingAccept = await PollingAccept.new(
-    [
-      parameters.acceptProposalThresholdBIPS, 
-      parameters.votingDelaySeconds,
-      parameters.votingPeriodSeconds,
-      parameters.executionDelaySeconds,
-      parameters.executionPeriodSeconds,
-      parameters.ftsoRewardExpiryOffsetDays,
-      parameters.vpBlockPeriodSeconds,
-      parameters.wrappingThresholdBIPS,
-      parameters.absoluteThresholdBIPS,
-      parameters.relativeThresholdBIPS
-    ],
-    deployerAccount.address,
-    parameters.priceSubmitterAddress,
-    addressUpdater
-    );
-  spewNewContractInfo(contracts, addressUpdaterContracts, PollingAccept.contractName, `PollingAccept.sol`, pollingAccept.address, quiet);
+  spewNewContractInfo(contracts, null, PollingFoundation.contractName, `PollingFoundation.sol`, pollingFoundation.address, quiet);
 
   if (!quiet) {
     console.error("Contracts in JSON:");
@@ -85,12 +49,9 @@ export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment, 
     console.error("Deploy complete.");
   }
 
-  await pollingAccept.switchToProductionMode();
-  await pollingReject.switchToProductionMode();
+  await pollingFoundation.switchToProductionMode();
 
   return {
-    pollingReject: pollingReject,
-    pollingAccept: PollingAccept,
     contracts: contracts,
   };
 }

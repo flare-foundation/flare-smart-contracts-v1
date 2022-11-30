@@ -57,14 +57,6 @@
             },
             "type": "array"
         },
-        "absoluteThresholdBIPS": {
-            "description": "Share of a total vote power that needs to vote in favor (against) for a proposal to be accepted (rejected), in BIPS.",
-            "type": "integer"
-        },
-        "acceptProposalThresholdBIPS": {
-            "description": "Share of total vote power needed for creating (acceptance) proposal, in BIPS.",
-            "type": "integer"
-        },
         "assets": {
             "items": {
                 "$ref": "#/definitions/AssetParameters"
@@ -107,14 +99,6 @@
             "description": "Distribution treasury contract address. It is deployed to the genesis block with the fixed address  \"0x1000000000000000000000000000000000000004\".",
             "type": "string"
         },
-        "executionDelaySeconds": {
-            "description": "Time between an end of a voting period and a start of an execution period, in seconds.",
-            "type": "integer"
-        },
-        "executionPeriodSeconds": {
-            "description": "Length of an execution period, in seconds.",
-            "type": "integer"
-        },
         "executorFeeValueUpdateOffsetEpochs": {
             "description": "Executor fee value update timelock measured in reward epochs.\nThe parameter determines in how many reward epochs the new fee value submitted by an executor becomes effective. \nFor test purposes we recommend 3.",
             "type": "integer"
@@ -156,7 +140,7 @@
             "type": "string"
         },
         "governancePublicKey": {
-            "description": "Governance public key (the key to which governance is transfered after deploy). \nOverriden if provided in `.env` file as `GOVERNANCE_PUBLIC_KEY`.",
+            "description": "Governance public key (the key to which governance is transferred after deploy). \nOverriden if provided in `.env` file as `GOVERNANCE_PUBLIC_KEY`.",
             "type": "string"
         },
         "governanceSettingsAddress": {
@@ -288,19 +272,11 @@
             "type": "string"
         },
         "proposers": {
-            "description": "Array of proposers that can create a proposal (for rejection proposals).",
+            "description": "Array of proposers that can create a proposal",
             "items": {
                 "type": "string"
             },
             "type": "array"
-        },
-        "rejectProposalThresholdBIPS": {
-            "description": "Share of total vote power needed for creating (rejection) proposal, in BIPS.",
-            "type": "integer"
-        },
-        "relativeThresholdBIPS": {
-            "description": "Share of voter that needs to be in favor (against) for a proposal to be accepted (rejected), in BIPS.",
-            "type": "integer"
         },
         "revealEpochDurationSeconds": {
             "description": "Reveal epoch duration, in seconds. Usually, it should be at most half of `priceEpochDurationSeconds` (90 seconds).",
@@ -352,18 +328,6 @@
             "description": "Defines interval from which vote power block is randomly selected as a fraction of previous reward epoch. \nThe new vote power block is randomly chosen during finalization block from the last\n`(finalization_block_number - start_epoch_block_number) / votePowerIntervalFraction`\nblocks. Larger value of `votePowerIntervalFraction` means shorter interval, which gives 'fresher' vote power block, but less chance for randomization.\nFor example, if `votePowerIntervalFraction=7` and reward epoch duration is 7 days, vote power block is chosen from the last day of the epoch being finalized.",
             "type": "integer"
         },
-        "votingDelaySeconds": {
-            "description": "Time between proposal creation and a start of a voting period, in seconds.",
-            "type": "integer"
-        },
-        "votingPeriodSeconds": {
-            "description": "Length of a voting period, in seconds.",
-            "type": "integer"
-        },
-        "vpBlockPeriodSeconds": {
-            "description": "Minimal length of a period from which vote power block is selected, in seconds.",
-            "type": "integer"
-        },
         "wrappedNativeName": {
             "description": "The name of the wrapped currency (e.g. Wrapped Flare / Wrapped Songbird).",
             "type": "string"
@@ -371,16 +335,10 @@
         "wrappedNativeSymbol": {
             "description": "The symbol of the wrapped currency (e.g. wFLR/wSGB).",
             "type": "string"
-        },
-        "wrappingThresholdBIPS": {
-            "description": "Share of circulating supply that needs to be wrapped for a proposal to be valid, in BIPS.",
-            "type": "integer"
         }
     },
     "required": [
         "NATMultiAssets",
-        "absoluteThresholdBIPS",
-        "acceptProposalThresholdBIPS",
         "assets",
         "defaultRewardFeePercentageBIPS",
         "defaultVoterWhitelistSize",
@@ -391,8 +349,6 @@
         "distributionLatestEntitlementStart",
         "distributionTotalEntitlementWei",
         "distributionTreasuryAddress",
-        "executionDelaySeconds",
-        "executionPeriodSeconds",
         "executorFeeValueUpdateOffsetEpochs",
         "executorMaxFeeValueNAT",
         "executorRegisterFeeValueNAT",
@@ -434,8 +390,6 @@
         "priceEpochDurationSeconds",
         "priceSubmitterAddress",
         "proposers",
-        "rejectProposalThresholdBIPS",
-        "relativeThresholdBIPS",
         "revealEpochDurationSeconds",
         "rewardEpochDurationSeconds",
         "rewardEpochsStartDelayPriceEpochs",
@@ -447,12 +401,8 @@
         "totalNativeSupplyNAT",
         "trustedAddresses",
         "votePowerIntervalFraction",
-        "votingDelaySeconds",
-        "votingPeriodSeconds",
-        "vpBlockPeriodSeconds",
         "wrappedNativeName",
-        "wrappedNativeSymbol",
-        "wrappingThresholdBIPS"
+        "wrappedNativeSymbol"
     ],
     "type": "object"
 }
