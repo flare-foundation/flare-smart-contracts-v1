@@ -1,186 +1,222 @@
-### Stages
-## Temporary revert to run pipeline
 stages:
-    - test
+  - build
+  - test
 
-### Variables
+
+.rules:
+
+  always:
+    # branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null && $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null'
+    # MR pipelines
+    - if: '$CI_OPEN_MERGE_REQUESTS != null && $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "web"'
+    # Prevent duplicate MR && branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+
+  manual-web_always:
+    # branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null && $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS == null'
+      when: manual
+    # MR pipelines
+    - if: '$CI_OPEN_MERGE_REQUESTS != null && $CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "web"'
+      when: manual
+    # Prevent duplicate MR && branch pipelines
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS && $CI_PIPELINE_SOURCE != "web"'
+      when: never
+
+
+
 variables:
-    TEST_UNIT: "test_unit_hh"
-    TEST_INTEGRATION: "test_integration_hh"
-    TEST_PERFORMANCE: "test_performance_hh"
-    TEST_END_TO_END: "test_endtoend_hardhat"
+  YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
+
+
+
+
+include:
+  - remote: https://gitlab.com/gitlab-org/gitlab/-/raw/07a0843ad18ecb422cdc61bf3c2ef0a9dc58a209/lib/gitlab/ci/templates/Jobs/SAST.latest.gitlab-ci.yml
+
+sast:
+  needs:
+  - job: run-tests
+    optional: true
+
+
+
+
+
+.run-on-selfhosted-runner:
+  tags:
+  - flarenetworks
+
+.test-node:
+  stage: test
+  image: node:latest
+  timeout: 3h
+  needs:
+    - run-tests
+  rules:
+  - !reference [.rules, always]
+  cache:
+    - key:
+        files:
+          - yarn.lock
+      paths:
+        - .yarn-cache/
+        - node_modules/
+      policy: pull-push
+
+
+.test-node-sc:
+  extends: .test-node
+  variables:
     DEPLOYER_PRIVATE_KEY: "0xc5e8f61d1ab959b397eecc0a37a6517b8e67a0e7cf1f4bce5591f3ed80199122"
     GENESIS_GOVERNANCE_PRIVATE_KEY: "0x50777f5a3ce16445e63411bf1e865a2a11d5ca3c4cbc1de00808a52180bd8d3c"
     GOVERNANCE_PRIVATE_KEY: "0xd49743deccbccc5dc7baa8e69e5be03298da8688a15dd202e20f15d5e0e9a9fb"
     GOVERNANCE_PUBLIC_KEY: "0xeAD9C93b79Ae7C1591b1FB5323BD777E86e150d4"
-    TEST_LINTER: "lint"
-    TEST_STATE_CONNECTOR_FILES: "compare_state_connector_file_to_flare_repo"
-    YARN_CACHE_DIR: "$CI_PROJECT_DIR/.yarn-cache"
+  needs:
+    - build-smart-contracts
+    - run-tests
+  dependencies:
+    - build-smart-contracts
+  before_script:
+    - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
 
-cache:
-    - key: always-keep
-      paths:
-        - $YARN_CACHE_DIR
-      policy: pull
+
+
+run-tests:
+  stage: .pre
+  image: busybox
+  rules:
+  - !reference [.rules, manual-web_always]
+  script: [ "true" ]
+
+
+
+
+build-smart-contracts:
+  stage: build
+  needs: []
+  image: node:latest
+  before_script:
+    - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
+  script:
+    - yarn c
+  cache:
     - key:
         files:
-            - yarn.lock
+          - yarn.lock
       paths:
-        - $CI_PROJECT_DIR/node_modules
-      policy: pull
-
-# prevent running duplicate (branch and merge request) pipelines when MR is open
-workflow:
+        - .yarn-cache/
+        - node_modules/
+      policy: pull-push
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
-      when: never
-    - if: '$CI_COMMIT_BRANCH'
-    
-### Templates
+  - !reference [.rules, manual-web_always]
+  artifacts:
+    paths:
+      - typechain
+      - typechain-truffle
+      - typechain-web3
+    expire_in: 1 week
 
-# only run jobs automatically for master barnch push-es
-.pipeline-settings: &pipeline-settings
-    rules:
-        - if: '$CI_BRANCH_NAME == "master"'
-          when: on_success
-        - when: manual
 
-.yarn-setup: &yarn-setup
-    image: node:latest
-    <<: *pipeline-settings
-    before_script:
-        - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
-        
-### Jobs
-test-contract-unit-1:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - env TEST_PATH=./test/unit/ftso/lib yarn hardhat test --network hardhat
-        - env TEST_PATH=./test/unit/ftso/priceProviderDummyContracts yarn hardhat test --network hardhat
-        - yarn hardhat test --network hardhat test/unit/ftso/implementation/Ftso.ts
 
-test-contract-unit-2:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn hardhat test --network hardhat test/unit/ftso/implementation/FtsoManager.ts
-        - yarn hardhat test --network hardhat test/unit/ftso/implementation/FTSOMedian.ts
+test-unit:
+  extends: .test-node-sc
+  parallel:
+    matrix:
+      - TEST_PATH:
+        - ./test/unit/ftso/lib
+        - ./test/unit/ftso/priceProviderDummyContracts
+        - ./test/unit/genesis
+        - ./test/unit/adversary
+        - ./test/unit/Xasset
+        - ./test/unit/inflation
+        - ./test/unit/token
+        - ./test/unit/utils
+        - ./test/unit/inflation
+        - ./test/unit/inflation
+      - TEST_ARG:
+        - test/unit/gasReport/GasReport.ts
+  script:
+    - yarn hardhat test --network hardhat ${TEST_ARG}
 
-test-contract-unit-3:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - env TEST_PATH=./test/unit/tokenPools yarn hardhat test --network hardhat
-        - env TEST_PATH=./test/unit/governance yarn hardhat test --network hardhat
+test-unit-heavy:
+  extends:
+    - test-unit
+    - .run-on-selfhosted-runner
+  retry:
+    when: script_failure
+    max: 2
+  parallel:
+    matrix:
+      - TEST_PATH:
+        - ./test/unit/tokenPools
+        - ./test/unit/governance
+      - TEST_ARG:
+        - test/unit/ftso/implementation/FtsoManager.ts
+        - test/unit/ftso/implementation/FTSOMedian.ts
 
-test-contract-unit-4:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        # - yarn $TEST_STATE_CONNECTOR_FILES
-        - env TEST_PATH=./test/unit/genesis yarn hardhat test --network hardhat
-        - env TEST_PATH=./test/unit/adversary yarn hardhat test --network hardhat
-        - env TEST_PATH=./test/unit/Xasset yarn hardhat test --network hardhat
-        - env TEST_PATH=./test/unit/inflation yarn hardhat test --network hardhat
 
-test-contract-unit-5:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - env TEST_PATH=./test/unit/token yarn hardhat test --network hardhat
-
-test-contract-unit-6:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn $TEST_LINTER
-        - env TEST_PATH=./test/unit/utils yarn hardhat test --network hardhat
+test-lint:
+  extends: .test-node-sc
+  script:
+    - yarn lint
 
 test-contract-integration:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn $TEST_INTEGRATION
+  extends: .test-node-sc
+  script:
+    - yarn test_integration_hh
 
 test-fuzzing-token:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn test_fuzzing_token
+  extends: .test-node-sc
+  script:
+    - yarn test_fuzzing_token
 
 test-fuzzing-token-cleanup-block:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - env CLEANUP_BLOCK=1500 SET_CLEANUP_BLOCK_AT=2100 yarn test_fuzzing_token
+  extends: .test-node-sc
+  variables:
+    CLEANUP_BLOCK: 1500
+    SET_CLEANUP_BLOCK_AT: 2100
+  script:
+    - yarn test_fuzzing_token
 
 test-fuzzing-token-repl-vpcontract:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - env REPLACE_VPCONTRACT_AT=1100 SPLIT_VPCONTRACTS_BLOCKS=500 yarn test_fuzzing_token
+  extends: .test-node-sc
+  variables:
+    REPLACE_VPCONTRACT_AT: 1100
+    SPLIT_VPCONTRACTS_BLOCKS: 500
+  script:
+    - yarn test_fuzzing_token
 
 test-contract-performance:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn $TEST_PERFORMANCE
+  extends: .test-node-sc
+  script:
+    - yarn test_performance_hh
 
 test-contract-end-to-end:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn $TEST_END_TO_END
+  extends: .test-node-sc
+  retry:
+    max: 2
+    when: script_failure
+  script:
+    - yarn test_endtoend_hardhat
 
-slither-check:
-    stage: test
-    image: node:latest
-    <<: *pipeline-settings
-    before_script:
-        - apt update
-        - apt install -y python3-pip
-        - pip3 install slither-analyzer
-        - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
-    script:
-        - yarn slither
-    cache:  # only save cache here
-        - key: always-keep
-          paths:
-            - $YARN_CACHE_DIR
-          policy: pull-push
-        - key:
-            files:
-                - yarn.lock
-          paths:
-            - $CI_PROJECT_DIR/node_modules
-          policy: pull-push
+test-slither-check:
+  extends: .test-node
+  before_script:
+    - apt update
+    - apt install -y python3-pip
+    - pip3 install slither-analyzer
+    - yarn install --frozen-lockfile --cache-folder $YARN_CACHE_DIR
+  script:
+    - yarn slither
 
-gas-report:
-    stage: test
-    <<: *yarn-setup
-    script:
-        - yarn c
-        - yarn hardhat test --network hardhat test/unit/gasReport/GasReport.ts
-#        - env TEST_PATH=./test/unit/gasReport yarn hardhat test --network hardhat
-#        - yarn gas-report-check
-
-onlyDetector:
-    stage: test
-    image: node:latest
-    <<: *pipeline-settings
-    script:
-        - sh scripts/test-only.sh
+test-onlyDetector:
+  extends: .test-node-sc
+  script:
+    - sh scripts/test-only.sh
