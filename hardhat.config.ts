@@ -25,6 +25,7 @@ import "./type-extensions";
 import { deployContractsGovernance } from "./deployment/scripts/deploy-contracts-governance";
 import { switchToProductionMode } from "./deployment/scripts/switch-to-production-mode";
 import { linkContracts } from "./deployment/scripts/link-contracts";
+import { redeployContracts } from "./deployment/scripts/redeploy-contracts";
 
 
 dotenv.config();
@@ -101,6 +102,19 @@ task("deploy-contracts", "Deploy all contracts")
 task("link-contracts", "Link contracts with external libraries")
   .setAction(async (args, hre, runSuper) => {
     await linkContracts(hre);
+  });
+
+task("redeploy-contracts", "Redeploy some contracts")
+  .addFlag("quiet", "Suppress console output")
+  .setAction(async (args, hre, runSuper) => {
+    const parameters = getChainConfigParameters(process.env.CHAIN_CONFIG);
+    if (parameters) {
+      const contracts = new Contracts();
+      await contracts.deserialize(process.stdin);
+      await redeployContracts(hre, contracts, parameters, args.quiet);
+    } else {
+      throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
+    }
   });
   
 task("deploy-contracts-governance", "Deploy governance contracts")

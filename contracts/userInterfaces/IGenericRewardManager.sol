@@ -24,6 +24,10 @@ interface IGenericRewardManager {
         address[] recipients
     );
 
+    event RewardManagerActivated(address rewardManager);
+    event RewardManagerDeactivated(address rewardManager);
+
+
     /**
      * @notice Allows the sender to claim or wrap rewards for reward owner.
      * @notice The caller does not have to be the owner, but must be approved by the owner to claim on his behalf.
@@ -35,7 +39,7 @@ interface IGenericRewardManager {
      * @param _rewardOwner          address of the reward owner
      * @param _recipient            address to transfer funds to
      * @param _rewardAmount         amount of rewards to claim
-     * @param _wrap                 should reward be wrapped immediatelly
+     * @param _wrap                 should reward be wrapped immediately
      */
     function claim(address _rewardOwner, address payable _recipient, uint256 _rewardAmount, bool _wrap) external;
 

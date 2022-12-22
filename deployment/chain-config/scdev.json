@@ -50,6 +50,7 @@
         "0x2ffd013aaa7b5a7da93336c2251075202b33fb2b"
     ],
     "executorFeeValueUpdateOffsetEpochs": 3,
+    "executorMinFeeValueNAT": 0,
     "executorMaxFeeValueNAT": 100,
     "executorRegisterFeeValueNAT": 100,
     "rewardFeePercentageUpdateOffsetEpochs": 3,
@@ -64,7 +65,7 @@
     "inflationGasLimit": 2000000,
     "ftsoManagerGasLimit": 40000000,
     "incentivePoolGasLimit": 3000000,
-    "deployDistributionContract": false,
+    "deployDistributionContract": true,
     "deployDummyXAssetTokensAndMinters": false,
     "deployNATFtso": true,
     "NATMultiAssets": ["XRP", "LTC", "DOGE"],

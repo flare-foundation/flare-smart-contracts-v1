@@ -19,6 +19,7 @@ const ERR_WRONG_START_TIMESTAMP = "wrong start timestamp";
 const ERR_OUT_OF_BALANCE = "balance too low";
 const ERR_NOT_STARTED = "not started";
 const ERR_ACCOUNT_MISSING = "account missing";
+const ERR_NOT_YET_DISTRIBUTED = "not yet distributed";
 
 const EVENT_AIRDROP_START = "AirdropStart";
 const EVENT_ACCOUNTS_ADDED = "AccountsAdded";
@@ -154,6 +155,19 @@ contract(`InitialAirdrop.sol; ${getTestFile(__filename)}; InitialAirdrop unit te
   describe("airdrop startup", async () => {
     beforeEach(async () => {
       await bulkLoad(BN(1000));
+    });
+
+    it("Should receive funds from governance only", async () => {
+      // Assemble
+      await web3.eth.sendTransaction({ from: airdropGovernance, to: initialAirdrop.address, value: BN(1500) });
+      // Act
+      const now = await time.latest();
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      const tx = web3.eth.sendTransaction({ from: accounts[0], to: initialAirdrop.address, value: BN(1500) });
+      // Assert
+      const initialAirdropStartTs = await initialAirdrop.initialAirdropStartTs();
+      assert(initialAirdropStartTs.eq(now));
+      await expectRevert(tx, ERR_ONLY_GOVERNANCE);
     });
 
     it("Should start airdrop", async () => {
@@ -454,9 +468,53 @@ contract(`InitialAirdrop.sol; ${getTestFile(__filename)}; InitialAirdrop unit te
         assert.equal((await initialAirdrop.airdropAmountsWei(claimants[i])).toString(), "0");
         assert.equal(await web3.eth.getBalance(claimants[i]), i == 150 ? "0" : "150");
       }
-      assert((await initialAirdrop.totalTransferredAirdropWei()).eqn(160 * 150));
+      assert((await initialAirdrop.totalTransferredAirdropWei()).eqn((160 - 1) * 150));
       assert((await initialAirdrop.nextAirdropAccountIndexToTransfer()).eqn(160));
       expectEvent(tx, "AirdropTransferFailure", {account: gasConsumer.address, amountWei: BN(150)});
+    });
+
+    it("Should withdraw undistributed funds if error happens only by governance and only after distribution has finished", async () => {
+      // Assemble
+      const additionalClimants: string[] = [];
+      const gasConsumer = await GasConsumer.new();
+      additionalClimants.push(gasConsumer.address);
+      claimants.push(gasConsumer.address);
+      for (let i = 0; i < 9; i++) {
+        const address = await getAddressWithZeroBalance();
+        additionalClimants.push(address);
+        claimants.push(address);
+      }
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250]), ERR_ONLY_GOVERNANCE);
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250], { from: airdropGovernance }), "not started");
+      await bulkLoad(BN(1000), additionalClimants);
+      await bestowClaimableBalance(BN(160 * 150));
+      const now = await time.latest();
+      await initialAirdrop.setAirdropStart(now, { from: airdropGovernance });
+      const initialAirdropStartTs = await initialAirdrop.initialAirdropStartTs();
+      assert(initialAirdropStartTs.eq(now));
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250], { from: airdropGovernance }), ERR_NOT_YET_DISTRIBUTED);
+      // Act
+      await initialAirdrop.transferAirdrop();
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250], { from: airdropGovernance }), ERR_NOT_YET_DISTRIBUTED);
+      await initialAirdrop.transferAirdrop();
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250], { from: airdropGovernance }), ERR_NOT_YET_DISTRIBUTED);
+      await initialAirdrop.transferAirdrop();
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250], { from: airdropGovernance }), ERR_NOT_YET_DISTRIBUTED);
+      const tx = await initialAirdrop.transferAirdrop();
+      // Assert
+      for (let i = 0; i < 160; i++) {
+        assert.equal(await initialAirdrop.airdropAccounts(i), constants.ZERO_ADDRESS);
+        assert.equal((await initialAirdrop.airdropAmountsWei(claimants[i])).toString(), "0");
+        assert.equal(await web3.eth.getBalance(claimants[i]), i == 150 ? "0" : "150");
+      }
+      assert((await initialAirdrop.totalTransferredAirdropWei()).eqn((160 - 1) * 150));
+      assert((await initialAirdrop.nextAirdropAccountIndexToTransfer()).eqn(160));
+      expectEvent(tx, "AirdropTransferFailure", {account: gasConsumer.address, amountWei: BN(150)});
+      await expectRevert(initialAirdrop.withdrawUndistributedFunds(accounts[250],), ERR_ONLY_GOVERNANCE);
+      const openingBalance = BN(await web3.eth.getBalance(accounts[250]));
+      await initialAirdrop.withdrawUndistributedFunds(accounts[250], { from: airdropGovernance });
+      const closingBalance = BN(await web3.eth.getBalance(accounts[250]));
+      assert.equal(closingBalance.sub(openingBalance).toNumber(), 150);
     });
 
     it("Should not transfer airdrop if start not set", async () => {
