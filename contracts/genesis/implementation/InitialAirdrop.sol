@@ -41,6 +41,7 @@ contract InitialAirdrop is Governed, ReentrancyGuard {
     string internal constant ERR_ALREADY_STARTED = "already started";
     string internal constant ERR_ACCOUNT_MISSING = "account missing";
     string internal constant ERR_TRANSFER_FAILURE = "transfer failed";
+    string internal constant ERR_NOT_YET_DISTRIBUTED = "not yet distributed";
 
     // Events
     event AccountsAdded(address[] accounts);
@@ -66,6 +67,13 @@ contract InitialAirdrop is Governed, ReentrancyGuard {
 
     constructor(address _governance) Governed(_governance) {
         /* empty block */
+    }
+
+    /**
+     * @notice Needed in order to receive funds from governance address
+     */
+    receive() external payable {
+        require(msg.sender == governance(), "only governance");
     }
 
     /**
@@ -177,14 +185,14 @@ contract InitialAirdrop is Governed, ReentrancyGuard {
             delete airdropAmountsWei[account];
             delete airdropAccountsIndex[account];
             delete airdropAccounts[i];
-            // Update total transferred
-            totalTransferredAirdropWeiTemp = totalTransferredAirdropWeiTemp.add(amountWei);
             // Send
             /* solhint-disable avoid-low-level-calls */
             //slither-disable-next-line arbitrary-send-eth
             (bool success, ) = account.call{ value: amountWei, gas: 21000 }("");
             /* solhint-enable avoid-low-level-calls */
-            if (!success) {
+            if (success) {
+                totalTransferredAirdropWeiTemp = totalTransferredAirdropWeiTemp.add(amountWei);
+            } else {
                 emit AirdropTransferFailure(account, amountWei);
             }
         }
@@ -194,6 +202,20 @@ contract InitialAirdrop is Governed, ReentrancyGuard {
 
         // Update current position
         nextAirdropAccountIndexToTransfer = upperBound;
+    }
+
+    /**
+     * @notice Method for withdrawing initial airdrop funds that were not distributed
+     * @param _recipient                address to transfer funds to
+     * @dev Can only be called once airdrop was distributed
+     */
+    function withdrawUndistributedFunds(address _recipient) external onlyGovernance airdropStarted {
+        require(nextAirdropAccountIndexToTransfer == airdropAccounts.length, ERR_NOT_YET_DISTRIBUTED);
+        /* solhint-disable avoid-low-level-calls */
+        //slither-disable-next-line arbitrary-send-eth
+        (bool success, ) = _recipient.call{ value: address(this).balance }("");
+        /* solhint-enable avoid-low-level-calls */
+        require(success, ERR_TRANSFER_FAILURE);
     }
 
     /**

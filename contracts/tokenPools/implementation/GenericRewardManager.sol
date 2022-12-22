@@ -32,6 +32,7 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
     string internal constant ERR_RECIPIENT_NOT_ALLOWED = "recipient not allowed";
     string internal constant ERR_TOO_MUCH = "too much";
     string internal constant ERR_ARRAY_MISMATCH = "arrays lengths mismatch";
+    address payable constant internal BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
     
     bool public override active;
 
@@ -49,7 +50,6 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
     uint256 internal totalClaimedWei;     // rewards that were claimed
     uint256 internal totalInflationAuthorizedWei;
     uint256 internal totalInflationReceivedWei;
-    uint256 internal totalSelfDestructReceivedWei;
     uint256 internal lastInflationAuthorizationReceivedTs;
     uint256 internal dailyAuthorizedInflation;
 
@@ -115,7 +115,7 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
      * @param _rewardOwner          address of the reward owner
      * @param _recipient            address to transfer funds to
      * @param _rewardAmount         amount of rewards to claim
-     * @param _wrap                 should reward be wrapped immediatelly
+     * @param _wrap                 should reward be wrapped immediately
      */
     function claim(
         address _rewardOwner,
@@ -159,6 +159,7 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
         require(inflation != address(0) && address(wNat) != address(0),
             "contract addresses not set");
         active = true;
+        emit RewardManagerActivated(address(this));
     }
 
     /**
@@ -166,6 +167,7 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
      */
     function deactivate() external override onlyImmediateGovernance {
         active = false;
+        emit RewardManagerDeactivated(address(this));
     }
 
     function setDailyAuthorizedInflation(uint256 _toAuthorizeWei) external override onlyInflation {
@@ -177,9 +179,8 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
     }
 
     function receiveInflation() external payable override mustBalance onlyInflation {
-        (uint256 currentBalance, ) = _handleSelfDestructProceeds();
+        lastBalance = _handleSelfDestructProceeds();
         totalInflationReceivedWei = totalInflationReceivedWei.add(msg.value);
-        lastBalance = currentBalance;
 
         emit InflationReceived(msg.value);
     }
@@ -277,7 +278,6 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
             uint256 _totalClaimedWei,
             uint256 _totalInflationAuthorizedWei,
             uint256 _totalInflationReceivedWei,
-            uint256 _totalSelfDestructReceivedWei,
             uint256 _lastInflationAuthorizationReceivedTs,
             uint256 _dailyAuthorizedInflation
         )
@@ -287,7 +287,6 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
             totalClaimedWei,
             totalInflationAuthorizedWei,
             totalInflationReceivedWei,
-            totalSelfDestructReceivedWei,
             lastInflationAuthorizationReceivedTs,
             dailyAuthorizedInflation
         );
@@ -308,13 +307,14 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
         return allowedClaimRecipientSet[_rewardOwner].list;
     }
 
-    function _handleSelfDestructProceeds() internal returns (uint256 _currentBalance, uint256 _expectedBalance) {
+    function _handleSelfDestructProceeds() internal returns (uint256 _expectedBalance) {
         _expectedBalance = lastBalance.add(msg.value);
-        _currentBalance = address(this).balance;
-        if (_currentBalance > _expectedBalance) {
-            // Then assume extra were self-destruct proceeds
-            totalSelfDestructReceivedWei = totalSelfDestructReceivedWei.add(_currentBalance).sub(_expectedBalance);
-        } else if (_currentBalance < _expectedBalance) {
+        uint256 currentBalance = address(this).balance;
+        if (currentBalance > _expectedBalance) {
+            // Then assume extra were self-destruct proceeds and burn it
+            //slither-disable-next-line arbitrary-send-eth
+            BURN_ADDRESS.transfer(currentBalance.sub(_expectedBalance));
+        } else if (currentBalance < _expectedBalance) {
             // This is a coding error
             assert(false);
         }
@@ -405,7 +405,6 @@ abstract contract GenericRewardManager is IIGenericRewardManager, Governed, Reen
 
     function _getExpectedBalance() internal view returns(uint256 _balanceExpectedWei) {
         return totalInflationReceivedWei
-            .add(totalSelfDestructReceivedWei)
             .sub(totalClaimedWei);
     }
 
