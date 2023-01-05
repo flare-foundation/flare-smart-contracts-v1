@@ -735,7 +735,7 @@ contract(`ClaimSetupManager.sol; ${getTestFile(__filename)}; Claim setup manager
     // Arguments are irrelvant
     const transferMethod = token.contract.methods.transfer(accounts[99], 0).encodeABI()
     await tokenMock.givenMethodReturnBool(transferMethod, false);
-    await expectRevert(claimSetupManager.transferExternalToken(tokenMock.address, 70, {from: accounts[1]}), "transfer failed");
+    await expectRevert(claimSetupManager.transferExternalToken(tokenMock.address, 70, {from: accounts[1]}), "SafeERC20: ERC20 operation did not succeed");
     await tokenMock.givenMethodReturnBool(transferMethod, true);
 
     // Should allow transfer
@@ -768,12 +768,12 @@ contract(`ClaimSetupManager.sol; ${getTestFile(__filename)}; Claim setup manager
 
   it("Should fail if calling non existing contract", async() =>{
     const tx = claimSetupManager.transferExternalToken(accounts[3], 70, {from: accounts[1]});
-    await expectRevert(tx, "Transaction reverted: function call to a non-contract account");
+    await expectRevert(tx, "Address: call to non-contract");
   });
 
   it("Should fail if calling non conforming contract", async() =>{
     const tx = claimSetupManager.transferExternalToken(ftsoRewardManager.address, 70, {from: accounts[1]});
-    await expectRevert(tx, "Transaction reverted: function selector was not recognized and there's no fallback function");
+    await expectRevert(tx, "SafeERC20: low-level call failed");
   });
 
   it("Should not update wNat if address changes", async() => {
@@ -822,6 +822,33 @@ contract(`ClaimSetupManager.sol; ${getTestFile(__filename)}; Claim setup manager
     await claimSetupManager.setClaimExecutors([executor], { from: accounts[1], value: "10" });
     expect(await claimSetupManager.isClaimExecutor(accounts[1], executor)).to.equals(true);
     expect(await claimSetupManager.isClaimExecutor(accounts[2], executor)).to.equals(false);
+  });
+
+  it("Should pay fee for new executors only", async() => {
+    let executor = accounts[6];
+    let executor2 = accounts[7];
+    let executor3 = accounts[8];
+    await claimSetupManager.registerExecutor(10, { value: EXECUTOR_REGISTER_FEE, from: executor });
+    await claimSetupManager.registerExecutor(5, { value: EXECUTOR_REGISTER_FEE, from: executor3 });
+    await claimSetupManager.setClaimExecutors([executor], { from: accounts[1], value: "10" });
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[2], executor)).to.equals(false);
+    await claimSetupManager.setClaimExecutors([executor, executor2], { from: accounts[1] });
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor2)).to.equals(true);
+    await claimSetupManager.setClaimExecutors([executor, executor2, executor3], { from: accounts[1], value: "5" });
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor2)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor3)).to.equals(true);
+    await claimSetupManager.setClaimExecutors([executor2], { from: accounts[1] });
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor)).to.equals(false);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor2)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor3)).to.equals(false);
+    await expectRevert(claimSetupManager.setClaimExecutors([executor, executor2, executor3], { from: accounts[1], value: "14" }), "transfer failed");
+    await claimSetupManager.setClaimExecutors([executor, executor2, executor3], { from: accounts[1], value: "15" });
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor2)).to.equals(true);
+    expect(await claimSetupManager.isClaimExecutor(accounts[1], executor3)).to.equals(true);
   });
 
   it("Should revert when trying to disable delegation account that does not exist", async() => {

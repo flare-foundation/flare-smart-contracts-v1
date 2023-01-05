@@ -15,6 +15,7 @@ contract FtsoRegistry is IIFtsoRegistry, AddressUpdatable, GovernedBase {
 
     // constants
     uint256 internal constant MAX_HISTORY_LENGTH = 5;
+    address internal constant DEAD_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     // errors
     string internal constant ERR_TOKEN_NOT_SUPPORTED = "FTSO index not supported";
@@ -33,7 +34,7 @@ contract FtsoRegistry is IIFtsoRegistry, AddressUpdatable, GovernedBase {
     }
 
     // Using a governed proxy pattern - no constructor will run. Using initialiseRegistry function instead.
-    constructor() GovernedBase(address(0)) AddressUpdatable(address(0)) {
+    constructor() GovernedBase(DEAD_ADDRESS) AddressUpdatable(address(0)) {
         /* empty block */
     }
 

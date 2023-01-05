@@ -207,8 +207,8 @@ contract FlareAssetRegistry is Governed, IIFlareAssetRegistry {
      * @notice Returns a generic asset attribute value.
      * @param _token The token's address
      * @param _nameHash attributes name's hash
-     * @param _defined true if the attribute is defined for this token
-     * @param _value attribute value, may have to be cast into some other type
+     * @return _defined true if the attribute is defined for this token
+     * @return _value attribute value, may have to be cast into some other type
      */
     function getAttribute(address _token, bytes32 _nameHash) 
         public view override 

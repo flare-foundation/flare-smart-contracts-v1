@@ -74,8 +74,8 @@ interface IFlareAssetRegistry {
      * @notice Returns a generic asset attribute value.
      * @param token The token's address
      * @param nameHash attributes name's hash
-     * @param defined true if the attribute is defined for this token
-     * @param value attribute value, may have to be cast into some other type
+     * @return defined true if the attribute is defined for this token
+     * @return value attribute value, may have to be cast into some other type
      */
     function getAttribute(address token, bytes32 nameHash) external view returns (bool defined, bytes32 value);
 }

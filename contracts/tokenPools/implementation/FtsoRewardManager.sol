@@ -146,6 +146,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
      * @return _rewardAmount        amount of total claimed rewards
      * @dev Reverts if `msg.sender` is delegating by amount
      * @dev Claims for all unclaimed reward epochs to the 'max(_rewardEpochs)'.
+     * @dev Retained for backward compatibility.
      * @dev This function is deprecated - use `claim` instead.
      */
     function claimReward(
@@ -286,14 +287,17 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
         (address[] memory claimAddresses, uint256 executorFeeValue) = 
             claimSetupManager.getAutoClaimAddressesAndExecutorFee(msg.sender, _rewardOwners);
 
+        uint256 minClaimableEpoch = _minClaimableRewardEpoch();
         for (uint256 i = 0; i < _rewardOwners.length; i++) {
             address rewardOwner = _rewardOwners[i];
             address claimAddress = claimAddresses[i];
             // claim for owner
-            uint256 rewardAmount = _claimRewardPercentageDelegation(rewardOwner, claimAddress, _rewardEpoch);
+            uint256 rewardAmount = 
+                _claimRewardPercentageDelegation(rewardOwner, claimAddress, _rewardEpoch, minClaimableEpoch);
             if (rewardOwner != claimAddress) {
                 // claim for PDA
-                rewardAmount += _claimRewardPercentageDelegation(claimAddress, claimAddress, _rewardEpoch);
+                rewardAmount += 
+                    _claimRewardPercentageDelegation(claimAddress, claimAddress, _rewardEpoch, minClaimableEpoch);
             }
             rewardAmount = rewardAmount.sub(executorFeeValue, "claimed amount too small");
             if (rewardAmount > 0) {
@@ -805,6 +809,14 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
     }
 
     /**
+     * @notice Returns the next claimable reward epoch for '_rewardOwner'.
+     * @param _rewardOwner          address of the reward owner
+     */
+    function nextClaimableRewardEpoch(address _rewardOwner) external view override returns (uint256) {
+        return _nextClaimableEpoch(_rewardOwner, _minClaimableRewardEpoch());
+    }
+
+    /**
      * @notice Implement this function for updating inflation receiver contracts through AddressUpdater.
      */
     function getContractName() external pure override returns (string memory) {
@@ -893,7 +905,8 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
             return 0;
         }
 
-        _rewardAmount = _claimRewardPercentageDelegation(_rewardOwner, _recipient, _rewardEpoch);
+        _rewardAmount = 
+            _claimRewardPercentageDelegation(_rewardOwner, _recipient, _rewardEpoch, _minClaimableRewardEpoch());
 
         _transferOrWrapAndUpdateBalance(_recipient, _rewardAmount, _wrap);
     }
@@ -919,7 +932,8 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
     {
         _checkNonzeroRecipient(_recipient);
         _handleSelfDestructProceeds();
-        require(wNat.delegationModeOf(_rewardOwner) == 2, "explicit delegation only"); // DelegationMode.AMOUNT
+        require(wNat.delegationModeOf(_rewardOwner) == uint256(Delegatable.DelegationMode.AMOUNT), 
+            "explicit delegation only");
 
         uint256 currentRewardEpoch = _getCurrentRewardEpoch();
 
@@ -943,6 +957,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
      * @param _recipient            address representing the recipient of the reward
      * @param _rewardEpoch          reward epoch number
      * @param _rewardState          object holding reward state
+     * @param _explicitDelegation   indicates if claiming for explicit or percentage delegation
      * @return Returns the total reward amount.
      */
     function _claimReward(
@@ -997,12 +1012,13 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
     function _claimRewardPercentageDelegation(
         address _rewardOwner,
         address _recipient,
-        uint256 _rewardEpoch
+        uint256 _rewardEpoch,
+        uint256 _minClaimableEpoch
     )
         internal
         returns (uint256 _rewardAmount)
     {
-        for (uint256 epoch = _firstClaimableRewardEpoch(_rewardOwner); epoch <= _rewardEpoch; epoch++) {
+        for (uint256 epoch = _nextClaimableEpoch(_rewardOwner, _minClaimableEpoch); epoch <= _rewardEpoch; epoch++) {
             RewardState memory rewardState = _getStateOfRewards(_rewardOwner, epoch, true);
             uint256 amount = _claimReward(_rewardOwner, _recipient, epoch, rewardState, false);
             claimedRewardEpochRewards[epoch] += amount;
@@ -1268,8 +1284,12 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
                _rewardEpoch < _currentRewardEpoch;
     }
 
-    function _firstClaimableRewardEpoch(address _claimer) internal view returns (uint256) {
-        return Math.max(claimerNextClaimableEpoch[_claimer], nextRewardEpochToExpire);
+    function _nextClaimableEpoch(address _claimer, uint256 _minClaimableEpoch) internal view returns (uint256) {
+        return Math.max(claimerNextClaimableEpoch[_claimer], _minClaimableEpoch);
+    }
+
+    function _minClaimableRewardEpoch() internal view returns (uint256) {
+        return Math.max(firstClaimableRewardEpoch, Math.max(_getInitialRewardEpoch(), nextRewardEpochToExpire));
     }
 
     /**
@@ -1431,7 +1451,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard, Ad
         if (msg.sender == _rewardOwner) {
             return;
         }
-        assert(claimSetupManager.checkExecutorAndAllowedRecipient(msg.sender, _rewardOwner, _recipient));
+        claimSetupManager.checkExecutorAndAllowedRecipient(msg.sender, _rewardOwner, _recipient);
     }
     
     function _checkMustBalance() private view {

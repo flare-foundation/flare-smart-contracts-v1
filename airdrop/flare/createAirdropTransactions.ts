@@ -87,7 +87,7 @@ const { argv } = require("yargs")
         alias: "batch-size",
         describe: "Batch size",
         type: "number",
-        default: 30,
+        default: 25,
         demandOption: "Batch size is required (-b or --batch-size)",
         nargs: 1
     })
@@ -248,7 +248,7 @@ const inputRepString = `Script run with
 --header                           (-h)     : ${header}
 --gas                              (-g)     : ${gas}
 --gas-price                        (-p)     : ${gasPrice}
---GENESIS_GOVERNANCE_PRIVATE_KEY   (.ENV)   : ${initialAirdropSenderAddress}
+--GENESIS_GOVERNANCE_PUBLIC_KEY    (.ENV)   : ${initialAirdropSenderAddress}
 --WEB3_PROVIDER_URL                (.ENV)   : ${web3Provider}
 --chain-id                         (-i)     : ${chainId}
 --deployment-name                  (-d)     : ${deploymentName}

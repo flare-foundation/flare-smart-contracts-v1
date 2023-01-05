@@ -51,11 +51,17 @@ contract(`FtsoRegistry.sol; ${getTestFile(__filename)}; FtsoRegistry contract un
         [ADDRESS_UPDATER, MOCK_FTSO_MANAGER_ADDRESS], { from: ADDRESS_UPDATER });
     });
 
+    it("Should revert if trying to initialise from any other address than governance ", async () => {
+      ftsoRegistryProxy = await FtsoRegistryProxy.new(GOVERNANCE_ADDRESS, ftsoRegistryContract.address);
+      registry = await FtsoRegistryContract.at(ftsoRegistryProxy.address);
+      let onlyGovernance = registry.initialiseRegistry(ADDRESS_UPDATER, { from: accounts[12] });
+      await expectRevert(onlyGovernance, "only governance");
+    });
+
     it("Should revert if trying to initialise again ", async () => {
       let init = registry.initialiseRegistry(ADDRESS_UPDATER);
       await expectRevert(init, "already initialized");
     });
-
 
     it("Should revert for unsupported index ", async () => {
       // Assemble

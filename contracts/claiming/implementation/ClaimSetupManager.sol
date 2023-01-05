@@ -278,7 +278,7 @@ contract ClaimSetupManager is IIClaimSetupManager,
      * @param _amount           Amount of tokens to transfer
      * @dev Reverts if target token is WNat contract - use method `withdraw` for that
      */
-    function transferExternalToken(IERC20 _token, uint256 _amount) external override {
+    function transferExternalToken(IERC20 _token, uint256 _amount) external override nonReentrant {
         _getDelegationAccount(msg.sender).transferExternalToken(wNat, _token, _amount);
     }
     
@@ -394,11 +394,11 @@ contract ClaimSetupManager is IIClaimSetupManager,
      * @notice Checks if executor can claim for given address and send funds to recipient address
      */
     function checkExecutorAndAllowedRecipient(address _executor, address _claimFor, address _recipient) 
-        external view override returns (bool)
+        external view override
     {
         // checks if _executor is claiming for his account or his PDA account - allow any _recipient
         if (_claimFor == _executor || _claimFor == address(_getDelegationAccount(_executor))) {
-            return true;
+            return;
         }
         // if claiming for PDA, use owner settings
         address owner = delegationAccountToOwner[_claimFor];
@@ -412,8 +412,6 @@ contract ClaimSetupManager is IIClaimSetupManager,
             ownerAllowedClaimRecipientSet[_claimFor].index[_recipient] != 0 ||
             _recipient == address(_getDelegationAccount(_claimFor)),
             ERR_RECIPIENT_NOT_ALLOWED);
-        
-        return true;
     }   
 
     /**
@@ -535,22 +533,28 @@ contract ClaimSetupManager is IIClaimSetupManager,
      * @param _executors        The new executors. All old executors will be deleted and replaced by these.
      */
     function _setClaimExecutors(address[] memory _executors) internal {
-        // replace executors
-        ownerClaimExecutorSet[msg.sender].replaceAll(_executors);
-        emit ClaimExecutorsChanged(msg.sender, _executors);
+        // pay fee to new executors
         uint256 totalExecutorsFee = 0;
-        for (uint256 i = 0 ; i < _executors.length; i++) {
-            uint256 executorFee = getExecutorCurrentFeeValue(_executors[i]);
+        for (uint256 i = 0; i < _executors.length; i++) {
+            address executor = _executors[i];
+            if (ownerClaimExecutorSet[msg.sender].index[executor] != 0) {
+                continue; // current executor - fee already paid
+            }
+            uint256 executorFee = getExecutorCurrentFeeValue(executor);
             if (executorFee > 0) {
                 totalExecutorsFee += executorFee;
                 /* solhint-disable avoid-low-level-calls */
                 //slither-disable-next-line arbitrary-send-eth
-                (bool success, ) = _executors[i].call{value: executorFee}(""); //nonReentrant
+                (bool success, ) = executor.call{value: executorFee}(""); //nonReentrant
                 /* solhint-enable avoid-low-level-calls */
                 require(success, ERR_TRANSFER_FAILURE);
             }
         }
         require (totalExecutorsFee <= msg.value, ERR_EXECUTOR_FEE_INVALID);
+        // replace executors
+        ownerClaimExecutorSet[msg.sender].replaceAll(_executors);
+        emit ClaimExecutorsChanged(msg.sender, _executors);
+        // refund excess amount
         if (msg.value > totalExecutorsFee) {
             /* solhint-disable avoid-low-level-calls */
             //slither-disable-next-line arbitrary-send-eth
