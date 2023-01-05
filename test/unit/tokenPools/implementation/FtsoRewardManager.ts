@@ -383,6 +383,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             // advance, but not expire epoch 1            
             await travelToAndSetNewRewardEpoch(2, startTs, ftsoRewardManager, accounts[0]);
             expect((await ftsoRewardManager.getRewardEpochToExpireNext()).toNumber()).to.equals(1);
+            expect((await ftsoRewardManager.nextClaimableRewardEpoch(accounts[2])).toNumber()).to.equals(1);
         });
 
         it("Should get current reward epoch", async () => {
@@ -426,6 +427,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             expect((await ftsoRewardManager.getRewardEpochToExpireNext()).toNumber()).to.equals(5);
             expect((await ftsoRewardManager.getInitialRewardEpoch()).toNumber()).to.equals(20);
             expect((await ftsoRewardManager.firstClaimableRewardEpoch()).toNumber()).to.equals(2);
+            expect((await ftsoRewardManager.nextClaimableRewardEpoch(accounts[2])).toNumber()).to.equals(20);
         });
 
         it("Should revert calling setInitialRewardData twice", async () => {
@@ -923,6 +925,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await ftsoRewardManager.claimReward(accounts[1], [0], { from: accounts[1] });
 
             await ftsoRewardManager.claim(accounts[99], accounts[1], 0, true, { from: accounts[99] });
+            expect((await ftsoRewardManager.nextClaimableRewardEpoch(accounts[99])).toNumber()).to.equals(1);
 
             let rewardEpochAfterClaim = await ftsoRewardManager.getEpochReward(0);
             assert.equal(rewardEpochAfterClaim[0].toNumber(), 396 * 2);

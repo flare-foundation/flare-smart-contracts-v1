@@ -243,6 +243,7 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
   await ftsoRegistry.switchToProductionMode();
   await validatorRewardManager.switchToProductionMode();
   await claimSetupManager.switchToProductionMode();
+  await pollingFoundation.switchToProductionMode();
 
   if (!quiet) {
     console.error("Contracts in JSON:");

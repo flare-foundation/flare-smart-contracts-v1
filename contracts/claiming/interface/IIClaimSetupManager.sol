@@ -22,5 +22,5 @@ interface IIClaimSetupManager is IClaimSetupManager {
         external view returns (address[] memory _claimAddresses, uint256 _executorFeeValue);
 
     function checkExecutorAndAllowedRecipient(address _executor, address _owner, address _recipient)
-        external view returns (bool);
+        external view;
 }

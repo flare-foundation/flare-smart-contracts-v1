@@ -4,9 +4,11 @@ pragma solidity 0.7.6;
 import "../interface/IIDelegationAccount.sol";
 import "../interface/IIClaimSetupManager.sol";
 import "@openzeppelin/contracts/math/Math.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 
 contract DelegationAccount is IIDelegationAccount {
+    using SafeERC20 for IERC20;
 
     string internal constant ERR_TRANSFER_FAILURE = "transfer failed";
     string internal constant ERR_MANAGER_ONLY = "only manager";
@@ -85,9 +87,9 @@ contract DelegationAccount is IIDelegationAccount {
     }
 
     function withdraw(WNat _wNat, uint256 _amount) external override onlyManager {
+        emit WithdrawToOwner(_amount);
         bool success = _wNat.transfer(owner, _amount);
         require(success, ERR_TRANSFER_FAILURE);
-        emit WithdrawToOwner(_amount);
     }
 
     /**
@@ -100,9 +102,8 @@ contract DelegationAccount is IIDelegationAccount {
      */
     function transferExternalToken(WNat _wNat, IERC20 _token, uint256 _amount) external override onlyManager {
         require(address(_token) != address(_wNat), "Transfer from wNat not allowed");
-        bool success = _token.transfer(owner, _amount);
-        require(success, ERR_TRANSFER_FAILURE);
         emit ExternalTokenTransferred(_token, _amount);
+        _token.safeTransfer(owner, _amount);
     }
 
     function _checkOnlyManager() internal view {

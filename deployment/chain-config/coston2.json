@@ -14,14 +14,14 @@
     "genesisGovernancePrivateKey": "<use .env: GENESIS_GOVERNANCE_PRIVATE_KEY>",
     "governancePrivateKey": "<use .env: GOVERNANCE_PRIVATE_KEY>",
     "governancePublicKey": "<use .env: GOVERNANCE_PUBLIC_KEY>",
-    "governanceTimelock": 172800,
+    "governanceTimelock": 3600,
     "governanceExecutorPublicKey": "<use .env: GOVERNANCE_EXECUTOR_PUBLIC_KEY>",
     "totalNativeSupplyNAT":  100000000000000,
     "totalExcludedSupplyNAT": 20000000000000,
     "systemStart": 1662577110,
-    "initialAirdropStart": 1662638400,
+    "initialAirdropStart": 1672228800,
     "incentivePoolStart": 1665230400,
-    "initialAirdropLatestStart": 1667908800,
+    "initialAirdropLatestStart": 1704844800,
     "distributionLatestEntitlementStart": 1667908800,
     "initialAirdropWei": "3 900 330 239 094 370 633 065 000 000",
     "incentivePoolWei": "20 000 000 000 000 000 000 000 000 000",
@@ -165,7 +165,7 @@
             "dummyAssetMinterMax": 10000000000,
             "initialPriceUSDDec5": 0
         }
-    ], 
+    ],
     "proposers": [
         "0xC83Ec6a4aFf2099942836860A28C7e248Fabc32C",
         "0x1a16DC5ec4f48Ed769949855C3bC3a1d10c72A95",

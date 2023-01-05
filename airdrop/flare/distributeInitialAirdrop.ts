@@ -1,17 +1,15 @@
 import * as fs from "fs";
-import { logMessage, sleep } from "../flare/utils/utils";
+import { logMessage, sleep } from "./utils/utils";
 const Web3 = require("web3");
-const web3Eth = require("web3-eth");
 const cliProgress = require("cli-progress");
 
 import InitialAirdropAbi from "../../artifacts/contracts/genesis/implementation/InitialAirdrop.sol/InitialAirdrop.json";
-import { toBN } from "../../test/utils/test-helpers";
 import { InitialAirdrop } from "../../typechain-web3/InitialAirdrop";
 
 // Uses 0.12 per call for gas, makes 2850 calls => 342 native tokens are burned
 
 let { argv } = require("yargs")
-  .scriptName("signAirdropTransactions")
+  .scriptName("distributeInitialAirdrop")
   .option("d", {
     alias: "deployment-name",
     describe: "Deployment file name (generated to deployment/deploys/ folder)",
@@ -72,8 +70,8 @@ async function main(
   chainIdRaw: number
 ) {
   let airdropTransferKey: string;
-  const gas = "0x" + toBN(gasRaw).toString(16);
-  const gasPrice = "0x" + toBN(gasPriceRaw).toString(16);
+  const gas = "0x" + Web3.utils.toBN(gasRaw).toString(16);
+  const gasPrice = "0x" + Web3.utils.toBN(gasPriceRaw).toString(16);
   const chainId = "0x" + chainIdRaw.toString(16);
 
   if (process.env.AIRDROP_TRANSFER_PRIVATE_KEY) {
@@ -139,11 +137,10 @@ async function main(
     quiet
   );
 
-  // TODO parametrize
-  const numOfAcc = 142473;
+  const numOfAcc = Web3.utils.toBN(await InitialAirdropContract.methods.airdropAccountsLength().call());;
   const initialAirdropBatchSize = 50;
 
-  const numOfCalls = Math.ceil(numOfAcc / initialAirdropBatchSize);
+  const numOfCalls = numOfAcc.divn(initialAirdropBatchSize).addn(1).toNumber();
   const bar1 = new cliProgress.SingleBar(
     {},
     cliProgress.Presets.shades_classic
@@ -152,7 +149,6 @@ async function main(
   for (let i = 0; i < numOfCalls; i++) {
     try {
       await sleep(950);
-      // const rec = await InitialAirdropContract.methods.transferAirdrop().send({from:AirdropSigner.address, gas: '8000000', gasPrice: '225000000000' })
 
       const call = InitialAirdropContract.methods.transferAirdrop();
       const options = {
@@ -164,14 +160,9 @@ async function main(
         data: call.encodeABI(),
       };
 
-      // console.log(options);
-
       const signed = await AirdropSigner.signTransaction(options);
-
-      // console.log(signed);
-
       const rec = await web3.eth.sendSignedTransaction(signed.rawTransaction);
-      // console.log(rec);
+;
     } catch (e) {
       console.log(e);
     }

@@ -48,6 +48,7 @@ interface IFtsoRewardManager {
      * @return _rewardAmount        amount of total claimed rewards
      * @dev Reverts if `msg.sender` is delegating by amount
      * @dev Claims for all unclaimed reward epochs to the 'max(_rewardEpochs)'.
+     * @dev Retained for backward compatibility.
      * @dev This function is deprecated - use `claim` instead.
      */
     function claimReward(
@@ -243,6 +244,12 @@ interface IFtsoRewardManager {
             uint256 _startEpochId,
             uint256 _endEpochId
         );
+
+    /**
+     * @notice Returns the next claimable reward epoch for '_rewardOwner'.
+     * @param _rewardOwner          address of the reward owner
+     */
+    function nextClaimableRewardEpoch(address _rewardOwner) external view returns (uint256);
 
     /**
      * @notice Returns the array of claimable epoch ids for which the reward has not yet been claimed
