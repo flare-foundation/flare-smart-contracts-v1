@@ -268,6 +268,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   // FtsoRewardManager contract
   const ftsoRewardManager = await FtsoRewardManager.new(
     deployerAccount.address,
+    "0x0000000000000000000000000000000000000000", // old ftso reward manager
     parameters.rewardFeePercentageUpdateOffsetEpochs,
     parameters.defaultRewardFeePercentageBIPS);
   spewNewContractInfo(contracts, FtsoRewardManager.contractName, `FtsoRewardManager.sol`, ftsoRewardManager.address, quiet);
