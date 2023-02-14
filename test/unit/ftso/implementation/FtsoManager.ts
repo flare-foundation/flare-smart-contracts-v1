@@ -91,6 +91,7 @@ contract(`FtsoManager.sol; ${ getTestFile(__filename) }; Ftso manager unit tests
         mockRewardManager = await MockContract.new();
         ftsoRewardManagerInterface = await FtsoRewardManager.new(
             accounts[0],
+            constants.ZERO_ADDRESS,
             3,
             0
         );

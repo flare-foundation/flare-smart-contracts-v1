@@ -38,6 +38,7 @@ contract(`Inflation.sol and Supply.sol; ${getTestFile(__filename)}; Inflation an
     // Set up the ftsoRewardManager
     ftsoRewardManager = await FtsoRewardManager.new(
       accounts[0],
+      constants.ZERO_ADDRESS,
       3,
       0
     );

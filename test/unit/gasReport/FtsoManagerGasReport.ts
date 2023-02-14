@@ -235,6 +235,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       // create ftso reward manager
       ftsoRewardManager = await FtsoRewardManager.new(
         governance,
+        constants.ZERO_ADDRESS,
         3,
         0
       );
