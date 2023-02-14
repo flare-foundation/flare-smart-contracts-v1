@@ -59,10 +59,12 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
 
     uint256 public immutable feePercentageUpdateOffset; // fee percentage update timelock measured in reward epochs
     uint256 public immutable defaultFeePercentage; // default value for fee percentage
-        
+
     // id of the first epoch to expire. Closed = expired and unclaimed funds sent back
     uint256 private nextRewardEpochToExpire; 
-    
+    // reward epoch when setInitialRewardData is called - used for forwarding closeExpiredRewardEpoch
+    uint256 private initialRewardEpoch;
+
     /**
      * @dev Provides a mapping of reward epoch ids to an address mapping of unclaimed rewards.
      */
@@ -91,6 +93,10 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
     address private inflation;
     WNat public wNat; 
 
+    // for redeploy
+    IIFtsoRewardManager public immutable oldFtsoRewardManager;
+    address public newFtsoRewardManager;
+
     modifier mustBalance {
         _;
         require(address(this).balance == _getExpectedBalance(), ERR_OUT_OF_BALANCE);
@@ -113,11 +119,13 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
 
     constructor(
         address _governance,
+        IIFtsoRewardManager _oldFtsoRewardManager,
         uint256 _feePercentageUpdateOffset,
         uint256 _defaultFeePercentage
     )
         Governed(_governance)
     {
+        oldFtsoRewardManager = _oldFtsoRewardManager;
         feePercentageUpdateOffset = _feePercentageUpdateOffset;
         defaultFeePercentage = _defaultFeePercentage;
     }
@@ -341,6 +349,27 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
         emit FeePercentageChanged(msg.sender, _feePercentageBIPS, rewardEpoch);
         return rewardEpoch;
     }
+
+    /**
+     * @notice Set initial reward data values - only if oldRewardManager is set
+     * @dev Should be called at the time of switching to the new reward manager, can be called only once
+     */
+    function setInitialRewardData() external onlyGovernance {
+        require(!active && oldFtsoRewardManager != IIFtsoRewardManager(0) && 
+            initialRewardEpoch == 0 && nextRewardEpochToExpire == 0, "not initial state");
+        initialRewardEpoch = ftsoManager.getCurrentRewardEpoch();
+        nextRewardEpochToExpire = oldFtsoRewardManager.getRewardEpochToExpireNext();
+    }
+
+    /**
+     * @notice Sets new ftso reward manager which will take over closing expired reward epochs
+     * @dev Should be called at the time of switching to the new reward manager, can be called only once
+     */
+    function setNewFtsoRewardManager(address _newFtsoRewardManager) external onlyGovernance {
+        require(newFtsoRewardManager == address(0), "already set");
+        require(_newFtsoRewardManager != address(0), "address zero");
+        newFtsoRewardManager = _newFtsoRewardManager;
+    }
     
     /**
      * @notice Collects funds from expired reward epoch and totals.
@@ -349,8 +378,13 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
      * settings of parameters, it cannot be reopened even if new parameters would 
      * allow it since nextRewardEpochToExpire in ftsoManager never decreases.
      */
-    function closeExpiredRewardEpoch(uint256 _rewardEpoch) external override onlyFtsoManager {
+    function closeExpiredRewardEpoch(uint256 _rewardEpoch) external override {
+        require (msg.sender == address(ftsoManager) || msg.sender == newFtsoRewardManager, "only managers");
         require(nextRewardEpochToExpire == _rewardEpoch, "wrong reward epoch id");
+        if (oldFtsoRewardManager != IIFtsoRewardManager(0) && _rewardEpoch < initialRewardEpoch + 50) {
+            IIFtsoRewardManager(oldFtsoRewardManager).closeExpiredRewardEpoch(_rewardEpoch);
+        }
+
         uint256 expiredWei = totalRewardEpochRewards[_rewardEpoch] - claimedRewardEpochRewards[_rewardEpoch];
         totalExpiredWei = totalExpiredWei.add(expiredWei);
         emit RewardClaimsExpired(_rewardEpoch);
@@ -602,6 +636,29 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
         return (0, totalInflationAuthorizedWei, totalClaimedWei);
     }
 
+    /**
+     * @notice Return reward epoch vote power block
+     * @param _rewardEpoch          reward epoch number
+     */
+    function getRewardEpochVotePowerBlock(uint256 _rewardEpoch) external view returns (uint256) {
+        return ftsoManager.getRewardEpochVotePowerBlock(_rewardEpoch);
+    }
+
+    /**
+     * @notice Return current reward epoch number
+     */
+    function getCurrentRewardEpoch() external view returns (uint256) {
+        return ftsoManager.getCurrentRewardEpoch();
+    }
+
+    /**
+     * @notice Return initial reward epoch number
+     * @return _initialRewardEpoch                 initial reward epoch number
+     */
+    function getInitialRewardEpoch() external view returns (uint256 _initialRewardEpoch) {
+        return initialRewardEpoch;
+    }
+
     function _handleSelfDestructProceeds() internal returns (uint256 _currentBalance, uint256 _expectedBalance) {
         _expectedBalance = lastBalance.add(msg.value);
         _currentBalance = address(this).balance;
@@ -651,6 +708,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
             }
 
             RewardClaim storage rewardClaim = epochProviderClaimerReward[_rewardEpoch][dataProvider][msg.sender];
+            require (!rewardClaim.claimed, "already claimed");
             rewardClaim.claimed = true;
             rewardClaim.amount = rewardAmount;
 
