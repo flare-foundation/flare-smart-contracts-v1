@@ -1,5 +1,6 @@
 import { constants, expectEvent, expectRevert, time } from "@openzeppelin/test-helpers";
-import { DataAvailabilityRewardManagerInstance, FlareDaemonWithInflationMockInstance, InflationAllocationInstance, InflationInstance, InflationReceiverAndTokenPoolMockInstance, StateConnectorMockInstance, SupplyInstance } from "../../../typechain-truffle";
+import { Contracts } from "../../../deployment/scripts/Contracts";
+import { FlareDaemonWithInflationMockInstance, InflationAllocationInstance, InflationInstance, InflationReceiverAndTokenPoolMockInstance, SupplyInstance } from "../../../typechain-truffle";
 import { getTestFile, GOVERNANCE_GENESIS_ADDRESS } from "../../utils/constants";
 import { increaseTimeTo, toBN } from "../../utils/test-helpers";
 
@@ -9,8 +10,6 @@ const InflationAllocation = artifacts.require("InflationAllocation");
 const InflationReceiverAndTokenPoolMock = artifacts.require("InflationReceiverAndTokenPoolMock");
 const SuicidalMock = artifacts.require("SuicidalMock");
 const FlareDaemonWithInflationMock = artifacts.require("FlareDaemonWithInflationMock");
-const StateConnectorMock = artifacts.require("StateConnectorMock");
-const DataAvailabilityRewardManager = artifacts.require("DataAvailabilityRewardManager");
 
 function toBNFixed(x: number, decimals: number) {
   const prec = Math.min(decimals, 6);
@@ -35,8 +34,6 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
   let inflation: InflationInstance;
   let inflationAllocation: InflationAllocationInstance;
   let flareDaemon: FlareDaemonWithInflationMockInstance;
-  let stateConnectorMock: StateConnectorMockInstance;
-  let dataAvailabilityRewardManager: DataAvailabilityRewardManagerInstance;
 
   let supply: SupplyInstance;
   let startTs: BN;
@@ -71,7 +68,7 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
       }
 
       tokenPools.push(contract);
-      supply.addTokenPool(contract.address, 0, {from: governance});
+      await supply.addTokenPool(contract.address, 0, {from: governance});
 
     }
     await inflationAllocation.setSharingPercentages(inflationReceivers.map(ir => ir.address), inflationReceiversSharingBIPS, {from: governance});
@@ -87,13 +84,13 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
       await suicidalContract.die();
     }
 
-    await increaseTimeTo(startTs, 'web3');
+    await increaseTimeTo(startTs.toNumber(), 'web3');
 
     // initialize first annum
     await expectRevert(inflation.getCurrentAnnum(), "no annum");
     let oldMintingRequest = await flareDaemon.totalMintingRequestedWei();
     let initializeFirstAnnumTx = await flareDaemon.triggerDaemonize();
-    expectEvent.notEmitted.inTransaction(initializeFirstAnnumTx.tx, supply, "AuthorizedInflationUpdateError");
+    await expectEvent.notEmitted.inTransaction(initializeFirstAnnumTx.tx, supply, "AuthorizedInflationUpdateError");
     await inflation.getCurrentAnnum(); // should not revert
     console.log(`initialize first annum: ${initializeFirstAnnumTx.receipt.gasUsed}`);
     await flareDaemon.triggerReceiveMinting((await flareDaemon.totalMintingRequestedWei()).sub(oldMintingRequest));
@@ -103,7 +100,7 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
 
     for (let i = 1; i <= noOfDays; i++) {
 
-      await increaseTimeTo(startTs.addn(i * dayDurationSec + i), 'web3');
+      await increaseTimeTo(startTs.toNumber() + i * dayDurationSec, 'web3');
 
       for (let j = 0; j < tokenPools.length; j++) {
         await tokenPools[j].receiveFoundationAllocatedFunds({ value: toBN(50), from: governance });
@@ -116,7 +113,7 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
       console.log("day: " + i);
       oldMintingRequest = await flareDaemon.totalMintingRequestedWei();
       let updateSupplyAndReceiveInflation = await flareDaemon.triggerDaemonize();
-      expectEvent.notEmitted.inTransaction(updateSupplyAndReceiveInflation.tx, supply, "AuthorizedInflationUpdateError");
+      await expectEvent.notEmitted.inTransaction(updateSupplyAndReceiveInflation.tx, supply, "AuthorizedInflationUpdateError");
       console.log(`update supply contract and inflation: ${updateSupplyAndReceiveInflation.receipt.gasUsed}`);
       await flareDaemon.triggerReceiveMinting((await flareDaemon.totalMintingRequestedWei()).sub(oldMintingRequest));
 
@@ -135,7 +132,7 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
     }
 
     // finalize first annum
-    await increaseTimeTo(startTs.addn(yearDurationSec), 'web3');
+    await increaseTimeTo(startTs.toNumber() + yearDurationSec, 'web3');
     oldMintingRequest = await flareDaemon.totalMintingRequestedWei();
     let finalizeAnnumTx = await flareDaemon.triggerDaemonize();
     console.log(`finalize annum: ${finalizeAnnumTx.receipt.gasUsed}`);
@@ -185,72 +182,4 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
     });
   });
   
-  async function dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(skipRewardPeriods: number, rewardExpiryOffset: number, emptyRewardPeriod: boolean, noOfAdditionalRewardPeriods: number) {
-    
-    dataAvailabilityRewardManager = await DataAvailabilityRewardManager.new(governance, rewardExpiryOffset, stateConnectorMock.address, inflationAccount);
-    dataAvailabilityRewardManager.activate({from: governance});
-    
-    for (let i = 1; i <= skipRewardPeriods; i++) {
-      if (!emptyRewardPeriod) {
-        await stateConnectorMock.addNewDataAvailabilityPeriodsMined(accounts[i]);
-      }
-      await increaseTimeTo(startTs.addn(i * rewardPeriodSec), 'web3');
-    }
-    let setDailyAuthorizedInflationTx = await dataAvailabilityRewardManager.setDailyAuthorizedInflation(500_000, { from: inflationAccount });
-    console.log(`set first daily authorized inflation: ${setDailyAuthorizedInflationTx.receipt.gasUsed}`);
-
-    for (let i = 0; i < noOfAdditionalRewardPeriods; i++) {
-      if (!emptyRewardPeriod) {
-        await stateConnectorMock.addNewDataAvailabilityPeriodsMined(accounts[i]);
-      }
-
-      for (let day = 1; day < 7; day++) {
-        await increaseTimeTo(startTs.addn((skipRewardPeriods + i) * rewardPeriodSec + day * dayDurationSec), 'web3');
-
-        let setDailyAuthorizedInflationTx = await dataAvailabilityRewardManager.setDailyAuthorizedInflation(500_000, { from: inflationAccount });
-        console.log(`set daily authorized inflation (no reward epoch): ${setDailyAuthorizedInflationTx.receipt.gasUsed}`);
-      }
-
-      await increaseTimeTo(startTs.addn((skipRewardPeriods + i + 1) * rewardPeriodSec), 'web3');
-
-      let setDailyAuthorizedInflationTx = await dataAvailabilityRewardManager.setDailyAuthorizedInflation(500_000, { from: inflationAccount });
-      console.log(`set daily authorized inflation: ${setDailyAuthorizedInflationTx.receipt.gasUsed}`);
-
-    }
-  }
-
-  describe("Set daily inflation in data availability manager gas benchmarking", async () => {
-
-    beforeEach(async () => {
-
-      stateConnectorMock = await StateConnectorMock.new();
-      await stateConnectorMock.initialiseChains();
-      startTs = await stateConnectorMock.initialiseTime();
-    });
-
-
-    it("Set daily authorized inflation (1+2 reward periods, expire after 1 reward period, not empty)", async () => {
-      await dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(1, 1, false, 2);
-    });
-
-    it("Set daily authorized inflation (1+2 reward periods, expire after 5 reward periods, not empty)", async () => {
-      await dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(1, 5, false, 2);
-    });
-
-    it("Set daily authorized inflation (2+2 reward periods, expire after 1 reward period, not empty)", async () => {
-      await dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(2, 1, false, 2);
-    });
-
-    it("Set daily authorized inflation (6 reward periods, expire after 5 reward periods, not empty)", async () => {
-      await dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(6, 5, false, 0);
-    });
-
-    it("Set daily authorized inflation (50 reward periods, expire after 10 reward periods, not empty)", async () => {
-      await dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(50, 10, false, 0);
-    });
-
-    it("Set daily authorized inflation (50 reward periods, expire after 10 reward periods, empty)", async () => {
-      await dataAvailabilitySetDailyAuthorizedInflationGasBenchmarking(50, 10, true, 0);
-    });
-  });
 });

@@ -1,8 +1,7 @@
-import { FtsoRewardManagerInstance, MockContractInstance, SupplyInstance } from "../../../../typechain-truffle";
-import { increaseTimeTo, toBN } from "../../../utils/test-helpers";
+import { MockContractInstance, SupplyInstance } from "../../../../typechain-truffle";
+import { getAddressWithZeroBalance, increaseTimeTo, toBN } from "../../../utils/test-helpers";
 import {constants, expectRevert, expectEvent, time} from '@openzeppelin/test-helpers';
 const getTestFile = require('../../../utils/constants').getTestFile;
-const Wallet = require('ethereumjs-wallet').default;
 
 const Supply = artifacts.require("Supply");
 const MockTokenPool = artifacts.require("MockContract");
@@ -33,14 +32,6 @@ async function createTokenPool(totalSupply: number, totalInflationAuthorized: nu
 async function updateTokenPoolReturnData(tokenPool: MockContractInstance, totalSupply: number, totalInflationAuthorized: number, totalClaimed: number) {
     let getTokenPoolSupplyDataReturn = web3.eth.abi.encodeParameters(['uint256', 'uint256', 'uint256'], [totalSupply, totalInflationAuthorized, totalClaimed]);
     await tokenPool.givenMethodReturn(getTokenPoolSupplyData, getTokenPoolSupplyDataReturn);
-}
-
-async function getAddressWithZeroBalance() {
-    let wallet = Wallet.generate();
-    while(toBN(await web3.eth.getBalance(wallet.getChecksumAddressString())).gtn(0)) {
-        wallet = Wallet.generate();
-    }
-    return wallet.getChecksumAddressString();
 }
 
 contract(`Supply.sol; ${getTestFile(__filename)}; Supply unit tests`, async accounts => {
@@ -193,7 +184,8 @@ contract(`Supply.sol; ${getTestFile(__filename)}; Supply unit tests`, async acco
 
     it("Should deploy supply with token pools", async() => {
         await createTokenPools([500, 1000], [0, 0], [200, 50]);
-        supply = await Supply.new(governanceAddress, constants.ZERO_ADDRESS, inflationAddress, initialGenesisAmountWei, totalFoundationSupplyWei, mockTokenPools.map(rp => rp.address));
+        const burnAddress = await getAddressWithZeroBalance();
+        supply = await Supply.new(governanceAddress, burnAddress, inflationAddress, initialGenesisAmountWei, totalFoundationSupplyWei, mockTokenPools.map(rp => rp.address));
         expect((await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber())).toNumber()).to.equals(circulatingSupply - 500 - 1000 + 200 + 50);
     });
 

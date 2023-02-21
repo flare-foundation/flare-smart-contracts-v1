@@ -4,11 +4,12 @@
       "module": "commonjs",
       "strict": true,
       "esModuleInterop": true,
+      "resolveJsonModule": true,
       "outDir": "dist",
       "typeRoots": [
         "test/types",
         "node_modules/@types",
-        "airdrop/utils/airdropTypes.tss"
+        "airdrop/utils/airdropTypes.ts"
       ]
     },
     "include": [
@@ -26,7 +27,9 @@
       "deployment/test/deploy-contracts.ts", 
       "deployment/test/daemonize-contracts.ts", 
       "deployment/test/transfer-governance.ts", 
-      "./deployment/test/priceSubmitter.ts", 
+      "deployment/test/switch-to-production-mode.ts", 
+      "deployment/test/priceSubmitter.ts", 
+      "deployment/chain-config/chain-parameters.ts"
     ],
     "files": ["./hardhat.config.ts", "./type-extensions.ts"]
   }

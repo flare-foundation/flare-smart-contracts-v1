@@ -2,16 +2,17 @@ import { constants, expectEvent, expectRevert, time } from '@openzeppelin/test-h
 import { expect } from "hardhat";
 import { Contracts } from '../../../../deployment/scripts/Contracts';
 import {
-  CleanupBlockNumberManagerInstance, ExecuteMockInstance, FtsoInstance, FtsoManagerInstance, FtsoRegistryInstance, GovernanceVotePowerInstance, MockContractContract, MockContractInstance, PollingFoundationInstance, PriceSubmitterInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatInstance
+  CleanupBlockNumberManagerInstance, ExecuteMockInstance, FtsoInstance, FtsoManagerInstance, GovernanceVotePowerInstance, MockContractContract, MockContractInstance, PollingFoundationInstance, PriceSubmitterInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatInstance
 } from "../../../../typechain-truffle";
 import { defaultPriceEpochCyclicBufferSize } from "../../../utils/constants";
 import { createMockSupplyContract } from "../../../utils/FTSO-test-utils";
 import {
   setDefaultGovernanceParameters
 } from "../../../utils/FtsoManager-test-utils";
-import { toBN } from "../../../utils/test-helpers";
+import { encodeContractNames, toBN } from "../../../utils/test-helpers";
 
 const getTestFile = require('../../../utils/constants').getTestFile;
+const GOVERNANCE_GENESIS_ADDRESS = require('../../../utils/constants').GOVERNANCE_GENESIS_ADDRESS;
 const DAY = 60 * 60 * 24;
 
 const WNat = artifacts.require("WNat");
@@ -19,10 +20,13 @@ const GovernanceVotePower = artifacts.require("GovernanceVotePower");
 const MockFtso = artifacts.require("MockContract");
 const ExecuteMock = artifacts.require("ExecuteMock");
 const FtsoManager = artifacts.require("FtsoManager");
+const FtsoManagement = artifacts.require("FtsoManagement");
 const MockContract = artifacts.require("MockContract");
 const CleanupBlockNumberManager = artifacts.require("CleanupBlockNumberManager");
 const Ftso = artifacts.require("Ftso");
-const FtsoRegistry = artifacts.require("FtsoRegistry");
+const PriceSubmitter = artifacts.require("PriceSubmitter");
+const MockRegistry = artifacts.require("MockContract") as MockContractContract;
+const VoterWhitelister = artifacts.require("VoterWhitelister") as VoterWhitelisterContract;
 const PollingFoundation = artifacts.require("PollingFoundation");
 
 const ONLY_GOVERNANCE_MSG = "only governance";
@@ -62,21 +66,34 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
   let mockSupply: MockContractInstance;
   let mockFtso: MockContractInstance;
   let ftsoInterface: FtsoInstance;
-  let ftsoRegistry: FtsoRegistryInstance;
+  let priceSubmitter: PriceSubmitterInstance;
+  let mockFtsoRegistry: MockContractInstance;
+  let voterWhitelister: VoterWhitelisterInstance;
   let pollingFoundation: PollingFoundationInstance;
+
+  const ADDRESS_UPDATER = accounts[16];
+
+  before(async () => {
+    FtsoManager.link(await FtsoManagement.new() as any);
+  });
 
   beforeEach(async () => {
     wNat = await WNat.new(accounts[0], "Wrapped NAT", "WNAT");
     governanceVotePower = await GovernanceVotePower.new(wNat.address);
     await wNat.setGovernanceVotePower(governanceVotePower.address);
 
-    ftsoRegistry = await FtsoRegistry.new(accounts[0]);
-
     mockPriceSubmitter = await MockContract.new();
     mockRewardManager = await MockContract.new();
     mockVoterWhitelister = await MockContract.new();
     cleanupBlockNumberManager = await CleanupBlockNumberManager.new(accounts[0]);
     mockSupply = await createMockSupplyContract(accounts[0], 10000);
+
+    priceSubmitter = await PriceSubmitter.new();
+    await priceSubmitter.initialiseFixedAddress();
+
+    voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, priceSubmitter.address, 10);
+
+    mockFtsoRegistry = await MockRegistry.new();
 
     // Force a block in order to get most up to date time
     await time.advanceBlock();
@@ -87,7 +104,8 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
     ftsoManager = await FtsoManager.new(
       accounts[0],
       accounts[0],
-      mockPriceSubmitter.address,
+      ADDRESS_UPDATER,
+      constants.ZERO_ADDRESS,
       startTs,
       PRICE_EPOCH_DURATION_S,
       REVEAL_EPOCH_DURATION_S,
@@ -97,14 +115,24 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
     );
 
     // only second to last parameter is important for governor tests
-    await ftsoManager.setGovernanceParameters(5, 5, 50, 500, 500, 5000, 30 * DAY, []);
+    await ftsoManager.setGovernanceParameters(0, 5, 5, 50, 500, 500, 5000, 0, 30 * DAY, []);
+
+    await ftsoManager.updateContractAddresses(
+      encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.PRICE_SUBMITTER, Contracts.FTSO_REWARD_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER]),
+      [ADDRESS_UPDATER, priceSubmitter.address, mockRewardManager.address, mockFtsoRegistry.address, mockVoterWhitelister.address, mockSupply.address, cleanupBlockNumberManager.address], { from: ADDRESS_UPDATER });
+
+    await priceSubmitter.setContractAddresses(mockFtsoRegistry.address, voterWhitelister.address, ftsoManager.address, {from: GOVERNANCE_GENESIS_ADDRESS});
 
     mockFtso = await MockFtso.new();
     ftsoInterface = await Ftso.new(
       "NAT",
+      5,
       constants.ZERO_ADDRESS as any,
       constants.ZERO_ADDRESS as any,
       constants.ZERO_ADDRESS as any,
+      0,
+      120,
+      60,
       0,
       1e10,
       defaultPriceEpochCyclicBufferSize
@@ -118,12 +146,8 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
       [[], [], '0']);
     await mockFtso.givenMethodReturn(finalizePriceEpoch, finalizePriceEpochReturn);
 
-    // await setDefaultGovernanceParameters(ftsoManager);
+    await setDefaultGovernanceParameters(ftsoManager);
 
-    await ftsoManager.setContractAddresses(mockRewardManager.address, ftsoRegistry.address, 
-      mockVoterWhitelister.address, mockSupply.address, cleanupBlockNumberManager.address, {from: accounts[0]});
-
-    await ftsoRegistry.setFtsoManagerAddress(ftsoManager.address, {from: accounts[0]});
     await ftsoManager.addFtso(mockFtso.address);
 
     // deposit
@@ -133,7 +157,7 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
     await wNat.deposit({ from: accounts[5], value: toBN(3000) });
     await wNat.deposit({ from: accounts[6], value: toBN(100) });
 
-    // mock contract for proposals executable on chain 
+    // mock contract for proposals executable on chain
     executeMock = await ExecuteMock.new();
 
     // activate ftso manager
@@ -145,6 +169,7 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
 
     pollingFoundation = await PollingFoundation.new(
       accounts[0],
+      ADDRESS_UPDATER,
       [
         accounts[2],
         accounts[3],
@@ -152,11 +177,9 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
       ]
     );
 
-    let setContractAddressesFail = pollingFoundation.setContractAddresses(governanceVotePower.address, ftsoRegistry.address, ftsoManager.address, mockSupply.address, { from: accounts[99] });
-    await expectRevert(setContractAddressesFail, "only governance");
-
-    let setContractAddresses = await pollingFoundation.setContractAddresses(governanceVotePower.address, ftsoRegistry.address, ftsoManager.address, mockSupply.address);
-    expectEvent(setContractAddresses, "ContractAddressesSet", { vpContract: governanceVotePower.address, ftsoRegistry: ftsoRegistry.address, ftsoManager: ftsoManager.address, supply: mockSupply.address});
+    await pollingFoundation.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.GOVERNANCE_VOTE_POWER, Contracts.SUPPLY, Contracts.FTSO_REGISTRY]),
+        [ADDRESS_UPDATER, ftsoManager.address, governanceVotePower.address, mockSupply.address, mockFtsoRegistry.address], { from: ADDRESS_UPDATER });
 
     // initialize three reward epochs
     for (let i = 1; i <= 3 * (172800 / 1200); i++) {

@@ -123,7 +123,7 @@ contract VPContract is IIVPContract, Delegatable {
     }
     
     /**
-     * Update vote powers when tokens are transfered.
+     * Update vote powers when tokens are transferred.
      * Also update delegated vote powers for percentage delegation
      * and check for enough funds for explicit delegations.
      **/
