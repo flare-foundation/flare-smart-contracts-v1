@@ -1,13 +1,17 @@
-import { FtsoContract, FtsoInstance, MockContractContract, MockContractInstance, PriceSubmitterContract, PriceSubmitterInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatContract, WNatInstance } from "../../../../typechain-truffle";
-import { compareArrays, increaseTimeTo, lastOf, submitPriceHash, toBN } from "../../../utils/test-helpers";
-import { setDefaultVPContract } from "../../../utils/token-test-helpers";
-import {constants, expectRevert, expectEvent, time} from '@openzeppelin/test-helpers';
+import { constants, expectEvent, expectRevert, time } from '@openzeppelin/test-helpers';
+import { BigNumber } from 'ethers';
+import { keccak256, defaultAbiCoder } from 'ethers/lib/utils';
+import { Contracts } from "../../../../deployment/scripts/Contracts";
+import { FtsoContract, FtsoInstance, FtsoManagerContract, FtsoManagerInstance, MockContractContract, MockContractInstance, PriceSubmitterContract, PriceSubmitterInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatContract, WNatInstance } from "../../../../typechain-truffle";
 import { defaultPriceEpochCyclicBufferSize } from "../../../utils/constants";
+import { compareArrays, computeVoteRandom2, encodeContractNames, getRandom, increaseTimeTo, lastOf, submitHash, submitPriceHash, toBN } from "../../../utils/test-helpers";
+import { setDefaultVPContract } from "../../../utils/token-test-helpers";
 const getTestFile = require('../../../utils/constants').getTestFile;
 
 const Wnat = artifacts.require("WNat") as WNatContract;
 const MockWnat = artifacts.require("MockContract") as MockContractContract;
-const MockSupply = artifacts.require("MockContract") as MockContractContract;
+const FtsoManager = artifacts.require("FtsoManager") as FtsoManagerContract;
+const FtsoManagement = artifacts.require("FtsoManagement");
 const MockRegistry = artifacts.require("MockContract") as MockContractContract;
 const MockFtso = artifacts.require("MockContract") as MockContractContract;
 const Ftso = artifacts.require("Ftso") as FtsoContract;
@@ -16,17 +20,21 @@ const VoterWhitelister = artifacts.require("VoterWhitelister") as VoterWhitelist
 const GOVERNANCE_GENESIS_ADDRESS = require('../../../utils/constants').GOVERNANCE_GENESIS_ADDRESS;
 
 const ERR_FTSO_MANAGER_ONLY = "FTSOManager only";
+const ERR_WHITELISTER_ONLY = "Voter whitelister only"
 const ERR_NOT_WHITELISTED = "Not whitelisted";
 
 // contains a fresh contract for each test 
 let wnatInterface: WNatInstance;
 let mockWnat: MockContractInstance;
-let mockSupply: MockContractInstance;
+let mockFtsoManager: FtsoManagerInstance;
 let mockFtsoRegistry: MockContractInstance;
 let ftsos: FtsoInstance[];
 let priceSubmitter: PriceSubmitterInstance;
 let epochId: number;
 let voterWhitelister: VoterWhitelisterInstance;
+
+let FTSO_MANAGER_ADDRESS: string;
+let ADDRESS_UPDATER: string;
 
 // WARNING: This sets mock vote power fully, irrespective of address and blockNumber
 async function setBatchMockVotePower(votePower: number[]) {
@@ -34,6 +42,15 @@ async function setBatchMockVotePower(votePower: number[]) {
     const batchVotePowerOfAt = wnatInterface.contract.methods.batchVotePowerOfAt([constants.ZERO_ADDRESS], 1).encodeABI();
     const batchVotePowerOfAtReturn = web3.eth.abi.encodeParameter('uint256[]', votePower);
     await mockWnat.givenMethodReturn(batchVotePowerOfAt, batchVotePowerOfAtReturn);
+}
+
+// hack - change ftso manager address to set trusted addresses from known address with private key
+async function setTrustedAddresses(addresses: string[]) {
+    await priceSubmitter.setContractAddresses(mockFtsoRegistry.address, voterWhitelister.address, FTSO_MANAGER_ADDRESS, {from: GOVERNANCE_GENESIS_ADDRESS});
+        
+    await priceSubmitter.setTrustedAddresses(addresses, { from: FTSO_MANAGER_ADDRESS });
+
+    await priceSubmitter.setContractAddresses(mockFtsoRegistry.address, voterWhitelister.address, mockFtsoManager.address, {from: GOVERNANCE_GENESIS_ADDRESS});
 }
 
 async function setGetFtsosMock(ftsoIndices: number[]) {
@@ -47,7 +64,12 @@ async function setGetFtsosMock(ftsoIndices: number[]) {
 
 contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit tests`, async accounts => {
 
-    const FTSO_MANAGER_ADDRESS = accounts[12];
+    FTSO_MANAGER_ADDRESS = accounts[12];
+    ADDRESS_UPDATER = accounts[16];
+
+    before(async () => {
+        FtsoManager.link(await FtsoManagement.new() as any);
+    });
 
     describe("submit and reveal price", async() => {
         beforeEach(async() => {
@@ -55,11 +77,22 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             wnatInterface = await Wnat.new(accounts[0], "Wrapped NAT", "WNAT");
             await setDefaultVPContract(wnatInterface, accounts[0]);
             mockWnat = await MockWnat.new();
-            mockSupply = await MockSupply.new();
             mockFtsoRegistry = await MockRegistry.new();
             priceSubmitter = await PriceSubmitter.new();
             await priceSubmitter.initialiseFixedAddress();
             voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, priceSubmitter.address, 10);
+            mockFtsoManager = await FtsoManager.new(
+                GOVERNANCE_GENESIS_ADDRESS,
+                GOVERNANCE_GENESIS_ADDRESS,
+                ADDRESS_UPDATER,
+                constants.ZERO_ADDRESS,
+                0,
+                120,
+                60,
+                180,
+                240,
+                7
+            );
             
             // Have an exisitng address just to set up FtsoManager and can act like it in {from: _}
             await voterWhitelister.setContractAddresses(mockFtsoRegistry.address, FTSO_MANAGER_ADDRESS, { from: GOVERNANCE_GENESIS_ADDRESS });
@@ -69,14 +102,18 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             for (let i = 0; i < 3; i++) {
                 let ftso = await Ftso.new(
                     `ATOK${i}`,
+                    5,
                     priceSubmitter.address,
                     mockWnat.address,
                     accounts[10],
+                    0,
+                    120,
+                    60,
                     1, // initial token price 0.00001$
                     1e10,
                     defaultPriceEpochCyclicBufferSize
                 );
-                await ftso.configureEpochs(1, 1, 1000, 10000, 50, 500, [accounts[5], accounts[6], accounts[7]], {from: accounts[10]});
+                await ftso.configureEpochs(1, 1, 1000, 10000, 50, 500, 0, 0, [accounts[5], accounts[6], accounts[7]], {from: accounts[10]});
                 await ftso.setVotePowerBlock(1, {from: accounts[10]});
                 await ftso.activateFtso(0, 120, 60, {from: accounts[10]});
 
@@ -111,8 +148,22 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             await expectRevert(tx, ERR_FTSO_MANAGER_ONLY);
 
             compareArrays([], await priceSubmitter.getTrustedAddresses());
-            await priceSubmitter.setTrustedAddresses(addresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(addresses);
             compareArrays(addresses, await priceSubmitter.getTrustedAddresses());
+        });
+
+        it("Should add to whitelist only if VoterWhitelister", async () => {
+
+            let tx = priceSubmitter.voterWhitelisted(accounts[0], 0);
+            
+            await expectRevert(tx, ERR_WHITELISTER_ONLY);
+        });
+
+        it("Should remove from whitelist only if VoterWhitelister", async () => {
+
+            let tx = priceSubmitter.votersRemovedFromWhitelist([accounts[0]], 0);
+            
+            await expectRevert(tx, ERR_WHITELISTER_ONLY);
         });
 
         it("Should correctly set individual part of mask and fire events", async () => {
@@ -302,7 +353,7 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
 
         it("Should submit prices from trusted address", async () => {
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
             
             let hash1 = submitPriceHash(500, 123, accounts[6]);
             let hash2 = submitPriceHash(200, 124, accounts[6]);
@@ -318,7 +369,7 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             await voterWhitelister.requestFullVoterWhitelisting(accounts[6]);
             
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
             
             let hash1 = submitPriceHash(500, 123, accounts[6]);
             let hash2 = submitPriceHash(200, 124, accounts[6]);
@@ -332,10 +383,10 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
 
         it("Should revert submit prices from removed trusted address", async () => {
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
 
             // change trusted addresses
-            await priceSubmitter.setTrustedAddresses([accounts[7]], {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses([accounts[7]]);
             
             let hash1 = submitPriceHash(500, 123, accounts[6]);
             let hash2 = submitPriceHash(200, 124, accounts[6]);
@@ -351,10 +402,10 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             await voterWhitelister.requestFullVoterWhitelisting(accounts[6]);
             
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
 
             // change trusted addresses
-            await priceSubmitter.setTrustedAddresses([accounts[7]], {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses([accounts[7]]);
             
             let hash1 = submitPriceHash(500, 123, accounts[6]);
             let hash2 = submitPriceHash(200, 124, accounts[6]);
@@ -370,12 +421,14 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             await voterWhitelister.requestFullVoterWhitelisting(accounts[6]);
             
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
 
             await voterWhitelister.removeTrustedAddressFromWhitelist(accounts[6], 0);
+            await voterWhitelister.removeTrustedAddressFromWhitelist(accounts[6], 1);
+            await voterWhitelister.removeTrustedAddressFromWhitelist(accounts[6], 2);
 
             // change trusted addresses
-            await priceSubmitter.setTrustedAddresses([accounts[7]], {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses([accounts[7]]);
             
             let hash1 = submitPriceHash(500, 123, accounts[6]);
             let hash2 = submitPriceHash(200, 124, accounts[6]);
@@ -446,7 +499,7 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
 
         it("Should reveal price from trusted address", async() => {
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
 
             let prices = [500, 200, 300];
             let pricesBN = prices.map(x => toBN(x));
@@ -471,7 +524,7 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             await voterWhitelister.requestFullVoterWhitelisting(accounts[6]);
 
             let trustedAddresses: string[] = [accounts[6], accounts[7]];
-            await priceSubmitter.setTrustedAddresses(trustedAddresses, {from: FTSO_MANAGER_ADDRESS});
+            await setTrustedAddresses(trustedAddresses);
 
             let prices = [500, 200, 300];
             let pricesBN = prices.map(x => toBN(x));
@@ -631,12 +684,12 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
         });
 
         it("Should not allow price shadowing", async () => {
-            // Thist tests against an attacker that just copies submitted commit hash and sends 
+            // This tests against an attacker that just copies submitted commit hash and sends 
             // the same revealed price without doing anything else
             // This is mitigated by including sender's address in the hash before reveal.
-            let prices = [500, 200, ];
+            let prices = [500, 200];
             let pricesBN = prices.map(x => toBN(x));
-            let randoms = [123, 124, ];
+            let randoms = [123, 124];
             let randomsBN = randoms.map(x => toBN(x));
             let addresses = [ftsos[0].address, ftsos[1].address,];
             let hashes = [submitPriceHash(prices[0], randoms[0], accounts[1]), submitPriceHash(prices[1], randoms[1], accounts[1])];

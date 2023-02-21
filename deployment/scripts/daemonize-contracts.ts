@@ -13,6 +13,7 @@ export async function daemonizeContracts(
   hre: HardhatRuntimeEnvironment,
   contracts: Contracts,
   deployerPrivateKey: string,
+  genesisGovernancePrivateKey: string,
   inflationReceivers: string[], 
   inflationGasLimit: number,
   ftsoManagerGasLimit: number,
@@ -27,6 +28,7 @@ export async function daemonizeContracts(
 
   // Define accounts in play for the deployment process
   let deployerAccount: any;
+  let genesisGovernanceAccount: any;
 
   // Get deployer account
   try {
@@ -35,6 +37,12 @@ export async function daemonizeContracts(
     throw Error("Check .env file, if the private keys are correct and are prefixed by '0x'.\n" + e)
   }
 
+  try {
+    genesisGovernanceAccount = web3.eth.accounts.privateKeyToAccount(genesisGovernancePrivateKey);
+  } catch (e) {
+    throw Error("Check .env file, if the private keys are correct and are prefixed by '0x'.\n" + e)
+  }
+  
   if (!quiet) {
     console.error(`Deploying with address ${deployerAccount.address}`)
   }
@@ -49,9 +57,9 @@ export async function daemonizeContracts(
   const IIInflationReceiver = artifacts.require("IIInflationReceiver");
 
   // Fetch already deployed contracts
-  const inflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
-  const ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
   const flareDaemon = await FlareDaemon.at(contracts.getContractAddress(Contracts.FLARE_DAEMON));
+  const ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
+  const inflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
 
   // Do inflation receivers know about inflation?
   for (let inflationReceiverName of inflationReceivers) {
@@ -71,5 +79,5 @@ export async function daemonizeContracts(
     { daemonizedContract: inflation.address, gasLimit: inflationGasLimit },
     { daemonizedContract: ftsoManager.address, gasLimit: ftsoManagerGasLimit }
   ];
-  await flareDaemon.registerToDaemonize(registrations); 
+  await flareDaemon.registerToDaemonize(registrations, { from: genesisGovernanceAccount.address }); 
 }

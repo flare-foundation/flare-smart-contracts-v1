@@ -4,7 +4,7 @@ pragma solidity 0.7.6;
 import {IWNat} from "../../userInterfaces/IWNat.sol";
 
 /**
- * @notice Provide a means to test behavior of WNAT when natives are transfered to it.
+ * @notice Provide a means to test behavior of WNAT when natives are transferred to it.
  **/
 contract TransferToWnatMock {
     receive() external payable {

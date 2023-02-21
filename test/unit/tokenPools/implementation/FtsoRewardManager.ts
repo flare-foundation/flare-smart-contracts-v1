@@ -1,12 +1,11 @@
 import { constants, expectEvent, expectRevert, time } from '@openzeppelin/test-helpers';
 import BN from "bn.js";
-import { DeployedFlareContracts, ftsoContractForSymbol } from "../../../../deployment/scripts/deploy-contracts";
+import { DeployedFlareContracts, ftsoContractForSymbol } from '../../../../deployment/scripts/deploy-utils';
 import {
     FtsoManagerContract,
     FtsoManagerInstance,
     FtsoManagerMockContract,
     FtsoManagerMockInstance,
-    FtsoRegistryInstance,
     FtsoRewardManagerContract,
     FtsoRewardManagerInstance,
     InflationMockInstance,
@@ -18,9 +17,9 @@ import { setDefaultVPContract } from "../../../utils/token-test-helpers";
 
 const getTestFile = require('../../../utils/constants').getTestFile;
 
-const FtsoRegistry = artifacts.require("FtsoRegistry");
 const FtsoRewardManager = artifacts.require("FtsoRewardManager") as FtsoRewardManagerContract;
 const FtsoManager = artifacts.require("FtsoManager") as FtsoManagerContract;
+const FtsoManagement = artifacts.require("FtsoManagement");
 const MockFtsoManager = artifacts.require("FtsoManagerMock") as FtsoManagerMockContract;
 const WNAT = artifacts.require("WNat") as WNatContract;
 const InflationMock = artifacts.require("InflationMock");
@@ -43,6 +42,7 @@ let startTs: BN;
 let mockFtsoManager: FtsoManagerMockInstance;
 let wNat: WNatInstance;
 let mockInflation: InflationMockInstance;
+let ADDRESS_UPDATER: string;
 
 
 export async function distributeRewards(
@@ -101,8 +101,8 @@ async function runOnePriceEpoch(contracts: DeployedFlareContracts, accounts: str
     let revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    let rewardEpochDurationSeconds = await contracts.ftsoManager.rewardEpochDurationSeconds();
-    let rewardEpochsStartTs = await contracts.ftsoManager.rewardEpochsStartTs();
+    let rewardEpochDurationSeconds = await contracts.ftsoManager!.rewardEpochDurationSeconds();
+    let rewardEpochsStartTs = await contracts.ftsoManager!.rewardEpochsStartTs();
 
     let wNAT = ftsoContractForSymbol(contracts, 'NAT')!.xAssetToken as WNatInstance;
     const someNAT = web3.utils.toWei("1", "ether");
@@ -159,29 +159,10 @@ export async function travelToAndSetNewRewardEpoch(newRewardEpoch: number, start
 contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager unit tests`, async accounts => {
 
     let mockSuicidal: SuicidalMockInstance;
-    let ftsoRegistry: FtsoRegistryInstance;
-    let allDeployedContractsFixture: () => Promise<DeployedFlareContracts>;
-    let deploymentParameters: any;
+    ADDRESS_UPDATER = accounts[16];
 
-    before(async function () {
-        // TODO: create full deployment fixture (scdev config)
-        deploymentParameters = require('../../../../deployment/chain-config/scdev.json');
-        // inject private keys from .env, if they exist
-
-        if (process.env.DEPLOYER_PRIVATE_KEY) {
-            deploymentParameters.deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY
-        }
-        if (process.env.GENESIS_GOVERNANCE_PRIVATE_KEY) {
-            deploymentParameters.genesisGovernancePrivateKey = process.env.GENESIS_GOVERNANCE_PRIVATE_KEY
-        }
-        if (process.env.GOVERNANCE_PRIVATE_KEY) {
-            deploymentParameters.governancePrivateKey = process.env.GOVERNANCE_PRIVATE_KEY
-        }
-
-        // allDeployedContractsFixture = deployments.createFixture(async (env, options) => {
-        //     let contracts = await fullDeploy(deploymentParameters, true);
-        //     return contracts;
-        // });
+    before(async () => {
+        FtsoManager.link(await FtsoManagement.new() as any);
     });
 
     beforeEach(async () => {
@@ -200,12 +181,11 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
         // Get the timestamp for the just mined block
         startTs = await time.latest();
 
-        ftsoRegistry = await FtsoRegistry.new(accounts[0]);
-
         ftsoManagerInterface = await FtsoManager.new(
             accounts[0],
             accounts[0],
-            accounts[7],
+            ADDRESS_UPDATER,
+            constants.ZERO_ADDRESS,
             startTs,
             PRICE_EPOCH_DURATION_S,
             REVEAL_EPOCH_DURATION_S,
@@ -1888,13 +1868,6 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             const invocationCountForMethod = await oldFtsoRewardManager.invocationCountForMethod.call(closeExpiredRewardEpoch);
             assert.equal(invocationCountForMethod.toNumber(), 2);
         });
-
-
-        // it("Should expire rewards after set time in days", async () => {
-
-        //     let fixture = await allDeployedContractsFixture();
-        //     let expiryDays = deploymentParameters.ftsoRewardExpiryOffsetDays;            
-        // });
 
     });
 });

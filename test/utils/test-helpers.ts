@@ -2,8 +2,12 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 // This sometimes break tests
 // @ts-ignore
 import { time } from '@openzeppelin/test-helpers';
-import { BigNumber, Signer } from "ethers";
-import { ethers } from "hardhat";
+import BN from "bn.js";
+import { BigNumber, ContractReceipt, ContractTransaction, Signer } from "ethers";
+import { ethers, network } from "hardhat";
+import { MIN_RANDOM } from "./constants";
+
+const Wallet = require('ethereumjs-wallet').default;
 
 /**
  * Helper function for instantiating and deploying a contract by using factory.
@@ -34,7 +38,7 @@ export function formatTime(date: Date): string {
  * the the timestamp equal time + 1 
  * @param tm 
  */
-export async function increaseTimeTo(tm: any, callType: 'ethers' | 'web3' = "ethers") {
+export async function increaseTimeTo(tm: number, callType: 'ethers' | 'web3' = "ethers") {
     if (process.env.VM_FLARE_TEST == "real") {
         // delay
         while (true) {
@@ -73,7 +77,7 @@ export async function increaseTimeTo(tm: any, callType: 'ethers' | 'web3' = "eth
  * @param advanceBlock 
  * @returns 
  */
-export async function increaseTimeTo3(tm: any, advanceBlock: () => Promise<FlareBlock>) {
+export async function increaseTimeTo3(tm: number, advanceBlock: () => Promise<FlareBlock>) {
     return increaseTimeTo(tm, "web3")
 }
 
@@ -84,12 +88,14 @@ export async function increaseTimeTo3(tm: any, advanceBlock: () => Promise<Flare
  * @param func 
  * @returns 
  */
-export async function waitFinalize(signer: SignerWithAddress, func: () => any) {
+export async function waitFinalize(signer: SignerWithAddress, func: () => Promise<ContractTransaction>): Promise<ContractReceipt> {
     let nonce = await ethers.provider.getTransactionCount(signer.address);
     let res = await (await func()).wait();
+    if (res.from !== signer.address) {
+        throw new Error("Transaction from and signer mismatch, did you forget connect()?");
+    }
     while ((await ethers.provider.getTransactionCount(signer.address)) == nonce) {
-        await new Promise((resolve: any) => { setTimeout(() => { resolve() }, 100) })
-        // console.log("Delaying")
+        await sleep(100);
     }
     return res;
 }
@@ -101,12 +107,11 @@ export async function waitFinalize(signer: SignerWithAddress, func: () => any) {
  * @param func 
  * @returns 
  */
-export async function waitFinalize3(address: string, func: () => any) {
+export async function waitFinalize3<T>(address: string, func: () => Promise<T>) {
     let nonce = await web3.eth.getTransactionCount(address);
     let res = await func();
     while ((await web3.eth.getTransactionCount(address)) == nonce) {
-        await new Promise((resolve: any) => { setTimeout(() => { resolve() }, 1000) })
-        // console.log("Waiting...")
+        await sleep(1000);
     }
     return res;
 }
@@ -151,11 +156,24 @@ export async function advanceBlock(): Promise<FlareBlock> {
 
 /**
  * Helper wrapper to convert number to BN 
- * @param n 
- * @returns 
+ * @param x number expressed in any reasonable type
+ * @returns same number as BN
  */
-export function toBN(n: number | string) {
-    return web3.utils.toBN(n);
+export function toBN(x: BN | BigNumber | number | string): BN {
+    if (x instanceof BN) return x;
+    if (x instanceof BigNumber) return new BN(x.toHexString().slice(2), 16)
+    return web3.utils.toBN(x);
+}
+
+/**
+ * Helper wrapper to convert number to Ethers' BigNumber 
+ * @param x number expressed in any reasonable type
+ * @returns same number as BigNumber
+ */
+export function toBigNumber(x: BN | BigNumber | number | string): BigNumber {
+    if (x instanceof BigNumber) return x;
+    if (x instanceof BN) return BigNumber.from(`0x${x.toString(16)}`);
+    return BigNumber.from(x);
 }
 
 export function numberedKeyedObjectToList<T>(obj: any) {
@@ -180,6 +198,26 @@ export function doBNListsMatch(lst1: BN[], lst2: BN[]) {
 
 export function lastOf(lst: any[]) {
     return lst[lst.length-1];
+}
+
+export function zip<T1, T2>(a: T1[], b: T2[]): [T1, T2][] {
+    return a.map((x, i) => [x, b[i]]);
+}
+
+export function zip_many<T>(l: T[], ...lst: T[][]): T[][] {
+    return l.map(
+        (x, i) => [x, ...lst.map( l => l[i])]
+    );
+}
+
+export function zipi<T1, T2>(a: T1[], b: T2[]): [number, T1, T2][] {
+    return a.map((x, i) => [i, x, b[i]]);
+}
+
+export function zip_manyi<T>(l: T[], ...lst: T[][]): [number, T[]][] {
+    return l.map(
+        (x, i) => [i, [x, ...lst.map( l => l[i])]]
+    );
 }
 
 export function compareNumberArrays(a: BN[], b: number[]) {
@@ -211,12 +249,16 @@ export function assertNumberEqual(a: BN, b: number, message?: string) {
     return assert.equal(a.toNumber(), b, message);
 }
 
-export function submitPriceHash(price: number | BN | BigNumber, random: number | BN | BigNumber, address: string,): string {
+export function submitPriceHash(price: number | BN | BigNumber, random: number | BN | BigNumber, address: string): string {
     return ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode([ "uint256", "uint256", "address" ], [ price.toString(), random.toString(), address]))
 }
 
+export function submitHash(ftsoIndices: (number | BN | BigNumber)[], prices: (number | BN | BigNumber)[], random: number | BN | BigNumber, address: string): string {
+    return ethers.utils.keccak256(web3.eth.abi.encodeParameters([ "uint256[]", "uint256[]", "uint256", "address" ], [ ftsoIndices, prices, random, address ]));
+}
+
 function computeOneVoteRandom(price: number | BN | BigNumber, random: number | BN | BigNumber): BN {
-    return  web3.utils.toBN(ethers.utils.solidityKeccak256([ "uint256", "uint256" ], [ random.toString(), price.toString() ]));
+    return  web3.utils.toBN(ethers.utils.solidityKeccak256([ "uint256", "uint256[]" ], [ random.toString(), [price.toString()] ]));
 }
 
 // price_random is an array of pairs [price, random] that are being submitted
@@ -224,6 +266,19 @@ export function computeVoteRandom(price_random: number[][] | BN[][] | BigNumber[
     let sum = toBN(0);
     for (let i = 0; i < price_random.length; i++) {
         sum = sum.add(computeOneVoteRandom(price_random[i][0], price_random[i][1]));
+    }
+    return  sum.mod(toBN(2).pow(toBN(256))).toString();
+}
+
+function computeOneVoteRandom2(prices: (number | BN | BigNumber)[], random: number | BN | BigNumber): BN {
+    return  web3.utils.toBN(ethers.utils.keccak256(web3.eth.abi.encodeParameters([ "uint256", "uint256[]" ], [ random, prices ])));
+}
+
+// price_random is an array of pairs [[prices], random] that are being submitted
+export function computeVoteRandom2(prices_random: any): string {
+    let sum = toBN(0);
+    for (let i = 0; i < prices_random.length; i++) {
+        sum = sum.add(computeOneVoteRandom2(prices_random[i][0], prices_random[i][1]));
     }
     return  sum.mod(toBN(2).pow(toBN(256))).toString();
 }
@@ -247,7 +302,75 @@ export function resultTuple(obj: any): any[] {
     return keys.map(k => obj[k]);
 }
 
+export function encodeContractNames(names: string[]): string[] {
+    return names.map( name => encodeString(name) );
+}
+
+export function encodeString(text: string): string {
+    return ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(["string"], [text]));
+}
 
 export function isNotNull<T>(x: T): x is NonNullable<T> {
     return x != null;
+}
+
+// return String(Math.round(x * 10^exponent)), but sets places below float precision to zero instead of some random digits
+export function toStringFixedPrecision(x: number, exponent: number): string {
+    const significantDecimals = x !== 0 ? Math.max(0, 14 - Math.floor(Math.log10(x))) : 0;
+    const precision = Math.min(exponent, significantDecimals);
+    const xstr = x.toFixed(precision);
+    const dot = xstr.indexOf('.');
+    const mantissa = xstr.slice(0, dot) + xstr.slice(dot + 1);
+    if (precision === exponent) return mantissa;
+    const zeros = Array.from({length: exponent - precision}, () => '0').join('');   // trailing zeros
+    return mantissa + zeros;
+}
+
+// return BN(x * 10^exponent)
+export function toBNFixedPrecision(x: number, exponent: number): BN {
+    return toBN(toStringFixedPrecision(x, exponent));
+}
+
+// return BigNumber(x * 10^exponent)
+export function toBigNumberFixedPrecision(x: number, exponent: number): BigNumber {
+    return BigNumber.from(toStringFixedPrecision(x, exponent));
+}
+
+/**
+ * Run an async task on every element of an array. Start tasks for all elements immediately (in parallel) and complete when all are completed.
+ * @param array array of arguments
+ * @param func the task to run for every element of the array
+ */
+export async function foreachAsyncParallel<T>(array: T[], func: (x: T, index: number) => Promise<void>) {
+    await Promise.all(array.map(func));
+}
+
+/**
+ * Run an async task on every element of an array. Start tasks for every element when the previous completes (serial). Complete when all are completed.
+ * @param array array of arguments
+ * @param func the task to run for every element of the array
+ */
+export async function foreachAsyncSerial<T>(array: T[], func: (x: T, index: number) => Promise<void>) {
+    for (let i = 0; i < array.length; i++) {
+        await func(array[i], i);
+    }
+}
+
+
+export async function getAddressWithZeroBalance() {
+    let wallet = Wallet.generate();
+    while(toBN(await web3.eth.getBalance(wallet.getChecksumAddressString())).gtn(0)) {
+        wallet = Wallet.generate();
+    }
+    return wallet.getChecksumAddressString();
+}
+
+export function getRandom(): BN {
+    return MIN_RANDOM.addn(Math.floor(Math.random() * 1000));
+}
+
+export function findRequiredEvent<E extends Truffle.AnyEvent, N extends E['name']>(res: Truffle.TransactionResponse<E>, name: N): Truffle.TransactionLog<Extract<E, { name: N }>> {
+    const event = res.logs.find(e => e.event === name) as any;
+    assert.isTrue(event != null);
+    return event;
 }

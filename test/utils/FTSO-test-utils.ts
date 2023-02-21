@@ -56,9 +56,6 @@ export interface VoteInfo {
  * Auxiliary interface for JSON returned by FTSO function `getFullEpochReport`
  */
 export interface EpochResultRaw {
-    _epochSubmitStartTime: BigNumber;
-    _epochSubmitEndTime: BigNumber;
-    _epochRevealEndTime: BigNumber;
     _epochFinalizedTimestamp: BigNumber;
     _price: BigNumber;
     _lowRewardPrice: BigNumber;
@@ -522,7 +519,7 @@ export function resultsFromTestData(data: TestExample, addresses: string[], natS
         medianPrice = Math.floor((medianPrice + votes[medianIndex + 1].price) / 2);
     }
     let random = toBN(computeVoteRandom(price_random));
-    logger.log(`Computed FTSO random: ${ random.toString() }`);
+    logger.log(`Computed random: ${ random.toString() }`);
     let rewardedVotes: RewardedVoteInfo[] = [];
     logger.log("Start filtering the reward addresses")
     for (let i = truncatedFirstQuartileIndex; i <= truncatedLastQuartileIndex; i++) {
@@ -536,7 +533,7 @@ export function resultsFromTestData(data: TestExample, addresses: string[], natS
                     continue;
                 }
             }
-            rewardedVotes.push({ weightNat: voteInfo.weightNat, address: voteInfo.address! } as RewardedVoteInfo);
+            rewardedVotes.push({ weightNat: voteInfo.weightNat * 10000, address: voteInfo.address! } as RewardedVoteInfo);
         }
     }
     logger.log("Done filtering the reward addresses");
@@ -733,7 +730,10 @@ export async function createMockSupplyContract(address: string, circulatingSuppl
     const Supply = artifacts.require("Supply");
     const MockSupply = artifacts.require("MockContract");
 
-    let supplyInterface = await Supply.new(address, constants.ZERO_ADDRESS, address, 1000, 0, []);
+    // balance is not zeroed for every test, so if there were some nats burned before test, zero address's balance may be positive
+    // the problem is that this makes Supply.new fail if that balance is greater than initial genesis amount
+    let zeroAddressBalance = toBN(await web3.eth.getBalance(constants.ZERO_ADDRESS));
+    let supplyInterface = await Supply.new(address, constants.ZERO_ADDRESS, address, zeroAddressBalance.addn(1000), 0, []);
     let mockSupply = await MockSupply.new();
     const getCirculatingSupplyAtCached = supplyInterface.contract.methods.getCirculatingSupplyAtCached(0).encodeABI();
     const getCirculatingSupplyAtCachedReturn = web3.eth.abi.encodeParameter('uint256', circulatingSupply);
@@ -837,13 +837,14 @@ export async function testFTSOInitContracts(epochStartTimestamp: number, signers
     )
 
     let ftso = await newContract<MockFtso>("MockFtso", signers[0],
-        assetToken._symbol(), constants.ZERO_ADDRESS, natToken.address, signers[0].address,  // symbol, address priceSubmitter, address _wNat, address _xAsset,
+        assetToken._symbol(), 5, constants.ZERO_ADDRESS, natToken.address, signers[0].address,  // symbol, address priceSubmitter, address _wNat, address _xAsset,
         // testExample.randomizedPivot, // bool _randomizedPivot
         epochStartTimestamp, // uint256 _startTimestamp
         epochPeriod, revealPeriod, //uint256 _epochPeriod, uint256 _revealPeriod
         1, //uint256 _initialPrice
         1e10,
-        defaultPriceEpochCyclicBufferSize
+        defaultPriceEpochCyclicBufferSize,
+        true
     );
     await ftso.setAsset(assetToken.address);
 
@@ -894,7 +895,7 @@ export async function testFTSOMedian2(epochStartTimestamp: number, epochPeriod: 
 
     let random = await ftso.getCurrentRandom();
     logger.log(`AFTER REVEAL, test RANDOM = ${ random }`);
-
+ 
     // Finalize
     await moveToFinalizeStart(epochStartTimestamp, epochPeriod, revealPeriod, epochId);
     let epochFinalizeResponse = await finalizePriceEpochWithResult(signers[0], ftso, epochId);

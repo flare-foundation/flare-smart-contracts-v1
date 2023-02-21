@@ -5,13 +5,13 @@ interface IFtso {
     enum PriceFinalizationType {
         // initial state
         NOT_FINALIZED,
-        // median calculation used to decide price
+        // median calculation used to find price
         WEIGHTED_MEDIAN,
-        // low turnout - price decided from average of trusted addresses
+        // low turnout - price calculated from median of trusted addresses
         TRUSTED_ADDRESSES,
         // low turnout + no votes from trusted addresses - price copied from previous epoch
         PREVIOUS_PRICE_COPIED,
-        // price decided from average of trusted addresses - triggered due to an exception
+        // price calculated from median of trusted addresses - triggered due to an exception
         TRUSTED_ADDRESSES_EXCEPTION,
         // previous price copied - triggered due to an exception
         PREVIOUS_PRICE_COPIED_EXCEPTION
@@ -29,8 +29,9 @@ interface IFtso {
 
     event PriceFinalized(
         uint256 indexed epochId, uint256 price, bool rewardedFtso,
-        uint256 lowRewardPrice, uint256 highRewardPrice, PriceFinalizationType finalizationType,
-        uint256 timestamp
+        uint256 lowIQRRewardPrice, uint256 highIQRRewardPrice,
+        uint256 lowElasticBandRewardPrice, uint256 highElasticBandRewardPrice, 
+        PriceFinalizationType finalizationType, uint256 timestamp
     );
 
     event PriceEpochInitializedOnFtso(
@@ -64,13 +65,13 @@ interface IFtso {
      * @param _timestamp            Timestamp as seconds from unix epoch
      */
     function getEpochId(uint256 _timestamp) external view returns (uint256);
-
+    
     /**
      * @notice Returns random number of the specified epoch
      * @param _epochId              Id of the epoch
      */
     function getRandom(uint256 _epochId) external view returns (uint256);
-    
+
     /**
      * @notice Returns asset price consented in specific epoch
      * @param _epochId              Id of the epoch
@@ -97,14 +98,14 @@ interface IFtso {
 
     /**
      * @notice Returns current epoch data
-     * @return _firstEpochStartTime         First epoch start time
-     * @return _submitPeriod                Submit period in seconds
-     * @return _revealPeriod                Reveal period in seconds
+     * @return _firstEpochStartTs           First epoch start timestamp
+     * @return _submitPeriodSeconds         Submit period in seconds
+     * @return _revealPeriodSeconds         Reveal period in seconds
      */
     function getPriceEpochConfiguration() external view returns (
-        uint256 _firstEpochStartTime,
-        uint256 _submitPeriod,
-        uint256 _revealPeriod
+        uint256 _firstEpochStartTs,
+        uint256 _submitPeriodSeconds,
+        uint256 _revealPeriodSeconds
     );
     
     /**
@@ -121,6 +122,53 @@ interface IFtso {
      * @return _timestamp           Time when price was updated for the last time
      */
     function getCurrentPrice() external view returns (uint256 _price, uint256 _timestamp);
+
+    /**
+     * @notice Returns current asset price and number of decimals
+     * @return _price                   Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _timestamp               Time when price was updated for the last time
+     * @return _assetPriceUsdDecimals   Number of decimals used for USD price
+     */
+    function getCurrentPriceWithDecimals() external view returns (
+        uint256 _price,
+        uint256 _timestamp,
+        uint256 _assetPriceUsdDecimals
+    );
+    
+    /**
+     * @notice Returns current asset price calculated from trusted providers
+     * @return _price               Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _timestamp           Time when price was updated for the last time
+     */
+    function getCurrentPriceFromTrustedProviders() external view returns (uint256 _price, uint256 _timestamp);
+
+    /**
+     * @notice Returns current asset price calculated from trusted providers and number of decimals
+     * @return _price                   Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _timestamp               Time when price was updated for the last time
+     * @return _assetPriceUsdDecimals   Number of decimals used for USD price
+     */
+    function getCurrentPriceWithDecimalsFromTrustedProviders() external view returns (
+        uint256 _price,
+        uint256 _timestamp,
+        uint256 _assetPriceUsdDecimals
+    );
+
+    /**
+     * @notice Returns current asset price details
+     * @return _price                                   Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _priceTimestamp                          Time when price was updated for the last time
+     * @return _priceFinalizationType                   Finalization type when price was updated for the last time
+     * @return _lastPriceEpochFinalizationTimestamp     Time when last price epoch was finalized
+     * @return _lastPriceEpochFinalizationType          Finalization type of last finalized price epoch
+     */
+    function getCurrentPriceDetails() external view returns (
+        uint256 _price,
+        uint256 _priceTimestamp,
+        PriceFinalizationType _priceFinalizationType,
+        uint256 _lastPriceEpochFinalizationTimestamp,
+        PriceFinalizationType _lastPriceEpochFinalizationType
+    );
 
     /**
      * @notice Returns current random number

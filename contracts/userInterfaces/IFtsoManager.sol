@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.6 <0.9;
 
-import "./IPriceSubmitter.sol";
 import "../ftso/interface/IIFtso.sol";
+import "../genesis/interface/IFtsoManagerGenesis.sol";
 
-interface IFtsoManager {
+interface IFtsoManager is IFtsoManagerGenesis {
 
     event FtsoAdded(IIFtso ftso, bool add);
     event FallbackMode(bool fallbackMode);
@@ -14,14 +14,16 @@ interface IFtsoManager {
     event InitializingCurrentEpochStateForRevealFailed(IIFtso ftso, uint256 epochId);
     event FinalizingPriceEpochFailed(IIFtso ftso, uint256 epochId, IFtso.PriceFinalizationType failingType);
     event DistributingRewardsFailed(address ftso, uint256 epochId);
+    event AccruingUnearnedRewardsFailed(uint256 epochId);
+    event UseGoodRandomSet(bool useGoodRandom, uint256 maxWaitForGoodRandomSeconds);
 
     function active() external view returns (bool);
-    
-    function getPriceSubmitter() external view returns (IPriceSubmitter);
 
     function getCurrentRewardEpoch() external view returns (uint256);
 
     function getRewardEpochVotePowerBlock(uint256 _rewardEpoch) external view returns (uint256);
+
+    function getRewardEpochToExpireNext() external view returns (uint256);
     
     function getCurrentPriceEpochData() external view 
         returns (
@@ -39,6 +41,12 @@ interface IFtsoManager {
             uint256 _firstPriceEpochStartTs,
             uint256 _priceEpochDurationSeconds,
             uint256 _revealEpochDurationSeconds
+        );
+
+    function getRewardEpochConfiguration() external view 
+        returns (
+            uint256 _firstRewardEpochStartTs,
+            uint256 _rewardEpochDurationSeconds
         );
 
     function getFallbackMode() external view 

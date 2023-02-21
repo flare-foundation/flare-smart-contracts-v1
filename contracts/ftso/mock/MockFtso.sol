@@ -5,8 +5,7 @@ import "./SimpleMockFtso.sol";
 
 
 contract MockFtso is SimpleMockFtso {
-    using FtsoEpoch for FtsoEpoch.State;
-    
+
     struct EpochResult {
         uint256 truncatedFirstQuartileIndex;    // first vote id eligible for reward
         uint256 truncatedLastQuartileIndex;     // last vote id eligible for reward
@@ -19,31 +18,37 @@ contract MockFtso is SimpleMockFtso {
     }
 
     mapping (uint256 => EpochResult) private epochResults;
-    
+
     constructor(
         string memory _symbol,
+        uint256 _decimals,
         IPriceSubmitter _priceSubmitter,
         IIVPToken _wNat,
-        IIFtsoManager _ftsoManager,
-        uint256 _startTimestamp,
-        uint256 _submitPeriod,
-        uint256 _revealPeriod,
-        uint256 _initialPrice,
+        address _ftsoManager,
+        uint256 _firstEpochStartTs,
+        uint256 _submitPeriodSeconds,
+        uint256 _revealPeriodSeconds,
+        uint128 _initialPrice,
         uint256 _priceDeviationThresholdBIPS,
-        uint256 _cyclicBufferSize
+        uint256 _cyclicBufferSize,
+        bool activate
     )
         SimpleMockFtso(
             _symbol,
+            _decimals,
             _priceSubmitter,
             _wNat,
             _ftsoManager,
+            _firstEpochStartTs,
+            _submitPeriodSeconds,
+            _revealPeriodSeconds,
             _initialPrice,
             _priceDeviationThresholdBIPS,
             _cyclicBufferSize
         )
     {
         // Init only when sensible settings. Otherwise use mock similarly like Ftso.sol
-        if (_submitPeriod != 0 && _revealPeriod != 0) {
+        if (activate) {
 
             // configureEpochs
             epochs.maxVotePowerNatThresholdFraction = 1;
@@ -52,12 +57,8 @@ contract MockFtso is SimpleMockFtso {
             epochs.highAssetUSDThreshold = 10000;
             epochs.highAssetTurnoutThresholdBIPS = 50;
             epochs.lowNatTurnoutThresholdBIPS = 1500;
-            epochs.trustedAddresses = new address[](0);
 
             // activateFtso
-            epochs.firstEpochStartTime = _startTimestamp;
-            epochs.submitPeriod = _submitPeriod;
-            epochs.revealPeriod = _revealPeriod;
             active = true;
         }
     }
@@ -65,9 +66,6 @@ contract MockFtso is SimpleMockFtso {
     /**
      * @notice Provides epoch summary
      * @param _epochId                  Id of the epoch
-     * @return _epochSubmitStartTime    Start time of epoch price submission as seconds from unix epoch
-     * @return _epochSubmitEndTime      End time of epoch price submission as seconds from unix epoch
-     * @return _epochRevealEndTime      End time of epoch price reveal as seconds from unix epoch
      * @return _epochFinalizedTimestamp Block.timestamp when the price was decided
      * @return _price                   Finalized price for epoch
      * @return _lowRewardPrice          The lowest submitted price eligible for reward
@@ -80,12 +78,9 @@ contract MockFtso is SimpleMockFtso {
      * @return _fallbackMode            Whether epoch instance was in fallback mode
      * @dev half-closed intervals - end time not included
      */
-    function getFullEpochReport(uint256 _epochId) 
+    function getFullEpochReport(uint256 _epochId)
         public view
         returns (
-            uint256 _epochSubmitStartTime,
-            uint256 _epochSubmitEndTime,
-            uint256 _epochRevealEndTime,
             uint256 _epochFinalizedTimestamp,
             uint256 _price,
             uint256 _lowRewardPrice,
@@ -98,43 +93,18 @@ contract MockFtso is SimpleMockFtso {
             bool _fallbackMode
         )
     {
-        // used as a check only to avoid "Stack too deep" compiler error
-        _getEpochInstance(_epochId);
-        return _getFullEpochReport(_epochId);
-    }
-
-    function _getFullEpochReport(uint256 _epochId) 
-        private view
-        returns (
-            uint256 _epochSubmitStartTime,
-            uint256 _epochSubmitEndTime,
-            uint256 _epochRevealEndTime,
-            uint256 _epochFinalizedTimestamp,
-            uint256 _price,
-            uint256 _lowRewardPrice,
-            uint256 _highRewardPrice,
-            uint256 _numberOfVotes,
-            uint256 _votePowerBlock,
-            PriceFinalizationType _finalizationType,
-            address[] memory _trustedAddresses,
-            bool _rewardedFtso,
-            bool _fallbackMode
-        )
-    {
-        _epochSubmitStartTime = epochs._epochSubmitStartTime(_epochId);
-        _epochSubmitEndTime = epochs._epochSubmitEndTime(_epochId);        
-        _epochRevealEndTime = epochs._epochRevealEndTime(_epochId);
-        _epochId = _epochId % priceEpochCyclicBufferSize;
-        _price = epochs.instance[_epochId].price;
-        _numberOfVotes = epochs.instance[_epochId].nextVoteIndex;
-        _votePowerBlock = epochs.instance[_epochId].votePowerBlock;
-        _finalizationType = epochs.instance[_epochId].finalizationType;
-        _trustedAddresses = epochResults[_epochId].trustedAddresses;
-        _fallbackMode = epochs.instance[_epochId].fallbackMode || epochResults[_epochId].fallbackMode;
-        _epochFinalizedTimestamp = epochResults[_epochId].finalizedTimestamp;
-        _lowRewardPrice = epochResults[_epochId].lowRewardedPrice;
-        _highRewardPrice = epochResults[_epochId].highRewardedPrice;
-        _rewardedFtso = epochResults[_epochId].rewardedFtso;
+        FtsoEpoch.Instance storage epoch = _getEpochInstance(_epochId);
+        EpochResult storage epochResult = epochResults[_epochId];
+        _price = epoch.price;
+        _numberOfVotes = epoch.nextVoteIndex;
+        _votePowerBlock = epoch.votePowerBlock;
+        _finalizationType = epoch.finalizationType;
+        _trustedAddresses = epochResult.trustedAddresses;
+        _fallbackMode = epoch.fallbackMode || epochResult.fallbackMode;
+        _epochFinalizedTimestamp = epochResult.finalizedTimestamp;
+        _lowRewardPrice = epochResult.lowRewardedPrice;
+        _highRewardPrice = epochResult.highRewardedPrice;
+        _rewardedFtso = epochResult.rewardedFtso;
     }
 
     /**
@@ -160,7 +130,7 @@ contract MockFtso is SimpleMockFtso {
         )
     {
         FtsoEpoch.Instance storage epoch = _getEpochInstance(_epochId);
-        EpochResult storage epochResult = epochResults[_epochId % priceEpochCyclicBufferSize];
+        EpochResult storage epochResult = epochResults[_epochId];
 
         uint256 count = epoch.nextVoteIndex;
         _voters = new address[](count);
@@ -180,7 +150,7 @@ contract MockFtso is SimpleMockFtso {
             _prices[index] = vote.price;
             _weightsNat[index] = vote.weightNat;
             _weightsAsset[index] = vote.weightAsset;
-            _eligibleForReward[index] = rewardsAvailable && 
+            _eligibleForReward[index] = rewardsAvailable &&
                 vote.index >= firstEligibleForReward && vote.index <= lastEligibleForReward;
         }
         _weights = FtsoEpoch._computeWeights(epoch, _weightsNat, _weightsAsset);
@@ -194,14 +164,14 @@ contract MockFtso is SimpleMockFtso {
      */
     function _writeEpochPriceData(
         uint256 _epochId,
-        FtsoMedian.Data memory _data, 
+        FtsoMedian.Data memory _data,
         uint256[] memory _index,
         bool rewardedFtso
     )
         internal virtual override
     {
         FtsoEpoch.Instance storage epoch = epochs.instance[_epochId % priceEpochCyclicBufferSize];
-        EpochResult storage result = epochResults[_epochId % priceEpochCyclicBufferSize];
+        EpochResult storage result = epochResults[_epochId];
 
         // update indexes
         for (uint256 i = 0; i < _index.length; i++) {
@@ -223,9 +193,26 @@ contract MockFtso is SimpleMockFtso {
      */
     function _writeFallbackEpochPriceData(uint256 _epochId) internal virtual override {
         FtsoEpoch.Instance storage epoch = epochs.instance[_epochId % priceEpochCyclicBufferSize];
-        EpochResult storage result = epochResults[_epochId % priceEpochCyclicBufferSize];
+        EpochResult storage result = epochResults[_epochId];
         result.finalizedTimestamp = block.timestamp;
         result.trustedAddresses = epochs.trustedAddresses;
         result.fallbackMode = epoch.fallbackMode;
+    }
+
+    function getVoteWeightingParameters() external view override
+        returns (
+            IIVPToken[] memory _assets,
+            uint256[] memory _assetMultipliers,
+            uint256 _totalVotePowerNat,
+            uint256 _totalVotePowerAsset,
+            uint256 _assetWeightRatio,
+            uint256 _votePowerBlock
+        )
+    {
+        // not needed in mock - removed to reduce contract size
+    }
+
+    function getVotePowerWeights(address[] memory _owners) public override returns (uint256[] memory _weights) {
+        // not needed in mock - removed to reduce contract size
     }
 }

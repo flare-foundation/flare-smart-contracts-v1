@@ -1,18 +1,23 @@
 {
     "nativeSymbol": "CFLR",
+    "nativeFtsoDecimals": 5,
+    "nativeElasticBandWidthPPM": 500,
     "wrappedNativeName": "Wrapped CostonFlare",
     "wrappedNativeSymbol": "WCFLR",
     "stateConnectorAddress": "0x1000000000000000000000000000000000000001",
     "flareDaemonAddress": "0x1000000000000000000000000000000000000002",
     "priceSubmitterAddress": "0x1000000000000000000000000000000000000003",
+    "governanceSettingsAddress": "0x183fAfF6997C98A812A3B98748Fc80241D08f312",
     "deployerPrivateKey": "<use .env: DEPLOYER_PRIVATE_KEY>",
+    "governanceSettingsDeployerPrivateKey": "<use .env: GOVERNANCE_SETTINGS_DEPLOYER_PRIVATE_KEY>",
     "genesisGovernancePrivateKey": "<use .env: GENESIS_GOVERNANCE_PRIVATE_KEY>",
     "governancePrivateKey": "<use .env: GOVERNANCE_PRIVATE_KEY>",
     "governancePublicKey": "<use .env: GOVERNANCE_PUBLIC_KEY>",
+    "governanceTimelock": 3600,
+    "governanceExecutorPublicKey": "<use .env: GOVERNANCE_EXECUTOR_PUBLIC_KEY>",
     "burnAddress": "0x0100000000000000000000000000000000000000",
     "totalNativeSupplyNAT": 1000000000000,
     "totalFoundationSupplyNAT": 900000000000,
-    "initialInflationPercentageBIPS": 10,
     "scheduledInflationPercentageBIPS": [10],
     "rewardEpochDurationSeconds": 3600,
     "revealEpochDurationSeconds": 90,
@@ -27,6 +32,7 @@
     "highAssetThresholdUSDDec5": 5000000000,
     "highAssetTurnoutThresholdBIPS": 200,
     "lowNatTurnoutThresholdBIPS": 0,
+    "elasticBandRewardBIPS": 3000,
     "priceDeviationThresholdBIPS": 1500,
     "trustedAddresses": [
         "0xb849b93b585effb7ce4b522ff88d9b3b24955f24"
@@ -34,7 +40,6 @@
     "rewardFeePercentageUpdateOffsetEpochs": 3,
     "defaultRewardFeePercentageBIPS": 2000,
     "ftsoRewardExpiryOffsetDays": 7,
-    "dataAvailabilityRewardExpiryOffsetEpochs": 26,
     "initialWnatPriceUSDDec5": 0,
     "priceEpochCyclicBufferSize": 200,
     "inflationReceivers": ["FtsoRewardManager"],
@@ -51,6 +56,8 @@
         {
             "assetSymbol": "testXRP",
             "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 150,
             "xAssetName": "cAsset XRP",
             "xAssetSymbol": "cXRP",
             "dummyAssetMinterMax": 7000000000,
@@ -59,6 +66,8 @@
         {
             "assetSymbol": "testLTC",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Litecoin",
             "xAssetSymbol": "cLTC",
             "dummyAssetMinterMax": 4000000000,
@@ -67,6 +76,8 @@
         {
             "assetSymbol": "testXLM",
             "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset XLM (Lumen)",
             "xAssetSymbol": "cXLM",
             "dummyAssetMinterMax": 7000000000,
@@ -75,6 +86,8 @@
         {
             "assetSymbol": "testDOGE",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Dogecoin",
             "xAssetSymbol": "cDOGE",
             "dummyAssetMinterMax": 13000000000000,
@@ -83,6 +96,8 @@
         {
             "assetSymbol": "testADA",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset ADA (Cardano)",
             "xAssetSymbol": "cADA",
             "dummyAssetMinterMax": 45000000000,
@@ -91,6 +106,8 @@
         {
             "assetSymbol": "testALGO",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Algorand",
             "xAssetSymbol": "cALGO",
             "dummyAssetMinterMax": 5000000000,
@@ -99,6 +116,8 @@
         {
             "assetSymbol": "testBCH",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Bitcoin Cash",
             "xAssetSymbol": "cBCH",
             "dummyAssetMinterMax": 21000000000,
@@ -107,6 +126,8 @@
         {
             "assetSymbol": "testDGB",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 500,
             "xAssetName": "cAsset Digibyte",
             "xAssetSymbol": "cDGB",
             "dummyAssetMinterMax": 10000000000,
@@ -115,6 +136,8 @@
         {
             "assetSymbol": "testBTC",
             "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 100,
             "xAssetName": "cAsset BTC",
             "xAssetSymbol": "cBTC",
             "dummyAssetMinterMax": 7000000000,
@@ -123,6 +146,8 @@
         {
             "assetSymbol": "testETH",
             "assetDecimals": 18,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 150,
             "xAssetName": "cAsset ETH",
             "xAssetSymbol": "cETH",
             "dummyAssetMinterMax": 10000000000,
@@ -131,8 +156,10 @@
         {
             "assetSymbol": "testFIL",
             "assetDecimals": 18,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset FIL",
-            "xAssetSymbol": "cFIL",            
+            "xAssetSymbol": "cFIL",
             "dummyAssetMinterMax": 10000000000,
             "initialPriceUSDDec5": 0
         }
@@ -141,6 +168,5 @@
         "0x1a16DC5ec4f48Ed769949855C3bC3a1d10c72A95",
         "0x893baB99798BCF5e0faB09Ad5CE61872B951F0a5",
         "0x2da78A7908A89038832f920869a5526c20689904"
-    ] 
-  
+    ]
 }

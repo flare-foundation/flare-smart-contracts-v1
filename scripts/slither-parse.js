@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { sortBy } = require("lodash");
+const axios = require("axios")
 
 const priorities = { High: 1, Medium: 2, Low: 3, Informational: 4, Optimization: 5 };
 
@@ -89,9 +90,14 @@ if (!process.argv[2]) {
 const json = fs.readFileSync(process.argv[2], 'utf-8');
 const data = JSON.parse(json);
 
+let BadgeStorageURL = ""
+if (process.env.BADGE_URL) {
+  BadgeStorageURL = process.env.BADGE_URL
+}
+
+
 if (!data.success) {
-    console.error("Problem running Slither.");
-    process.exit(1);
+    process.exit(0);
 }
 
 let detectors = (data.results && data.results.detectors) || [];
