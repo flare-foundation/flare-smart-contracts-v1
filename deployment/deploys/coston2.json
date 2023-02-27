@@ -17,7 +17,7 @@
   {
     "name": "DistributionTreasury",
     "contractName": "DistributionTreasury.sol",
-    "address": "0x1000000000000000000000000000000000000004"
+    "address": "0x062b351bdBF365B51dd34bC25c8eDe43100E4cbC"
   },
   {
     "name": "IncentivePoolTreasury",
@@ -37,7 +37,7 @@
   {
     "name": "AddressUpdater",
     "contractName": "AddressUpdater.sol",
-    "address": "0x248a75c6a7EB5280c75599014f88a9539c9beE48"
+    "address": "0x707C840D053f28DF75223C151fA7aFa6d7eB3354"
   },
   {
     "name": "InflationAllocation",
@@ -85,14 +85,9 @@
     "address": "0xDFc2C5C636b73a9F2814B5AE821bE5a08cD25453"
   },
   {
-    "name": "Distribution",
-    "contractName": "Distribution.sol",
-    "address": "0x25Dae0114EF74aCc98022DE0299cA673E11D7426"
-  },
-  {
     "name": "DistributionToDelegators",
     "contractName": "DistributionToDelegators.sol",
-    "address": "0x965AC495BeB5bb3c91C70Aa5af132cD41058C16c"
+    "address": "0xbd33bDFf04C357F7FC019E72D0504C24CF4Aa010"
   },
   {
     "name": "IncentivePoolAllocation",
@@ -116,6 +111,11 @@
   },
   {
     "name": "WNat",
+    "contractName": "WNat.sol",
+    "address": "0xC67DCE33D7A8efA5FfEB961899C73fe01bCe9273"
+  },
+  {
+    "name": "CombinedNat",
     "contractName": "WNat.sol",
     "address": "0xC67DCE33D7A8efA5FfEB961899C73fe01bCe9273"
   },
@@ -208,5 +208,10 @@
     "name": "DelegationAccount",
     "contractName": "DelegationAccount.sol",
     "address": "0xA46ae6f0b180862236e5A309B1463EA02D3aD307"
+  },
+  {
+    "name": "FlareContractRegistry",
+    "contractName": "FlareContractRegistry.sol",
+    "address": "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019"
   }
 ]
