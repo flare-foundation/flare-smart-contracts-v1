@@ -138,5 +138,10 @@
     "name": "AddressUpdater",
     "contractName": "AddressUpdater.sol",
     "address": "0xb006c0cb0b2b8ae48E5B12883Cd5a13654cc6e20"
+  },
+  {
+    "name": "FlareContractRegistry",
+    "contractName": "FlareContractRegistry.sol",
+    "address": "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019"
   }
 ]
