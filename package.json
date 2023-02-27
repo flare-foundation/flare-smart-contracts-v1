@@ -142,6 +142,12 @@
     "test_deploy_ftso_v2_network_coston": "cat deployment/deploys/coston_ftso_v2.json | env CHAIN_CONFIG=coston TEST_PATH=./deployment/test yarn --silent hardhat test --no-compile --network coston ./deployment/test/deploy-ftso-v2.ts",
     "test_upgrade_to_ftso_v2_network_coston": "cat deployment/deploys/coston_ftso_v2.json | env CHAIN_CONFIG=coston TEST_PATH=./deployment/test yarn --silent hardhat test --no-compile --network coston ./deployment/test/upgrade-to-ftso-v2.ts",
 
+    "---------REDEPLOY---SCRIPTS": "",
+    "redeploy_contracts_local_hardhat": "yarn compile && cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=endToEndHardhat yarn --silent hardhat --network localhost redeploy-contracts > ./deployment/deploys/hardhat_redeploy.json",
+    "redeploy_contracts_local_scdev": "yarn compile && cat deployment/deploys/scdev.json | env CHAIN_CONFIG=scdev yarn --silent hardhat --network scdev redeploy-contracts > ./deployment/deploys/scdev_redeploy.json",
+    "redeploy_contracts_network_songbird": "yarn compile && cat deployment/deploys/songbird.json | env CHAIN_CONFIG=songbird yarn --silent hardhat --network songbird redeploy-contracts > ./deployment/deploys/songbird_redeploy.json",
+    "redeploy_contracts_network_coston": "yarn compile && cat deployment/deploys/coston.json | env CHAIN_CONFIG=coston yarn --silent hardhat --network coston redeploy-contracts > ./deployment/deploys/coston_redeploy.json",
+
     "---------FAST---SCRIPTS---SKIP---DEPLOY---TESTS": "",
     "deploy_local_hardhat_commands_fast": "yarn deploy_contracts_local_hardhat_fast && yarn daemonize_contracts_local_hardhat_fast && yarn activate_managers_local_hardhat_fast && yarn transfer_governance_local_hardhat_fast && yarn switch_to_production_mode_local_hardhat_fast",
     "transfer_governance_local_hardhat_fast": "cat deployment/deploys/hardhat.json | env CHAIN_CONFIG=endToEndHardhat yarn --silent hardhat --network localhost transfer-governance",

@@ -8,7 +8,7 @@
  */
 
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { AddressUpdaterContract, CleanupBlockNumberManagerContract, DistributionContract, FlareDaemonContract, FlareDaemonInstance, FtsoContract, FtsoInstance, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryProxyContract, FtsoRewardManagerContract, GovernanceSettingsContract, GovernanceSettingsInstance, GovernanceVotePowerContract, InflationAllocationContract, InflationContract, PollingFoundationContract, PriceSubmitterContract, PriceSubmitterInstance, StateConnectorContract, StateConnectorInstance, SupplyContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract } from '../../typechain-truffle';
+import { AddressUpdaterContract, CleanupBlockNumberManagerContract, DistributionContract, FlareContractRegistryContract, FlareDaemonContract, FlareDaemonInstance, FtsoContract, FtsoInstance, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryProxyContract, FtsoRewardManagerContract, GovernanceSettingsContract, GovernanceSettingsInstance, GovernanceVotePowerContract, InflationAllocationContract, InflationContract, PollingFoundationContract, PriceSubmitterContract, PriceSubmitterInstance, StateConnectorContract, StateConnectorInstance, SupplyContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
 import {
@@ -55,6 +55,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   // Contract definitions
   const GovernanceSettings: GovernanceSettingsContract = artifacts.require("GovernanceSettings");
   const AddressUpdater: AddressUpdaterContract = artifacts.require("AddressUpdater");
+  const FlareContractRegistry: FlareContractRegistryContract = artifacts.require("FlareContractRegistry");
   const InflationAllocation: InflationAllocationContract = artifacts.require("InflationAllocation");
   const StateConnector: StateConnectorContract = artifacts.require("StateConnector");
   const FlareDaemon: FlareDaemonContract = artifacts.require("FlareDaemon");
@@ -188,6 +189,9 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const addressUpdater = await AddressUpdater.new(deployerAccount.address);
   spewNewContractInfo(contracts, addressUpdaterContracts, AddressUpdater.contractName, `AddressUpdater.sol`, addressUpdater.address, quiet);
 
+  // Flare contract registry
+  const flareContractRegistry = await FlareContractRegistry.new(addressUpdater.address);
+  spewNewContractInfo(contracts, addressUpdaterContracts, FlareContractRegistry.contractName, `FlareContractRegistry.sol`, flareContractRegistry.address, quiet);
 
   // InflationAllocation contract
   // Inflation will be set to 0 for now...it will be set shortly.
