@@ -182,6 +182,11 @@ export interface ChainParameters {
      */
     incentivePoolGasLimit: integer;
 
+    /**
+     * Gas limit for daemonize calls of on DistributionToDelegators contract.
+     */
+    distributionToDelegatorsGasLimit: integer;
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Inflation settings
 
@@ -227,11 +232,6 @@ export interface ChainParameters {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Deployment options settings
-
-    /**
-     * Whether `Distribution` contract should be deployed.
-     */
-    deployDistributionContract: boolean;
 
     /**
      * Whether dummy FAsset tokens should be deployed. Only `true` for dev testing deploys.
@@ -387,9 +387,10 @@ export interface ChainParameters {
     executorFeeValueUpdateOffsetEpochs: integer;
 
     /**
-     * Min allowed executor fee value. In whole native units, not Wei.
+     * Min allowed executor fee value, in natural currency Wei.
+     * Big integer, formatted as string.
      */
-    executorMinFeeValueNAT: integer;
+    executorMinFeeValueWei: string;
 
     /**
      * Max allowed executor fee value. In whole native units, not Wei.
