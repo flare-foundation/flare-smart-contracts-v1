@@ -28,7 +28,7 @@ interface IIGovernanceVotePower is IGovernanceVotePower {
     );
 
     /**
-     * Update vote powers when tokens are transfered.
+     * Update vote powers when tokens are transferred.
      **/
     function updateAtTokenTransfer(
         address _from,

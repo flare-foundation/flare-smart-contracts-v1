@@ -40,10 +40,9 @@ contract MockNpmFtso is IIFtso {
     IIVPToken[] public assets;                   // array of assets
     IIFtso[] public assetFtsos;                  // FTSOs for assets (for a multi-asset FTSO)
 
-    // Info normally stored in epoch
-    uint256 internal firstEpochStartTime;
-    uint256 internal submitPeriod;
-    uint256 internal revealPeriod;
+    uint256 internal firstEpochStartTs;
+    uint256 internal submitPeriodSeconds;
+    uint256 internal revealPeriodSeconds;
 
     mapping(uint256 => uint256) internal random;
     mapping(uint256 => mapping (address => uint256)) internal revealedPrices;
@@ -58,17 +57,17 @@ contract MockNpmFtso is IIFtso {
     constructor(
         string memory _symbol,
         IPriceSubmitter _priceSubmitter,
-        uint256 _firstEpochStartTime,
-        uint256 _submitPeriod,
-        uint256 _revealPeriod)
+        uint256 _firstEpochStartTs,
+        uint256 _submitPeriodSeconds,
+        uint256 _revealPeriodSeconds)
     {
         symbol = _symbol;
         assetPriceTimestamp = block.timestamp;
         active = true;
         priceSubmitter = _priceSubmitter;
-        firstEpochStartTime = _firstEpochStartTime;
-        submitPeriod = _submitPeriod;
-        revealPeriod = _revealPeriod;
+        firstEpochStartTs = _firstEpochStartTs;
+        submitPeriodSeconds = _submitPeriodSeconds;
+        revealPeriodSeconds = _revealPeriodSeconds;
     }
 
     // This methods should only be used by price submitter
@@ -112,8 +111,8 @@ contract MockNpmFtso is IIFtso {
     {
         require(_price < 2**128, ERR_PRICE_TOO_HIGH);
         // Check if reveal is in progress
-        uint256 revealStartTime = firstEpochStartTime + (_epochId + 1) * submitPeriod; 
-        require(revealStartTime <= block.timestamp && block.timestamp < revealStartTime + revealPeriod, 
+        uint256 revealStartTime = firstEpochStartTs + (_epochId + 1) * submitPeriodSeconds; 
+        require(revealStartTime <= block.timestamp && block.timestamp < revealStartTime + revealPeriodSeconds, 
                 ERR_PRICE_REVEAL_FAILURE);
         require(epochVoterHash[_epochId][_voter] == keccak256(abi.encode(_price, _random, _voter)), 
                 ERR_PRICE_INVALID);
@@ -141,10 +140,82 @@ contract MockNpmFtso is IIFtso {
     }
 
     /**
+     * @notice Returns current asset price and number of decimals
+     * @return _price                   Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _timestamp               Time when price was updated for the last time
+     * @return _assetPriceUsdDecimals   Number of decimals used for USD price
+     */
+    function getCurrentPriceWithDecimals() external view override
+        returns (
+            uint256 _price,
+            uint256 _timestamp,
+            uint256 _assetPriceUsdDecimals
+        )
+    {
+        // TODO
+    }
+
+    /**
+     * @notice Returns current asset price calculated from trusted providers
+     * @return _price               Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _timestamp           Time when price was updated for the last time
+     */
+    function getCurrentPriceFromTrustedProviders() external view override 
+        returns (
+            uint256 _price,
+            uint256 _timestamp
+        )
+    {
+        // TODO
+    }
+
+    /**
+     * @notice Returns current asset price calculated from trusted providers and number of decimals
+     * @return _price                   Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _timestamp               Time when price was updated for the last time
+     * @return _assetPriceUsdDecimals   Number of decimals used for USD price
+     */
+    function getCurrentPriceWithDecimalsFromTrustedProviders() external view override
+        returns (
+            uint256 _price,
+            uint256 _timestamp,
+            uint256 _assetPriceUsdDecimals
+        )
+    {
+        // TODO
+    }
+
+    /**
+     * @notice Returns current asset price details
+     * @return _price                                   Price in USD multiplied by ASSET_PRICE_USD_DECIMALS
+     * @return _priceTimestamp                          Time when price was updated for the last time
+     * @return _priceFinalizationType                   Finalization type when price was updated for the last time
+     * @return _lastPriceEpochFinalizationTimestamp     Time when last price epoch was finalized
+     * @return _lastPriceEpochFinalizationType          Finalization type of last finalized price epoch
+     */
+    function getCurrentPriceDetails() external view override 
+        returns (
+            uint256 _price,
+            uint256 _priceTimestamp,
+            PriceFinalizationType _priceFinalizationType,
+            uint256 _lastPriceEpochFinalizationTimestamp,
+            PriceFinalizationType _lastPriceEpochFinalizationType
+        )
+    {
+        // TODO
+    }
+
+
+
+    /**
      * @notice Returns current random number
      */
     function getCurrentRandom() external pure override returns (uint256) {
         return 0;
+    }
+
+    function ftsoManager() external pure override returns (address) {
+        // TODO
     }
 
     /**
@@ -166,8 +237,8 @@ contract MockNpmFtso is IIFtso {
         )
     {
         _epochId = _getCurrentEpochId();
-        _epochSubmitEndTime = firstEpochStartTime + (_epochId + 1) * submitPeriod;
-        _epochRevealEndTime = _epochSubmitEndTime + revealPeriod;
+        _epochSubmitEndTime = firstEpochStartTs + (_epochId + 1) * submitPeriodSeconds;
+        _epochRevealEndTime = _epochSubmitEndTime + revealPeriodSeconds;
 
         _votePowerBlock = 0;
         _fallbackMode = false;
@@ -175,21 +246,21 @@ contract MockNpmFtso is IIFtso {
 
     /**
      * @notice Returns current epoch data
-     * @return _firstEpochStartTime         First epoch start time
-     * @return _submitPeriod                Submit period in seconds
-     * @return _revealPeriod                Reveal period in seconds
+     * @return _firstEpochStartTs           First epoch start timestamp
+     * @return _submitPeriodSeconds         Submit period in seconds
+     * @return _revealPeriodSeconds         Reveal period in seconds
      */
     function getPriceEpochConfiguration() external view override 
         returns (
-            uint256 _firstEpochStartTime,
-            uint256 _submitPeriod,
-            uint256 _revealPeriod
+            uint256 _firstEpochStartTs,
+            uint256 _submitPeriodSeconds,
+            uint256 _revealPeriodSeconds
         )
     {
         return (
-            firstEpochStartTime, 
-            submitPeriod,
-            revealPeriod
+            firstEpochStartTs, 
+            submitPeriodSeconds,
+            revealPeriodSeconds
         );
     }
 
@@ -217,10 +288,10 @@ contract MockNpmFtso is IIFtso {
      * @dev Should never revert
      */
     function _getEpochId(uint256 _timestamp) internal view returns (uint256) {
-        if (_timestamp < firstEpochStartTime) {
+        if (_timestamp < firstEpochStartTs) {
             return 0;
         } else {
-            return (_timestamp - firstEpochStartTime) / submitPeriod;
+            return (_timestamp - firstEpochStartTs) / submitPeriodSeconds;
         }
 
     }
@@ -239,7 +310,7 @@ contract MockNpmFtso is IIFtso {
         return (new address[](0), new uint256[](0), 0);
     }
 
-    function averageFinalizePriceEpoch(uint256) external pure override {
+    function fallbackFinalizePriceEpoch(uint256) external pure override {
         require(false, UNAVAILABLE);
     }
 
@@ -268,6 +339,8 @@ contract MockNpmFtso is IIFtso {
     }
 
     function configureEpochs(
+        uint256,
+        uint256,
         uint256,
         uint256,
         uint256,
@@ -326,21 +399,21 @@ contract MockNpmFtso is IIFtso {
             uint256,
             uint256,
             uint256,
+            uint256,
+            uint256,
             address[] memory
         )
     {
         require(false, UNAVAILABLE);
-        return (0, 0, 0, 0, 0, 0, new address[](0));
+        return (0, 0, 0, 0, 0, 0, 0, 0, new address[](0));
     }
 
-    function getCurrentEpochId() external pure override returns (uint256) {
-        require(false, UNAVAILABLE);
-        return 0;
+    function getCurrentEpochId() external view override returns (uint256) {
+        return _getCurrentEpochId();
     }
 
-    function getEpochId(uint256) external pure override returns (uint256) {
-        require(false, UNAVAILABLE);
-        return 0;
+    function getEpochId(uint256 _timestamp) external view override returns (uint256) {
+        return _getEpochId(_timestamp);
     }
 
     function getRandom(uint256) external pure override returns (uint256) {

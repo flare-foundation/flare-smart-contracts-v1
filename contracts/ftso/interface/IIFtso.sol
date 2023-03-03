@@ -22,7 +22,7 @@ interface IIFtso is IFtso, IFtsoGenesis {
             uint256 _totalNatWeight
         );
 
-    function averageFinalizePriceEpoch(uint256 _epochId) external;
+    function fallbackFinalizePriceEpoch(uint256 _epochId) external;
 
     function forceFinalizePriceEpoch(uint256 _epochId) external;
 
@@ -30,8 +30,8 @@ interface IIFtso is IFtso, IFtsoGenesis {
     // before this is done, FTSO can't run
     function activateFtso(
         uint256 _firstEpochStartTs,
-        uint256 _epochPeriod,
-        uint256 _revealPeriod
+        uint256 _submitPeriodSeconds,
+        uint256 _revealPeriodSeconds
     ) external;
 
     function deactivateFtso() external;
@@ -46,6 +46,8 @@ interface IIFtso is IFtso, IFtsoGenesis {
         uint256 _highAssetUSDThreshold,
         uint256 _highAssetTurnoutThresholdBIPS,
         uint256 _lowNatTurnoutThresholdBIPS,
+        uint256 _elasticBandRewardBIPS,
+        uint256 _elasticBandWidthPPM,
         address[] memory _trustedAddresses
     ) external;
 
@@ -60,6 +62,11 @@ interface IIFtso is IFtso, IFtsoGenesis {
 
     function initializeCurrentEpochStateForReveal(uint256 _circulatingSupplyNat, bool _fallbackMode) external;
   
+    /**
+     * @notice Returns ftso manager address
+     */
+    function ftsoManager() external view returns (address);
+
     /**
      * @notice Returns the FTSO asset
      * @dev Asset is null in case of multi-asset FTSO
@@ -80,6 +87,10 @@ interface IIFtso is IFtso, IFtsoGenesis {
      * @return _highAssetUSDThreshold           Threshold for high asset vote power
      * @return _highAssetTurnoutThresholdBIPS   Threshold for high asset turnout
      * @return _lowNatTurnoutThresholdBIPS      Threshold for low nat turnout
+     * @return _elasticBandRewardBIPS           Hybrid reward band, where _elasticBandRewardBIPS goes to the 
+        elastic band (prices within _elasticBandWidthPPM of the median) 
+        and 10000 - elasticBandRewardBIPS to the IQR 
+     * @return _elasticBandWidthPPM             Prices within _elasticBandWidthPPM of median are rewarded
      * @return _trustedAddresses                Trusted addresses - use their prices if low nat turnout is not achieved
      */
     function epochsConfiguration() external view 
@@ -90,6 +101,8 @@ interface IIFtso is IFtso, IFtsoGenesis {
             uint256 _highAssetUSDThreshold,
             uint256 _highAssetTurnoutThresholdBIPS,
             uint256 _lowNatTurnoutThresholdBIPS,
+            uint256 _elasticBandRewardBIPS,
+            uint256 _elasticBandWidthPPM,
             address[] memory _trustedAddresses
         );
 

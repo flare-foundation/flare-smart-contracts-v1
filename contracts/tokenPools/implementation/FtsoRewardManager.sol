@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  */    
 
 //solhint-disable-next-line max-states-count
-contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenPool, Governed, ReentrancyGuard {
+contract FtsoRewardManager is IIFtsoRewardManager, Governed, ReentrancyGuard {
     using SafePct for uint256;
     using SafeMath for uint256;
 
@@ -55,7 +55,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
     uint256 constant internal MAX_BIPS = 1e4;
     uint256 constant internal ALMOST_FULL_DAY_SEC = 86399;
 
-    bool public active;
+    bool public override active;
 
     uint256 public immutable feePercentageUpdateOffset; // fee percentage update timelock measured in reward epochs
     uint256 public immutable defaultFeePercentage; // default value for fee percentage
@@ -91,7 +91,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, IIInflationReceiver, IITokenP
     /// addresses
     IIFtsoManager public ftsoManager;
     address private inflation;
-    WNat public wNat; 
+    WNat public wNat;
 
     // for redeploy
     IIFtsoRewardManager public immutable oldFtsoRewardManager;

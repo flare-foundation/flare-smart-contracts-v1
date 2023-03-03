@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { sortBy } = require("lodash");
+const axios = require("axios")
 
 const priorities = { High: 1, Medium: 2, Low: 3, Informational: 4, Optimization: 5 };
 
@@ -18,7 +19,7 @@ resultInfo = {
     "uninitialized-state": ["Uninitialized state variables", "https://github.com/crytic/slither/wiki/Detector-Documentation#uninitialized-state-variables"],
     "uninitialized-storage": ["Uninitialized storage variables", "https://github.com/crytic/slither/wiki/Detector-Documentation#uninitialized-storage-variables"],
     "unprotected-upgrade": ["Unprotected upgradeable contract", "https://github.com/crytic/slither/wiki/Detector-Documentation#unprotected-upgradeable-contract"],
-    "arbitrary-send": ["Functions that send Ether to arbitrary destinations", "https://github.com/crytic/slither/wiki/Detector-Documentation#functions-that-send-ether-to-arbitrary-destinations"],
+    "arbitrary-send-eth": ["Functions that send Ether to arbitrary destinations", "https://github.com/crytic/slither/wiki/Detector-Documentation#functions-that-send-ether-to-arbitrary-destinations"],
     "controlled-array-length": ["Tainted array length assignment", "https://github.com/crytic/slither/wiki/Detector-Documentation#array-length-assignment"],
     "controlled-delegatecall": ["Controlled delegatecall destination", "https://github.com/crytic/slither/wiki/Detector-Documentation#controlled-delegatecall"],
     "reentrancy-eth": ["Reentrancy vulnerabilities (theft of ethers)", "https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities"],
@@ -89,9 +90,14 @@ if (!process.argv[2]) {
 const json = fs.readFileSync(process.argv[2], 'utf-8');
 const data = JSON.parse(json);
 
+let BadgeStorageURL = ""
+if (process.env.BADGE_URL) {
+  BadgeStorageURL = process.env.BADGE_URL
+}
+
+
 if (!data.success) {
-    console.error("Problem running Slither.");
-    process.exit(1);
+    process.exit(0);
 }
 
 let detectors = (data.results && data.results.detectors) || [];

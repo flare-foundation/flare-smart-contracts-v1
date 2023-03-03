@@ -3,9 +3,9 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import "../interface/IIGovernorProposer.sol";
-import "./Governed.sol";
+import "./GovernedV2.sol";
 
-abstract contract GovernorProposer is IIGovernorProposer, Governed {
+abstract contract GovernorProposer is IIGovernorProposer, GovernedV2 {
 
     mapping(address => bool) private proposers;
 

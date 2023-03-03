@@ -20,6 +20,9 @@ build/
 bin/
 crytic-export/
 
+## Docs generated
+docs/api/
+
 ## Node packages etc
 node_modules/
 .yarn-cache/
@@ -29,6 +32,7 @@ node_modules/
 coverage.json
 .nyc_output/
 coverage/
+!test/coverage/
 
 ## hardhat?
 artifacts/
@@ -65,11 +69,18 @@ deployment/deploys/*
 
 ## Slither working files
 slither.json
+slither_badge.json
+
+## linter working files
+solhint_badge.json
+e2e_fuzzer_badge.json
+fuzzer_token_badge.json
 
 ## Tenderly 
 deployments
 
 ## Airdrop transactions
 airdrop/files
-
+airdrop/flare/files
+airdrop/songbird/files
 /hardhat-link.config.ts

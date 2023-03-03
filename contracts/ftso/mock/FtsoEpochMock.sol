@@ -7,8 +7,8 @@ import "../../token/interface/IIVPToken.sol";
 
 
 /**
- * @title Ftso Vote mock contract
- * @notice A contract to expose the FtsoVote library for unit testing.
+ * @title Ftso Epoch mock contract
+ * @notice A contract to expose the FtsoEpoch library for unit testing.
  **/
 contract FtsoEpochMock {
     using FtsoEpoch for FtsoEpoch.State;
@@ -25,27 +25,18 @@ contract FtsoEpochMock {
         uint256 accumulatedVotePowerNat;        // total native token vote power accumulated from votes in epoch
         // base weight ratio between asset and native token used to combine weights
         uint256 baseWeightRatio;
+        uint256[] trustedVotes;                 // array of all votes from trusted providers in epoch
         uint256 price;                          // consented epoch asset price
         IFtso.PriceFinalizationType finalizationType; // finalization type
         uint256 random;                         // random number associated with the epoch
-        uint256 voteCount;                       // number of votes in epoch
-        IIVPToken[] assets;                       // list of assets
+        uint256 voteCount;                      // number of votes in epoch
+        IIVPToken[] assets;                     // list of assets
         uint256[] assetWeightedPrices;          // prices that determine the contributions of assets to vote power
         bool initializedForReveal;              // whether epoch instance is initialized for reveal
         bool fallbackMode;                      // current epoch in fallback mode
     }
 
     FtsoEpoch.State private state;
-
-    constructor(
-        uint256 _firstEpochStartTime,  // start time of the first epoch instance
-        uint256 _submitPeriod,         // duration of price submission for an epoch instance
-        uint256 _revealPeriod)         // duration of price reveal for an epoch instance
-    {
-        state.firstEpochStartTime = _firstEpochStartTime;
-        state.submitPeriod = _submitPeriod;
-        state.revealPeriod = _revealPeriod;
-    }
 
     function setAssetNorm(IIVPToken _asset, uint256 _decimals) public {
         state.assetNorm[_asset] = 10**_decimals;
@@ -82,7 +73,7 @@ contract FtsoEpochMock {
         public
     {
         FtsoEpoch.Instance storage epoch = state.instance[_epochId];
-        FtsoEpoch._addVote(epoch, _voter, _votePowerNat, _votePowerAsset, _price, _random);
+        state._addVote(epoch, _voter, _votePowerNat, _votePowerAsset, _price, _random);
     }
 
     function configureEpochs(
@@ -92,6 +83,8 @@ contract FtsoEpochMock {
         uint256 _highAssetUSDThreshold,
         uint256 _highAssetTurnoutThresholdBIPS,
         uint256 _lowNatTurnoutThresholdBIPS,
+        uint256 _elasticBandRewardBIPS,
+        uint256 _elasticBandWidthPPM,
         address[] memory _trustedAddresses
     ) 
         public
@@ -102,6 +95,19 @@ contract FtsoEpochMock {
         state.highAssetUSDThreshold = _highAssetUSDThreshold;
         state.highAssetTurnoutThresholdBIPS = _highAssetTurnoutThresholdBIPS;
         state.lowNatTurnoutThresholdBIPS = _lowNatTurnoutThresholdBIPS;
+        state.elasticBandRewardBIPS = _elasticBandRewardBIPS;
+        state.elasticBandWidthPPM = _elasticBandWidthPPM;
+        
+        // remove old addresses mapping
+        uint256 len = state.trustedAddresses.length;
+        for (uint256 i = 0; i < len; i++) {
+            state.trustedAddressesMapping[state.trustedAddresses[i]] = false;
+        }
+        // set new addresses mapping
+        len = _trustedAddresses.length;
+        for (uint256 i = 0; i < len; i++) {
+            state.trustedAddressesMapping[_trustedAddresses[i]] = true;
+        }
         state.trustedAddresses = _trustedAddresses;
     }
     
@@ -131,6 +137,7 @@ contract FtsoEpochMock {
         result.maxVotePowerAsset = epoch.maxVotePowerAsset;
         result.accumulatedVotePowerNat = epoch.accumulatedVotePowerNat;
         result.baseWeightRatio = epoch.baseWeightRatio;
+        result.trustedVotes = epoch.trustedVotes;
         result.price = epoch.price;
         result.finalizationType = epoch.finalizationType;
         result.random = epoch.random;
@@ -175,25 +182,5 @@ contract FtsoEpochMock {
     {
         FtsoEpoch.Instance storage epoch = state.instance[_epochId];
         return FtsoEpoch._computeWeights(epoch, _weightsNat, _weightsAsset);
-    }
-
-    function getEpochId(uint256 _timestamp) public view returns (uint256) {
-        return state._getEpochId(_timestamp);
-    }
-
-    function epochSubmitStartTime(uint256 _epochId) public view returns (uint256) {
-        return state._epochSubmitStartTime(_epochId);
-    }
-
-    function epochSubmitEndTime(uint256 _epochId) public view returns (uint256) {
-        return state._epochSubmitEndTime(_epochId);
-    }
-
-    function epochRevealEndTime( uint256 _epochId) public view returns (uint256) {
-        return state._epochRevealEndTime(_epochId);
-    }
-
-    function epochRevealInProcess(uint256 _epochId) public view returns (bool) {
-        return state._epochRevealInProcess(_epochId);
     }
 }

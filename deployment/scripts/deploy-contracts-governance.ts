@@ -8,18 +8,21 @@
  */
 
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { PollingFoundationContract } from '../../typechain-truffle';
+import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
 import { spewNewContractInfo } from './deploy-utils';
 
-export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment,  contracts: Contracts, parameters: any, quiet: boolean = false) {
-
+export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment,  contracts: Contracts, parameters: ChainParameters, quiet: boolean = false) {
   const web3 = hre.web3;
   const artifacts = hre.artifacts;
 
   // Define repository for created contracts
   // Define address updater contracts names list
+  const addressUpdaterContracts: string[] = [];
   // Define accounts in play for the deployment process
   let deployerAccount: any;
+
 
   try {
     deployerAccount = web3.eth.accounts.privateKeyToAccount(parameters.deployerPrivateKey);
@@ -30,14 +33,17 @@ export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment, 
   // Wire up the default account that will do the deployment
   web3.eth.defaultAccount = deployerAccount.address;
 
-  const PollingFoundation = artifacts.require("PollingFoundation");
+  const PollingFoundation: PollingFoundationContract = artifacts.require("PollingFoundation");
+
+  const addressUpdater = contracts.getContractAddress(Contracts.ADDRESS_UPDATER);
 
   // Deploy polling foundation
   const pollingFoundation = await PollingFoundation.new(
     deployerAccount.address,
+    addressUpdater,
     parameters.proposers
   );
-  spewNewContractInfo(contracts, PollingFoundation.contractName, `PollingFoundation.sol`, pollingFoundation.address, quiet);
+  spewNewContractInfo(contracts, addressUpdaterContracts, PollingFoundation.contractName, `PollingFoundation.sol`, pollingFoundation.address, quiet);
 
   if (!quiet) {
     console.error("Contracts in JSON:");
@@ -45,15 +51,7 @@ export async function deployContractsGovernance(hre: HardhatRuntimeEnvironment, 
     console.error("Deploy complete.");
   }
 
-  // set contract addresses
-  const ftsoManager = contracts.getContractAddress(Contracts.FTSO_MANAGER);
-  const governanceVotePower = contracts.getContractAddress(Contracts.GOVERNANCE_VOTE_POWER);
-  const supply = contracts.getContractAddress(Contracts.SUPPLY);
-  const ftsoRegistry = contracts.getContractAddress(Contracts.FTSO_REGISTRY);
-
-  await pollingFoundation.setContractAddresses(governanceVotePower, ftsoRegistry, ftsoManager, supply);
-
-  await pollingFoundation.transferGovernance(parameters.governancePublicKey);
+  await pollingFoundation.switchToProductionMode();
 
   return {
     contracts: contracts,

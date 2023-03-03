@@ -1,18 +1,21 @@
 import { constants } from "@openzeppelin/test-helpers";
-import { WNatInstance } from "../../../typechain-truffle";
+import { GovernanceVotePowerInstance, WNatInstance } from "../../../typechain-truffle";
 import { getTestFile } from "../../utils/constants";
 import { setDefaultVPContract } from "../../utils/token-test-helpers";
-import { coinFlip, linearFallingRandom, loadJson, MAX_BIPS, Nullable, randomChoice, randomInt, randomIntDist, saveJson, weightedRandomChoice } from "./FuzzingUtils";
+import { coinFlip, linearFallingRandom, loadJson, MAX_BIPS, Nullable, randomChoice, randomInt, randomIntDist, saveJson, weightedRandomChoice } from "../../utils/fuzzing-utils";
 import { VPTokenChecker } from "./VPTokenChecker";
 import { Checkpoint, VPTokenHistory, VPTokenSimulator } from "./VPTokenSimulator";
-
+import axios from "axios";
+const fs = require("fs");
 
 const VPToken = artifacts.require("WNat");
+const GovernanceVP = artifacts.require("GovernanceVotePower");
 
 contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availableAccounts => {
     let vpToken: WNatInstance;
     let history: VPTokenHistory;
     let simulator: VPTokenSimulator;
+    let governanceVP: GovernanceVotePowerInstance;
     
     let env = process.env;
 
@@ -71,9 +74,58 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
     before(async () => {
         vpToken = await VPToken.new(governance, "Test token", "TTOK");
         await setDefaultVPContract(vpToken, governance);
-        history = new VPTokenHistory(vpToken);
+        governanceVP = await GovernanceVP.new(vpToken.address);
+        await vpToken.setGovernanceVotePower(governanceVP.address);
+        await vpToken.setCleanupBlockNumberManager(governance, { from: governance });
+        history = new VPTokenHistory(vpToken, governanceVP);
         simulator = new VPTokenSimulator(history);
     });
+
+    let is_passing = true
+    afterEach(function() {
+      const status = this.currentTest?.state
+      if(status === "failed"){
+        is_passing = false;
+      }
+    })
+
+    after(async () => {
+        let BadgeStorageURL = ""
+        if (process.env.BADGE_URL) {
+          BadgeStorageURL = process.env.BADGE_URL
+        }
+      
+        let fromMaster = false
+        if (process.env.FROM_MASTER) {
+            fromMaster = process.env.FROM_MASTER === 'true'
+        }
+        
+        let badge_data;
+        if(!is_passing){
+            badge_data = {
+                "name": "FlareSCFuzzerToken",
+                "schemaVersion": 1,
+                "label": "Fuzzer token",
+                "color": "red",
+                "message": "Fail"
+            }
+        } else {
+            badge_data = {
+                "name": "FlareSCFuzzerToken",
+                "schemaVersion": 1,
+                "label": "Fuzzer token",
+                "color": "green",
+                "message": "Pass"
+            }
+        }
+        if(fromMaster){
+            await axios.post(
+                BadgeStorageURL+"api/0/badges",
+                badge_data
+              )
+        }
+    });
+
 
     // utility functions
     it("run randomized tests", async () => {
@@ -101,9 +153,9 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
         }
 
         console.log("Checking...");
-        await performChecks(vpToken, history, null);
+        await performChecks(vpToken, history, null, governanceVP);
         for (const checkpoint of history.checkpoints.values()) {
-            await performChecks(vpToken, history, checkpoint);
+            await performChecks(vpToken, history, checkpoint, governanceVP);
         }
     });
 
@@ -120,9 +172,11 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
             [testWithdrawFrom, 5],
             [testTransfer, 5],
             [testDelegate, 10],
+            [testDelegateGovernance, 10],
             [testDelegateExplicit, 10],
             [testUndelegateAll, 1],
             [testUndelegateAllExplicit, 1],
+            [testUndelegateGovernance, 1]
         ];
         const historyActions: Array<[() => Promise<void>, number]> = [
             [testRevokeDelegationAt, 5],
@@ -217,7 +271,10 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
     async function testDelegate() {
         const from = randomChoice(coinFlip(0.9) ? percentageAccounts : otherAccounts);
         const to = randomChoice(accounts);
-        const bips = randomIntDist(0, MAX_BIPS.toNumber(), linearFallingRandom);
+        const currentDelegation = history.state.bipsDelegations.row(from).total().toNumber();
+        const bips = currentDelegation !== 0 && currentDelegation !== MAX_BIPS && coinFlip(0.8)
+            ? MAX_BIPS - currentDelegation                          // delegate all should be common
+            : randomIntDist(0, MAX_BIPS, linearFallingRandom);      // delegate any
         await simulator.delegate(from, to, bips);
     }
 
@@ -227,6 +284,12 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
         const balance = history.state.balances.get(from).toNumber();
         const amount = randomIntDist(0, balance, linearFallingRandom);
         await simulator.delegateExplicit(from, to, amount);
+    }
+
+    async function testDelegateGovernance() {
+        const from = randomChoice(accounts);
+        const to = randomChoice(accounts);
+        await simulator.delegateGovernance(from, to, MAX_BIPS);
     }
 
     async function testRevokeDelegationAt() {
@@ -250,6 +313,11 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
         await simulator.undelegateAllExplicit(from, fromDelegates);
     }
 
+    async function testUndelegateGovernance() {
+        const from = randomChoice(accounts);
+        await simulator.undelegateGovernance(from);
+    }
+
     async function testVotePowerAtCached() {
         const checkpoints = history.checkpointList();
         if (checkpoints.length === 0) return;
@@ -265,10 +333,15 @@ contract(`VPToken.sol; ${getTestFile(__filename)}; Token fuzzing tests`, availab
         await simulator.votePowerOfAtCached(plainuser, from, cp.id);
     }
 
-    async function performChecks(vpToken: WNatInstance, history: VPTokenHistory, checkpoint: Nullable<Checkpoint>) {
+    async function performChecks(
+        vpToken: WNatInstance,
+        history: VPTokenHistory,
+        checkpoint: Nullable<Checkpoint>,
+        governanceVP: GovernanceVotePowerInstance
+    ) {
         const checker = checkpoint != null
-            ? new VPTokenChecker(vpToken, checkpoint.blockNumber, accounts, checkpoint.state)
-            : new VPTokenChecker(vpToken, null, accounts, history.state)
+            ? new VPTokenChecker(vpToken, checkpoint.blockNumber, accounts, checkpoint.state, governanceVP)
+            : new VPTokenChecker(vpToken, null, accounts, history.state, governanceVP)
 
         const cpMsg = checkpoint ? `for checkpoint ${checkpoint.id}` : '';
 

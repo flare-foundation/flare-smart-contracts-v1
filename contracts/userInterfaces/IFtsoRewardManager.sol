@@ -10,7 +10,7 @@ interface IFtsoRewardManager {
         uint256 rewardEpoch, 
         uint256 amount
     );
-    
+
     event RewardsDistributed(
         address indexed ftso,
         uint256 epochId,
@@ -63,6 +63,11 @@ interface IFtsoRewardManager {
      */
     function setDataProviderFeePercentage(uint256 _feePercentageBIPS)
         external returns (uint256 _validFromEpoch);
+
+    /**
+     * @notice Allows reward claiming
+     */
+    function active() external view returns (bool);
 
     /**
      * @notice Returns the current fee percentage of `_dataProvider`

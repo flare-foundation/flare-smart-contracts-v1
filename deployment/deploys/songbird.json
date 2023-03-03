@@ -7,7 +7,7 @@
   {
     "name": "StateConnector",
     "contractName": "StateConnector.sol",
-    "address": "0x1000000000000000000000000000000000000001"
+    "address": "0x0c13aDA1C7143Cf0a0795FFaB93eEBb6FAD6e4e3"
   },
   {
     "name": "FlareDaemon",
@@ -42,7 +42,7 @@
   {
     "name": "FtsoRegistry",
     "contractName": "FtsoRegistry.sol",
-    "address": "0x6D222fb4544ba230d4b90BA1BfC0A01A94E6cB23"
+    "address": "0xEf4c203470553C654B3870f37ce4DE1fA862Dee0"
   },
   {
     "name": "VoterWhitelister",
@@ -52,7 +52,7 @@
   {
     "name": "FtsoManager",
     "contractName": "FtsoManager.sol",
-    "address": "0xbfA12e4E1411B62EdA8B035d71735667422A6A9e"
+    "address": "0x7A6B15E17b7691ba687ad182bD12cb4a91D533ae"
   },
   {
     "name": "WNat",
@@ -62,62 +62,67 @@
   {
     "name": "FtsoXrp",
     "contractName": "Ftso.sol",
-    "address": "0xA1a9B8aB5BB798EeE536A23669AD744DCF8537a3"
+    "address": "0x2Be2A30c312F02B4a43327E36acc9a2e8FA94F81"
   },
   {
     "name": "FtsoLtc",
     "contractName": "Ftso.sol",
-    "address": "0x157D6316475765F13348DfA897C503Af0161B232"
+    "address": "0x1578a0e968e4bDE8B0A5C0E155ac3d73aDdE7d9e"
   },
   {
     "name": "FtsoXlm",
     "contractName": "Ftso.sol",
-    "address": "0xDC2cFeEe7Da8Be3eEF13B9e05BB4235063d0eCc1"
+    "address": "0x95F1De36a886492b2b2cE8f4476cEF25D4d752ee"
   },
   {
     "name": "FtsoDoge",
     "contractName": "Ftso.sol",
-    "address": "0xBc696A456E351C8a5f170135868a3850eB29135A"
+    "address": "0x2f976FE9c802dEAf684AD725C46F55b5C8ebA19f"
   },
   {
     "name": "FtsoAda",
     "contractName": "Ftso.sol",
-    "address": "0xCe7472A48754A2AFe34951c6F35f7BFE01bb8FeE"
+    "address": "0x9F867b6ae76fA031130D640cC58D04Aa501414c0"
   },
   {
     "name": "FtsoAlgo",
     "contractName": "Ftso.sol",
-    "address": "0x2Ce1d8653BbCa3F636A63E35136f4e015f0b4647"
+    "address": "0x502dD637B79B21b709Fdf5B61a4b824d584224C3"
   },
   {
     "name": "FtsoBch",
     "contractName": "Ftso.sol",
-    "address": "0x9dCda46Cb0589ec54384801905b2F79B65E93347"
+    "address": "0xd1D12609851170e7c48E5D5022BF973Cd285fbdF"
   },
   {
     "name": "FtsoDgb",
     "contractName": "Ftso.sol",
-    "address": "0xd47B92E53941b7f71AcA3cD6235C866c55b4f23a"
+    "address": "0x72Fd7A3A012370bee1F64BF55AB168524e69c24c"
   },
   {
     "name": "FtsoBtc",
     "contractName": "Ftso.sol",
-    "address": "0x20Fecb7b1Ff69C62BBA5Bb6aCD5a9743D11E246F"
+    "address": "0x602B1c4c6A7F192D9c9cFf7dCb3ec272cA3dFC81"
   },
   {
     "name": "FtsoEth",
     "contractName": "Ftso.sol",
-    "address": "0x3C028fE13a87229D5D56a5b234eDC0199794684e"
+    "address": "0xD20975F531E8AEa8a94F8aCD8F4a67914b099471"
   },
   {
     "name": "FtsoFil",
     "contractName": "Ftso.sol",
-    "address": "0x71c57de677222f5E9BB3a3134Eb27aEe8b50BD39"
+    "address": "0x44A26395Fc561701875A653183dA340f16eefDEc"
   },
   {
     "name": "FtsoWnat",
     "contractName": "Ftso.sol",
-    "address": "0x23f1AaA1B6a5fD5bbB5906Fa389D517C870CA2FF"
+    "address": "0xf9660C1421a095FE2C49E8e4396E9eAF39d3D7f3"
+  },
+  {
+    "name": "GovernanceSettings",
+    "contractName": "GovernanceSettings.sol",
+    "address": "0x183fAfF6997C98A812A3B98748Fc80241D08f312"
   },
   {
     "name": "GovernanceVotePower",
@@ -127,6 +132,16 @@
   {
     "name": "PollingFoundation",
     "contractName": "PollingFoundation.sol",
-    "address": "0xE2aFc8465C8Ff5af3BBEa8BBcA5471844D6a14df"
+    "address": "0x725cd5E69388515029BCBF9F8aE2cc47f397CD64"
+  },
+  {
+    "name": "AddressUpdater",
+    "contractName": "AddressUpdater.sol",
+    "address": "0x884E1818eA005171CDe0dB5b83E9734454e0Ed6D"
+  },
+  {
+    "name": "FlareContractRegistry",
+    "contractName": "FlareContractRegistry.sol",
+    "address": "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019"
   }
 ]
