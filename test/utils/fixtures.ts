@@ -1,6 +1,9 @@
 import { deployments } from "hardhat";
-import { deployContracts } from "../../deployment/scripts/lib/deploy-contracts";
-const fs = require('fs');
+import { deployContracts } from "../../deployment/scripts/deploy-contracts";
+import fs from "fs";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { ChainParameters } from "../../deployment/chain-config/chain-parameters";
+
 const BN = web3.utils.toBN;
 
 export interface FtsoConfigParams {
@@ -12,8 +15,8 @@ export interface FtsoConfigParams {
 }
 
 // Reads deployment parameters from file
-export function readDeploymentParametersForConfiguration(configName: string) {
-    let deploymentParameters = JSON.parse(fs.readFileSync(`deployment/chain-config/${configName}.json`));
+export function readDeploymentParametersForConfiguration(configName: string): ChainParameters {
+    let deploymentParameters: ChainParameters = JSON.parse(fs.readFileSync(`deployment/chain-config/${configName}.json`).toString());
     // inject private keys from .env, if they exist
 
     if (process.env.DEPLOYER_PRIVATE_KEY) {
@@ -29,10 +32,9 @@ export function readDeploymentParametersForConfiguration(configName: string) {
 }
 
 // Returns full deployment fixture
-export function fullDeploymentFixture(deploymentParameters: any) {
+export function fullDeploymentFixture(hre: HardhatRuntimeEnvironment, deploymentParameters: ChainParameters) {
     return deployments.createFixture(async (env, options) => {
-        let contracts = await deployContracts(deploymentParameters, true);
+        let contracts = await deployContracts(hre, deploymentParameters, true);
         return contracts;
     });
 }
-

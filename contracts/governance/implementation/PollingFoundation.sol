@@ -3,30 +3,37 @@ pragma solidity 0.7.6;
 pragma abicoder v2;
 
 import "./Governor.sol";
+import "./GovernedV2.sol";
 import "./GovernorProposer.sol";
 import "../interface/IIPollingFoundation.sol";
 
 
-contract PollingFoundation is IIPollingFoundation, Governor, GovernorProposer {
+contract PollingFoundation is IIPollingFoundation, Governor, GovernedV2, GovernorProposer {
 
     /**
      * @notice Initializes the contract with default parameters
      * @param _governance                   Address identifying the governance address
+     * @param _addressUpdater               Address identifying the address updater contract
      * @param _proposers                    Array of addresses allowed to submit a proposal
      */
     constructor(
         address _governance,
+        address _addressUpdater,
         address[] memory _proposers
     )
-        Governor()
-        Governed(_governance)
-        GovernorProposer(_proposers)
+        GovernedV2(_governance)
+        Governor(
+            _addressUpdater
+        )
+        GovernorProposer(
+            _proposers
+        )
     {}
 
     /**
      * @notice Creates a new proposal without execution parameters
      * @param _description          String description of the proposal
-     * @param _settings             Settings of the poposal
+     * @param _settings             Settings of the proposal
      * @return Proposal id (unique identifier obtained by hashing proposal data)
      * @notice Emits a ProposalCreated event
      */

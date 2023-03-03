@@ -1,5 +1,6 @@
-import { WNatInstance } from "../../../typechain-truffle";
-import { BN_ZERO, Nullable, toBN } from "./FuzzingUtils";
+import { WNatInstance, GovernanceVotePowerInstance } from "../../../typechain-truffle";
+import { BN_ZERO, Nullable } from "../../utils/fuzzing-utils";
+import { toBN } from "../../utils/test-helpers";
 import { VPTokenState } from "./VPTokenState";
 
 export class VPTokenChecker {
@@ -10,7 +11,8 @@ export class VPTokenChecker {
         private state: VPTokenState,
         // when true, sums all votePowerFromTo in totalDelegationsTo and totalDelegationsFrom
         // when false, only sum up all existing delegates (based on state) - much faster but not as thorough
-        private checkZeroDelegations: boolean = false,
+        private governanceVP: GovernanceVotePowerInstance,
+        private checkZeroDelegations: boolean = false
     ) {}
 
     // VPToken wrappers
@@ -57,6 +59,11 @@ export class VPTokenChecker {
             () => this.blockNumber == null ? this.vpToken.undelegatedVotePowerOf(from) : this.vpToken.undelegatedVotePowerOfAt(from, this.blockNumber));
     }
 
+    governanceVotePowerOf(account: string) {
+        return this.cached(['governanceVotePowerOf', account],
+            () => this.blockNumber == null ? this.governanceVP.getVotes(account) : this.governanceVP.votePowerOfAt(account, this.blockNumber));
+    }
+
     // utility functions
 
     private cache: { [key: string]: any } = {};
@@ -71,7 +78,7 @@ export class VPTokenChecker {
     }
 
     async totalBalance() {
-        let total = toBN(0);
+        let total = BN_ZERO;
         for (const account of this.accounts) {
             total = total.add(await this.balanceOf(account));
         }
@@ -79,7 +86,7 @@ export class VPTokenChecker {
     }
 
     async totalVotePowerCalculated() {
-        let total = toBN(0);
+        let total = BN_ZERO;
         for (const account of this.accounts) {
             const vp = await this.votePowerOf(account);
             const revoked = this.state.revokedVotePower(account);
@@ -110,12 +117,22 @@ export class VPTokenChecker {
         return total;
     }
 
+    async totalGovernanceVotePowerCalculated() {
+        let total = BN_ZERO;
+        for (const account of this.accounts) {
+            const vp = await this.governanceVotePowerOf(account);
+            total = total.add(vp);
+        }
+        return total;
+    }
+
     // invariant checks
 
     async checkInvariants() {
         await this.checkTotalBalance();
         await this.checkTotalNativeBalance();
         await this.checkTotalVotePower();
+        await this.checkTotalGovernanceVotePower();
         await this.checkVotePowerIsUndelegatedPlusDelegationsTo();
         await this.checkVotePowerIsBalanceMinusFromPlusToDelegations();
         await this.checkCachedVotePower();
@@ -126,6 +143,7 @@ export class VPTokenChecker {
         await this.checkStateBalance();
         await this.checkStateVotePower();
         await this.checkStateUndelegatedVotePower();
+        await this.checkStateGovernanceVotePower();
     }
 
     async checkTotalBalance() {
@@ -148,6 +166,13 @@ export class VPTokenChecker {
         const calculated = await this.totalVotePowerCalculated();
         const vp = await this.totalVotePower();
         assert(calculated.eq(vp), `Calculated VP does not match contract VP: ${calculated} != ${vp}`);
+    }
+
+    async checkTotalGovernanceVotePower() {
+        console.log('   checkTotalGovernanceVotePower');
+        const calculated = await this.totalGovernanceVotePowerCalculated();
+        const vp = await this.totalVotePower();
+        assert(calculated.eq(vp), `Calculated governance VP does not match contract VP: ${calculated} != ${vp}`);
     }
 
     // totalVP = undelegatedVP + all delegations TO account
@@ -246,5 +271,20 @@ export class VPTokenChecker {
         const uvp = await this.undelegatedVotePowerOf(account);
         const stateUVp = this.state.undelegatedVotePower(account);
         assert(uvp.eq(stateUVp), `Simulator state undelegated vote power mismatch for acount:  ${account}: ${uvp} != ${stateUVp}`);
+    }
+
+    async checkStateGovernanceVotePower() {
+        console.log('   checkStateGovernanceVotePower');
+        for (const account of this.accounts) {
+            await this.checkStateGovernanceVotePowerFor(account);
+        }
+    }
+
+    private async checkStateGovernanceVotePowerFor(account: string) {
+        const vp = await this.governanceVotePowerOf(account);
+        const stateVp = this.state.governanceVotePower(account);
+        if (account != "0x0000000000000000000000000000000000000000") {
+            assert(vp.eq(stateVp), `Simulator state governance vote power mismatch for acount:  ${account}: ${vp} != ${stateVp}`);
+        }
     }
 }

@@ -11,14 +11,14 @@ import "@openzeppelin/contracts/drafts/EIP712.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "../../ftso/interface/IIFtsoManager.sol";
 import "../../inflation/interface/IISupply.sol";
+import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "../../token/interface/IIGovernanceVotePower.sol";
 import "../../userInterfaces/IFtsoRegistry.sol";
-import "./Governed.sol";
 
 abstract contract Governor is
     IGovernor, EIP712, GovernorVotePower, GovernorProposals,
-    GovernorVotes, Governed {
-    
+    GovernorVotes, AddressUpdatable {
+
     using SafePct for uint256;
 
     uint256 internal constant MAX_BIPS = 1e4;
@@ -32,30 +32,16 @@ abstract contract Governor is
 
     /**
      * @notice Initializes the contract with default parameters
+     * @param _addressUpdater               Address identifying the address updater contract
      */
     constructor(
+        address _addressUpdater
     )
         EIP712(name(), version())
         GovernorProposals()
         GovernorVotes()
-    {}
-
-    function setContractAddresses(
-        IIGovernanceVotePower _vpContract,
-        IFtsoRegistry _ftsoRegistry,
-        IIFtsoManager _ftsoManager,
-        IISupply _supply
-    )
-        external onlyGovernance
-    {
-        setVotePowerContract(_vpContract);
-        ftsoRegistry = _ftsoRegistry;
-        ftsoManager = _ftsoManager;
-        supply = _supply;
-
-        emit ContractAddressesSet(_vpContract, _ftsoRegistry, _ftsoManager, _supply);
-    }
-
+        AddressUpdatable(_addressUpdater)
+    { }
 
     /**
      * @notice Cancels a proposal
@@ -167,7 +153,7 @@ abstract contract Governor is
      */
     function state(uint256 _proposalId) external view override returns (ProposalState) {
         return _state(_proposalId, proposals[_proposalId]);
-    }    
+    }
 
     /**
      * @notice Returns the vote power of a voter at a specific block number
@@ -225,7 +211,7 @@ abstract contract Governor is
             uint256 _thresholdConditionBIPS,
             uint256 _majorityConditionBIPS,
             uint256 _circulatingSupply
-        ) 
+        )
     {
         Proposal storage proposal = proposals[_proposalId];
         _proposer = proposal.proposer;
@@ -253,7 +239,7 @@ abstract contract Governor is
         returns (
             uint256 _for,
             uint256 _against
-        ) 
+        )
     {
         ProposalVoting storage voting = proposalVotings[_proposalId];
         _for = voting.forVotePower;
@@ -299,7 +285,7 @@ abstract contract Governor is
         string memory _description,
         GovernorSettings memory _settings
     ) internal returns (uint256) {
-        (uint256 votePowerBlock, uint256 rewardEpochTimestamp) = 
+        (uint256 votePowerBlock, uint256 rewardEpochTimestamp) =
             _calculateVotePowerBlock(_settings.vpBlockPeriodSeconds);
 
         require(_isValidProposer(msg.sender, votePowerBlock), "submitter is not eligible to submit a proposal");
@@ -310,8 +296,8 @@ abstract contract Governor is
             "invalid majorityConditionBIPS");
 
         uint256 totalCirculatingSupply = supply.getCirculatingSupplyAt(votePowerBlock);
-        (,,,,,, uint256 rewardExpiryOffsetSeconds,,) = ftsoManager.settings();
-        
+        uint256 rewardExpiryOffsetSeconds = ftsoManager.getRewardExpiryOffsetSeconds();
+
         (uint256 proposalId, Proposal storage proposal) = _storeProposal(
             msg.sender,
             _targets,
@@ -390,12 +376,36 @@ abstract contract Governor is
 
         ProposalState proposalState = _state(proposalId, proposal);
         require(proposalState == ProposalState.Queued, "proposal not in execution state");
-        
+
         proposal.executed = true;
         _executeProposal(_targets, _values, _calldatas);
         emit ProposalExecuted(proposalId);
-        
+
         return proposalId;
+    }
+
+    /**
+     * @notice Implementation of the AddressUpdatable abstract method.
+     */
+    function _updateContractAddresses(
+        bytes32[] memory _contractNameHashes,
+        address[] memory _contractAddresses
+    )
+        internal virtual override
+    {
+        ftsoRegistry = IFtsoRegistry(
+            _getContractAddress(_contractNameHashes, _contractAddresses, "FtsoRegistry"));
+
+        ftsoManager = IIFtsoManager(
+            _getContractAddress(_contractNameHashes, _contractAddresses, "FtsoManager"));
+
+        supply = IISupply(
+            _getContractAddress(_contractNameHashes, _contractAddresses, "Supply"));
+
+        IIGovernanceVotePower vpContract = IIGovernanceVotePower(
+            _getContractAddress(_contractNameHashes, _contractAddresses, "GovernanceVotePower"));
+
+        setVotePowerContract(vpContract);
     }
 
     /**
@@ -405,41 +415,41 @@ abstract contract Governor is
     function _calculateVotePowerBlock(uint256 _vpBlockPeriodSeconds) internal view returns (uint256, uint256) {
         uint256 rewardEpochId = ftsoManager.getCurrentRewardEpoch();
 
-        (uint256 ftsoVpBlock, uint256 startBlock, uint256 startTs) = 
-            ftsoManager.rewardEpochs(rewardEpochId);
+        IIFtsoManager.RewardEpochData memory rewardEpochData =
+            ftsoManager.getRewardEpochData(rewardEpochId);
 
         uint256 nowBlockNumber = block.number;
         uint256 cleanupBlock = votePower.getCleanupBlockNumber();
 
-        uint256 diffSeconds = block.timestamp - startTs; 
-        
+        uint256 diffSeconds = block.timestamp - rewardEpochData.startTimestamp;
+
         while (rewardEpochId > 0 && diffSeconds < _vpBlockPeriodSeconds) {
-            (uint256 prevFtsoVpBlock, uint256 prevStartBlock, uint256 prevStartTs) = 
-                ftsoManager.rewardEpochs(rewardEpochId - 1);
-            if (prevStartBlock < cleanupBlock) {
+            IIFtsoManager.RewardEpochData memory prevRewardEpochData =
+                ftsoManager.getRewardEpochData(rewardEpochId - 1);
+            if (prevRewardEpochData.startBlock < cleanupBlock) {
                 break;
             }
             rewardEpochId -= 1;
-            (ftsoVpBlock, startBlock, startTs) =
-                (prevFtsoVpBlock, prevStartBlock, prevStartTs);
-            diffSeconds = block.timestamp - startTs;
+            rewardEpochData = prevRewardEpochData;
+            diffSeconds = block.timestamp - rewardEpochData.startTimestamp;
         }
 
-        uint256 epochBlockNumber = startBlock;
-                
+        uint256 epochBlockNumber = rewardEpochData.startBlock;
+
         //slither-disable-next-line weak-prng
         uint256 random = _getRandom() % (nowBlockNumber - epochBlockNumber);
 
-        return (nowBlockNumber - random, startTs);
+        return (nowBlockNumber - random, rewardEpochData.startTimestamp);
     }
 
     function _getRandom() internal view returns (uint256) {
-        uint256 random = block.timestamp;
+        uint256 ftsoRandom = 0;
         IIFtso[] memory ftsos = ftsoRegistry.getSupportedFtsos();
+        for (uint256 i = 0; i < ftsos.length; i++) {
+            ftsoRandom += ftsos[i].getCurrentRandom(); // may overflow but it is still ok
+        }
         //slither-disable-next-line weak-prng
-        uint256 ftsoRandom = ftsos[random % ftsos.length].getCurrentRandom();
-        //slither-disable-next-line weak-prng
-        return uint256(keccak256(abi.encode(random, ftsoRandom)));
+        return uint256(keccak256(abi.encode(block.timestamp, ftsoRandom)));
     }
 
     /**
@@ -481,7 +491,7 @@ abstract contract Governor is
             }
             return ProposalState.Expired;
         }
-        
+
         return ProposalState.Defeated;
     }
 
@@ -516,7 +526,7 @@ abstract contract Governor is
 
         return _proposal.accept;
     }
-    
+
     /**
      * @notice Determines if the submitter of a proposal is a valid proposer
      * @param _proposer             Address of the submitter

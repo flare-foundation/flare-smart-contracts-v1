@@ -2,11 +2,6 @@
 pragma solidity >=0.7.6 <0.9;
 pragma abicoder v2;
 
-import "../ftso/interface/IIFtsoManager.sol";
-import "../inflation/interface/IISupply.sol";
-import "../token/interface/IIGovernanceVotePower.sol";
-import "./IFtsoRegistry.sol";
-
 interface IGovernor {
 
     struct GovernorSettings {
@@ -33,17 +28,6 @@ interface IGovernor {
         Executed,
         Canceled
     }
-
-    /**
-     * @notice Event emitted when contract addresses are set
-     */
-    event ContractAddressesSet(
-        IIGovernanceVotePower vpContract,
-        IFtsoRegistry ftsoRegistry,
-        IIFtsoManager ftsoManager,
-        IISupply supply
-    );
-
 
     /**
      * @notice Event emitted when a proposal is created

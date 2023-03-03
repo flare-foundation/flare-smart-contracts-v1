@@ -6,7 +6,7 @@ import {
 import { increaseTimeTo, submitPriceHash, toBN } from "../../../utils/test-helpers";
 
 
-const {constants, expectRevert, expectEvent, time} = require('@openzeppelin/test-helpers');
+const {expectRevert, expectEvent, time} = require('@openzeppelin/test-helpers');
 
 const MockPriceSubmitter = artifacts.require("MockPriceSubmitter");
 const MockFtsoRegistry = artifacts.require("MockFtsoRegistry");
@@ -32,6 +32,7 @@ contract(`MockPriceSubmitter.sol; MockPriceSubmitter unit tests`, async accounts
             const prices = randoms;
             const addrs = [accounts[10], accounts[11], accounts[12], accounts[13]];
             if(false){ // enable this branch to get example hashes
+                console.log(`Prices: ${prices}`);
                 for(let addr of addrs){
                     console.log(`Address: ${addr}`);
                     for(let random of randoms){
@@ -69,9 +70,9 @@ contract(`MockPriceSubmitter.sol; MockPriceSubmitter unit tests`, async accounts
             // In a real environment, they would come from some external api, be calculated...
             // Mock randoms:
             const randoms = [27182, 81828, 45904]
-            const hash0 = submitPriceHash(prices[0], randoms[0], accounts[10]);            
-            const hash1 = submitPriceHash(prices[1], randoms[1], accounts[10]);            
-            const hash2 = submitPriceHash(prices[2], randoms[2], accounts[10]);            
+            const hash0 = submitPriceHash(prices[0], randoms[0], accounts[10]);
+            const hash1 = submitPriceHash(prices[1], randoms[1], accounts[10]);
+            const hash2 = submitPriceHash(prices[2], randoms[2], accounts[10]);
 
             // Ftsos for symbols that are deployed by mock contract
             let ftso0 = await ftsoRegistry.getFtsoBySymbol("XRP");
@@ -96,7 +97,7 @@ contract(`MockPriceSubmitter.sol; MockPriceSubmitter unit tests`, async accounts
             tx = await priceSubmitter.revealPrices(1, [ftso0Ind, ftso1Ind, ftso2Ind], prices, randoms, {from: accounts[10]});
 
             await expectEvent(tx, "PricesRevealed", { ftsos: [ftso0, ftso1, ftso2],
-                                                      epochId: "1", prices: [toBN(prices[0]), toBN(prices[1]), toBN(prices[2])]});
+                                                        epochId: "1", prices: [toBN(prices[0]), toBN(prices[1]), toBN(prices[2])]});
             
             // Should fail on double reveal
             let tx1 = priceSubmitter.revealPrices(1, [ftso0Ind, ftso1Ind, ftso2Ind], prices, randoms, {from: accounts[10]});
@@ -105,9 +106,9 @@ contract(`MockPriceSubmitter.sol; MockPriceSubmitter unit tests`, async accounts
         });
 
         it("Should fail if revealed to soon", async() => {
-            const hash0 = submitPriceHash(500, 123, accounts[10]);            
-            const hash1 = submitPriceHash(500, 123, accounts[10]);            
-            const hash2 = submitPriceHash(100, 30, accounts[10]);            
+            const hash0 = submitPriceHash(500, 123, accounts[10]);
+            const hash1 = submitPriceHash(500, 123, accounts[10]);
+            const hash2 = submitPriceHash(100, 30, accounts[10]);
 
             let ftso0 = await ftsoRegistry.getFtso(0);
             let ftso1 = await ftsoRegistry.getFtso(1);
@@ -120,7 +121,6 @@ contract(`MockPriceSubmitter.sol; MockPriceSubmitter unit tests`, async accounts
 
             expectEvent(tx, "PriceHashesSubmitted", { ftsos: [ftso0, ftso1, ftso2], epochId: "1", hashes: [hash0, hash1, hash2]});
 
-            
 
             let timestamp = await time.latest() as BN;
             // Not yet in new epoch

@@ -1,18 +1,23 @@
 {
-    "nativeSymbol": "SGB",     
+    "nativeSymbol": "SGB",
+    "nativeFtsoDecimals": 5,
+    "nativeElasticBandWidthPPM": 500,
     "wrappedNativeName": "Wrapped Songbird",
     "wrappedNativeSymbol": "WSGB",
     "stateConnectorAddress": "0x1000000000000000000000000000000000000001",
     "flareDaemonAddress": "0x1000000000000000000000000000000000000002",
     "priceSubmitterAddress": "0x1000000000000000000000000000000000000003",
+    "governanceSettingsAddress": "0x183fAfF6997C98A812A3B98748Fc80241D08f312",
     "deployerPrivateKey": "<use .env: DEPLOYER_PRIVATE_KEY>",
+    "governanceSettingsDeployerPrivateKey": "<use .env: GOVERNANCE_SETTINGS_DEPLOYER_PRIVATE_KEY>",
     "genesisGovernancePrivateKey": "<use .env: GENESIS_GOVERNANCE_PRIVATE_KEY>",
     "governancePrivateKey": "<use .env: GOVERNANCE_PRIVATE_KEY>",
     "governancePublicKey": "<use .env: GOVERNANCE_PUBLIC_KEY>",
+    "governanceTimelock": 3600,
+    "governanceExecutorPublicKey": "<use .env: GOVERNANCE_EXECUTOR_PUBLIC_KEY>",
     "burnAddress": "0x0100000000000000000000000000000000000000",
     "totalNativeSupplyNAT": 15000000000,
     "totalFoundationSupplyNAT": 5596817223,
-    "initialInflationPercentageBIPS": 1000,
     "scheduledInflationPercentageBIPS": [1000, 800, 600],
     "rewardEpochDurationSeconds": 604800,
     "revealEpochDurationSeconds": 90,
@@ -21,25 +26,25 @@
     "votePowerIntervalFraction": 4,
     "defaultVoterWhitelistSize": 100,
     "flareDaemonGasExceededHoldoffBlocks": 30,
-    "maxVotePowerNatThresholdFraction": 20,
-    "maxVotePowerAssetThresholdFraction": 20,
+    "maxVotePowerNatThresholdFraction": 40,
+    "maxVotePowerAssetThresholdFraction": 40,
     "lowAssetThresholdUSDDec5": 5000000000,
     "highAssetThresholdUSDDec5": 500000000000,
     "highAssetTurnoutThresholdBIPS": 6000,
     "lowNatTurnoutThresholdBIPS": 500,
+    "elasticBandRewardBIPS": 3000,
     "priceDeviationThresholdBIPS": 1500,
     "trustedAddresses": [
         "0x021305Bb75B9D7F720fD328d137114C930917B62",
-        "0x651ccEBfA2C5aa1e6d9C6180d91079F120314080",
+        "0xF750178B0155c651B4FFf490cE01D0736F1b54C6",
         "0x96b83D3F73E44c9A96388CF1D116595551dAeB5A"
     ],
     "rewardFeePercentageUpdateOffsetEpochs": 3,
     "defaultRewardFeePercentageBIPS": 2000,
     "ftsoRewardExpiryOffsetDays": 90,
-    "dataAvailabilityRewardExpiryOffsetEpochs": 26,
     "initialWnatPriceUSDDec5": 0,
     "priceEpochCyclicBufferSize": 200,
-    "inflationReceivers" : ["FtsoRewardManager"],
+    "inflationReceivers": ["FtsoRewardManager"],
     "inflationSharingBIPS": [10000],
     "inflationTopUpTypes": [0],
     "inflationTopUpFactorsx100": [300],
@@ -48,11 +53,13 @@
     "deployDistributionContract": false,
     "deployDummyXAssetTokensAndMinters": false,
     "deployNATFtso": true,
-    "NATMultiAssets": ["XRP", "LTC", "BTC"],
+    "NATMultiAssets": ["XRP","LTC","BTC"],
     "assets": [
         {
             "assetSymbol": "XRP",
             "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 150,
             "xAssetName": "sAsset XRP",
             "xAssetSymbol": "sXRP",
             "dummyAssetMinterMax": 7000000000,
@@ -61,6 +68,8 @@
         {
             "assetSymbol": "LTC",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "sAsset Litecoin",
             "xAssetSymbol": "sLTC",
             "dummyAssetMinterMax": 4000000000,
@@ -69,6 +78,8 @@
         {
             "assetSymbol": "XLM",
             "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "sAsset XLM (Lumen)",
             "xAssetSymbol": "sXLM",
             "dummyAssetMinterMax": 7000000000,
@@ -77,6 +88,8 @@
         {
             "assetSymbol": "DOGE",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "sAsset Dogecoin",
             "xAssetSymbol": "sDOGE",
             "dummyAssetMinterMax": 13000000000000,
@@ -85,6 +98,8 @@
         {
             "assetSymbol": "ADA",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "sAsset ADA (Cardano)",
             "xAssetSymbol": "sADA",
             "dummyAssetMinterMax": 45000000000,
@@ -93,6 +108,8 @@
         {
             "assetSymbol": "ALGO",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "sAsset Algorand",
             "xAssetSymbol": "sALGO",
             "dummyAssetMinterMax": 5000000000,
@@ -101,6 +118,8 @@
         {
             "assetSymbol": "BCH",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
             "xAssetName": "sAsset Bitcoin Cash",
             "xAssetSymbol": "sBCH",
             "dummyAssetMinterMax": 21000000000,
@@ -109,6 +128,8 @@
         {
             "assetSymbol": "DGB",
             "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 500,
             "xAssetName": "sAsset Digibyte",
             "xAssetSymbol": "sDGB",
             "dummyAssetMinterMax": 10000000000,
@@ -117,6 +138,8 @@
         {
             "assetSymbol": "BTC",
             "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 100,
             "xAssetName": "sAsset BTC",
             "xAssetSymbol": "sBTC",
             "dummyAssetMinterMax": 7000000000,
@@ -125,6 +148,8 @@
         {
             "assetSymbol": "ETH",
             "assetDecimals": 18,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 150,
             "xAssetName": "sAsset ETH",
             "xAssetSymbol": "sETH",
             "dummyAssetMinterMax": 10000000000,
@@ -133,13 +158,16 @@
         {
             "assetSymbol": "FIL",
             "assetDecimals": 18,
-            "xAssetName": "xAsset FIL",
-            "xAssetSymbol": "sFIL",            
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 200,
+            "xAssetName": "sAsset FIL",
+            "xAssetSymbol": "sFIL",
             "dummyAssetMinterMax": 10000000000,
             "initialPriceUSDDec5": 0
         }
     ],
     "proposers": [
-        "0x51e40f275feecA0A859CdA9D499afBcBe3804B71"
-    ]  
+        "0x51e40f275feeca0a859cda9d499afbcbe3804b71",
+        "0xBe6a26eAA777001A260DA7FcEAc67d2604cc5069"
+    ]
 }

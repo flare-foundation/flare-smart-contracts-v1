@@ -2,6 +2,7 @@ import { Contracts } from "../scripts/Contracts";
 import {
   GovernedBaseContract,
 } from "../../typechain-truffle";
+import { ChainParameters } from "../chain-config/chain-parameters";
 
 /**
  * This test assumes a chain is running with Flare allocated in accounts
@@ -9,9 +10,9 @@ import {
  */
 contract(`transfer-governance.ts system tests`, async accounts => {
   let contracts: Contracts;
-  let parameters: any;
+  let parameters: ChainParameters;
   let GovernedBase: GovernedBaseContract;
-  const SHOULD_HAVE_TRANSFERRED_GOVERNANCE = "Should have transfered governance";
+  const SHOULD_HAVE_TRANSFERRED_GOVERNANCE = "Should have transferred governance";
 
   before(async () => {
     contracts = new Contracts();
@@ -26,18 +27,12 @@ contract(`transfer-governance.ts system tests`, async accounts => {
     // Act
     const governance = await governedBase.governance();
     // Assert
-    assert.equal(governance, parameters.governancePublicKey);
+    assert.equal(governance.toLowerCase(), parameters.governancePublicKey.toLowerCase());
   }
-  
+
   describe(Contracts.INFLATION_ALLOCATION, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.INFLATION_ALLOCATION);
-    });
-  });
-
-  describe(Contracts.FTSO_MANAGER, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.FTSO_MANAGER);
     });
   });
 
@@ -57,35 +52,19 @@ contract(`transfer-governance.ts system tests`, async accounts => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.FTSO_REWARD_MANAGER);
     });
-  });  
-
-  describe(Contracts.DATA_AVAILABILITY_REWARD_MANAGER, async () => {    
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async function () {
-      if (!parameters.dataAvailabilityRewardManagerDeployed) return this.skip();
-      await checkGovernance(Contracts.DATA_AVAILABILITY_REWARD_MANAGER);
-    });
-    it("Should not have deployed", async function () {
-      if (parameters.dataAvailabilityRewardManagerDeployed) return this.skip();
-      try {
-        await checkGovernance(Contracts.DATA_AVAILABILITY_REWARD_MANAGER);
-        assert.fail('The expected Error was not thrown.');
-      } catch (err: any) {
-        assert.include(err.message, `${Contracts.DATA_AVAILABILITY_REWARD_MANAGER} not found`);
-      }
-    });
-  });    
+  });
 
   describe(Contracts.PRICE_SUBMITTER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.PRICE_SUBMITTER);
     });
-  });      
+  });
 
   describe(Contracts.SUPPLY, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.SUPPLY);
     });
-  });      
+  });
 
   describe(Contracts.VOTER_WHITELISTER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
@@ -115,21 +94,9 @@ contract(`transfer-governance.ts system tests`, async accounts => {
     });
   });
 
-  describe(Contracts.FTSO_REGISTRY, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.FTSO_REGISTRY);
-    });
-  });
-
   describe(Contracts.WNAT, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.WNAT);
-    });
-  });
-
-  describe(Contracts.POLLING_FOUNDATION, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.POLLING_FOUNDATION);
     });
   });
 

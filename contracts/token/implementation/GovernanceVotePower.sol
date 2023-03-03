@@ -7,8 +7,6 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../lib/CheckPointsByAddress.sol";
 import "../lib/DelegateCheckPointsByAddress.sol";
 
-import "hardhat/console.sol";
-
 contract GovernanceVotePower is IIGovernanceVotePower {
     using SafeMath for uint256;
     using SafeCast for uint256;
@@ -117,7 +115,7 @@ contract GovernanceVotePower is IIGovernanceVotePower {
     }
 
     /**
-     * Update governance vote powers when tokens are transfered.
+     * Update governance vote powers when tokens are transferred.
      **/
     function updateAtTokenTransfer(
         address _from, 
