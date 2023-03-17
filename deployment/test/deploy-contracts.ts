@@ -619,7 +619,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       let contractNames = [Contracts.STATE_CONNECTOR, Contracts.FLARE_DAEMON, Contracts.PRICE_SUBMITTER, Contracts.WNAT,
         Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER,
         Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.GOVERNANCE_VOTE_POWER,
-        Contracts.GOVERNANCE_SETTINGS, Contracts.POLLING_FOUNDATION, Contracts.FLARE_CONTRACT_REGISTRY];
+        Contracts.GOVERNANCE_SETTINGS, Contracts.POLLING_FOUNDATION, Contracts.FLARE_CONTRACT_REGISTRY, Contracts.POLLING_FTSO];
 
       if (parameters.deployDistributionContract) {
         contractNames.push(Contracts.DISTRIBUTION);
@@ -634,7 +634,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
     });
 
     it("Address updatable contracts should know about address updater", async () => {
-      let contractNames = [Contracts.FTSO_MANAGER, Contracts.FTSO_REGISTRY, Contracts.POLLING_FOUNDATION, Contracts.FLARE_CONTRACT_REGISTRY];
+      let contractNames = [Contracts.FTSO_MANAGER, Contracts.FTSO_REGISTRY, Contracts.POLLING_FOUNDATION, Contracts.FLARE_CONTRACT_REGISTRY, Contracts.POLLING_FTSO];
 
       for (let name of contractNames) {
         // Act

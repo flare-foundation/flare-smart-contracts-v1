@@ -80,7 +80,7 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             mockFtsoRegistry = await MockRegistry.new();
             priceSubmitter = await PriceSubmitter.new();
             await priceSubmitter.initialiseFixedAddress();
-            voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, priceSubmitter.address, 10);
+            voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, ADDRESS_UPDATER, priceSubmitter.address, 10, constants.ZERO_ADDRESS);
             mockFtsoManager = await FtsoManager.new(
                 GOVERNANCE_GENESIS_ADDRESS,
                 GOVERNANCE_GENESIS_ADDRESS,
@@ -95,9 +95,10 @@ contract(`PriceSubmitter.sol; ${getTestFile(__filename)}; PriceSubmitter unit te
             );
             
             // Have an exisitng address just to set up FtsoManager and can act like it in {from: _}
-            await voterWhitelister.setContractAddresses(mockFtsoRegistry.address, FTSO_MANAGER_ADDRESS, { from: GOVERNANCE_GENESIS_ADDRESS });
             await priceSubmitter.setContractAddresses(mockFtsoRegistry.address, voterWhitelister.address, FTSO_MANAGER_ADDRESS, { from: GOVERNANCE_GENESIS_ADDRESS });
-
+            await voterWhitelister.updateContractAddresses(
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
+                [ADDRESS_UPDATER, mockFtsoRegistry.address, FTSO_MANAGER_ADDRESS], {from: ADDRESS_UPDATER});
             
             for (let i = 0; i < 3; i++) {
                 let ftso = await Ftso.new(

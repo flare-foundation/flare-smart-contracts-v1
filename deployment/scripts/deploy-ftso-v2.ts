@@ -215,8 +215,8 @@ export async function deployFtsoV2(hre: HardhatRuntimeEnvironment, oldContracts:
     console.error(`Setting upgrade data...`);
   }
   let assetList = [
-    ...(parameters.deployNATFtso ? [{ assetSymbol: parameters.nativeSymbol, elasticBandWidthPPM: parameters.nativeElasticBandWidthPPM }] : []),
-    ...parameters.assets
+    ...parameters.assets,
+    ...(parameters.deployNATFtso ? [{ assetSymbol: parameters.nativeSymbol, elasticBandWidthPPM: parameters.nativeElasticBandWidthPPM }] : [])
   ]
   let ftsoAddresses: string[] = [];
   let elasticBandWidthsPPM: number[] = [];

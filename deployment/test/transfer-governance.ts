@@ -66,12 +66,6 @@ contract(`transfer-governance.ts system tests`, async accounts => {
     });
   });
 
-  describe(Contracts.VOTER_WHITELISTER, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.VOTER_WHITELISTER);
-    });
-  });
-
   describe(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER);

@@ -9,6 +9,8 @@ import "../../governance/implementation/GovernedV2.sol";
 import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "../../utils/implementation/AddressSet.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "../../inflation/implementation/Supply.sol";
+import "../../utils/implementation/Burner.sol";
 
 contract ClaimSetupManager is IIClaimSetupManager, 
     GovernedV2, AddressUpdatable, CloneFactory, ReentrancyGuard
@@ -42,8 +44,6 @@ contract ClaimSetupManager is IIClaimSetupManager,
     string internal constant ERR_ONLY_OWNER_OR_EXECUTOR = "only owner or executor";
     string internal constant ERR_RECIPIENT_NOT_ALLOWED = "recipient not allowed";
     string internal constant ERR_WRONG_WNAT_ADDRESS = "wrong wNat address";
-    
-    address payable constant internal BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     uint256 public immutable feeValueUpdateOffset;      // fee value update timelock measured in reward epochs
     uint256 public minFeeValueWei;                      // min value for fee
@@ -51,6 +51,7 @@ contract ClaimSetupManager is IIClaimSetupManager,
     uint256 public registerExecutorFeeValueWei;         // fee value that executor must pay to register
 
     IFtsoManager public ftsoManager;
+    Supply public supply;
     WNat public override wNat;
     IGovernanceVotePower public governanceVP;
 
@@ -159,8 +160,11 @@ contract ClaimSetupManager is IIClaimSetupManager,
     function registerExecutor(uint256 _feeValue) external payable override returns (uint256) {
         require(registeredExecutors.index[msg.sender] == 0, ERR_ALREADY_REGISTERED);
         require(registerExecutorFeeValueWei == msg.value, ERR_EXECUTOR_FEE_INVALID);
+        // burn registration fee
+        Burner burner = new Burner(payable(supply.burnAddress()));
         //slither-disable-next-line arbitrary-send-eth
-        BURN_ADDRESS.transfer(msg.value);
+        address(burner).transfer(msg.value);
+        burner.die();
         // add and emit event
         registeredExecutors.add(msg.sender);
         emit ExecutorRegistered(msg.sender);
@@ -609,6 +613,7 @@ contract ClaimSetupManager is IIClaimSetupManager,
         internal override
     {
         ftsoManager = IFtsoManager(_getContractAddress(_contractNameHashes, _contractAddresses, "FtsoManager"));
+        supply = Supply(_getContractAddress(_contractNameHashes, _contractAddresses, "Supply"));
         WNat newWNat = WNat(payable(_getContractAddress(_contractNameHashes, _contractAddresses, "WNat")));
         if (address(wNat) == address(0)) {
             wNat = newWNat;
