@@ -37,6 +37,7 @@ const PRICE_EPOCH_DURATION_S = 120;   // 2 minutes
 const REVEAL_EPOCH_DURATION_S = 30;
 const REWARD_EPOCH_DURATION_S = 2 * 24 * 60 * 60; // 2 days
 const VOTE_POWER_BOUNDARY_FRACTION = 7;
+const BURN_ADDRESS = "0x000000000000000000000000000000000000dEaD";
 
 // contains a fresh contract for each test
 let ftsoRewardManager: FtsoRewardManagerV2MockInstance;
@@ -46,6 +47,7 @@ let mockFtsoManager: FtsoManagerMockInstance;
 let wNat: WNatInstance;
 let mockInflation: InflationMockInstance;
 let claimSetupManager: ClaimSetupManagerInstance;
+let supplyMock: MockContractInstance;
 let ADDRESS_UPDATER: string;
 let libraryContract: DelegationAccountInstance;
 
@@ -150,12 +152,12 @@ export async function distributeRewards(
 export async function expireRewardEpoch(rewardEpoch: number, ftsoRewardManager: FtsoRewardManagerV2MockInstance, deployer: string) {
     let currentFtsoManagerAddress = await ftsoRewardManager.ftsoManager();
     await ftsoRewardManager.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-        [ADDRESS_UPDATER, mockInflation.address, deployer, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+        [ADDRESS_UPDATER, mockInflation.address, deployer, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
     await ftsoRewardManager.closeExpiredRewardEpoch(rewardEpoch);
     await ftsoRewardManager.updateContractAddresses(
-        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-        [ADDRESS_UPDATER, mockInflation.address, currentFtsoManagerAddress, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+        [ADDRESS_UPDATER, mockInflation.address, currentFtsoManagerAddress, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
 }
 
 export async function travelToAndSetNewRewardEpoch(newRewardEpoch: number, startTs: BN, ftsoRewardManager: FtsoRewardManagerV2MockInstance, deployer: string, closeAsYouGo = false) {
@@ -198,7 +200,6 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
     const EXECUTOR_MIN_FEE = "0";
     const EXECUTOR_MAX_FEE = "500";
     const EXECUTOR_REGISTER_FEE = "100";
-    const burnAddress = "0x000000000000000000000000000000000000dEaD";
 
     ADDRESS_UPDATER = accounts[16];
 
@@ -255,14 +256,18 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
         wNat = await WNAT.new(accounts[0], "Wrapped NAT", "WNAT");
         await setDefaultVPContract(wNat, accounts[0]);
 
+        supplyMock = await MockContract.new();
+        const burnAddressSelector = web3.utils.sha3("burnAddress()")!.slice(0, 10); // first 4 bytes is function selector
+        await supplyMock.givenMethodReturnAddress(burnAddressSelector, BURN_ADDRESS);
+
         await ftsoRewardManager.updateContractAddresses(
-            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-            [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+            [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
         await ftsoRewardManager.enableClaims();
 
         await claimSetupManager.updateContractAddresses(
-            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-            [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+            [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
         // set the daily authorized inflation...this proxies call to ftso reward manager
         await mockInflation.setDailyAuthorizedInflation(2000000);
@@ -314,43 +319,43 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
 
         it("Should revert calling updateContractAddresses if not from address updater", async () => {
             await expectRevert(ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: accounts[1] }), "only address updater");
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: accounts[1] }), "only address updater");
         });
 
         it("Should update ftso manager", async () => {
             expect(await ftsoRewardManager.ftsoManager()).to.equals(mockFtsoManager.address);
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, accounts[8], wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, accounts[8], wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             expect(await ftsoRewardManager.ftsoManager()).to.equals(accounts[8]);
         });
 
         it("Should revert updating ftso manager if setting to address(0)", async () => {
             await expectRevert(ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, constants.ZERO_ADDRESS, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER }), "address zero");
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, constants.ZERO_ADDRESS, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER }), "address zero");
         });
 
         it("Should update WNAT", async () => {
             expect(await ftsoRewardManager.wNat()).to.equals(wNat.address);
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, accounts[8], claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, accounts[8], claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             expect(await ftsoRewardManager.wNat()).to.equals(accounts[8]);
         });
 
         it("Should revert updating wNAt if setting to address(0)", async () => {
             await expectRevert(ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, constants.ZERO_ADDRESS, claimSetupManager.address], { from: ADDRESS_UPDATER }), "address zero");
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, constants.ZERO_ADDRESS, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER }), "address zero");
         });
 
         it("Should update inflation", async () => {
             expect(await ftsoRewardManager.getInflationAddress()).to.equals(mockInflation.address);
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, accounts[8], mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, accounts[8], mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             expect(await ftsoRewardManager.getInflationAddress()).to.equals(accounts[8]);
         });
 
@@ -365,8 +370,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
 
         it("Should revert updating inflation if setting to address(0)", async () => {
             await expectRevert(ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, constants.ZERO_ADDRESS, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER }), "address zero");
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, constants.ZERO_ADDRESS, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER }), "address zero");
         });
 
         it("Should get epoch to expire next", async () => {
@@ -408,8 +413,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockFtsoManager.givenMethodReturnUint(getCurrentRewardEpoch, 20);
 
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             await ftsoRewardManager.enableClaims();
 
             expect((await ftsoRewardManager.getInitialRewardEpoch()).toNumber()).to.equals(0);
@@ -432,8 +437,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             );
 
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             await ftsoRewardManager.enableClaims();
 
             await ftsoRewardManager.setInitialRewardData();
@@ -642,8 +647,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
 
         it("Should burn unearned rewards when inflation received", async () => {
             // Assemble
-            const burnAddress = "0x000000000000000000000000000000000000dEaD";
-            let burnAddressOpeningBalance = web3.utils.toBN(await web3.eth.getBalance(burnAddress));
+            let burnAddressOpeningBalance = web3.utils.toBN(await web3.eth.getBalance(BURN_ADDRESS));
             // Simulate ftso in fallback by accruing unearned rewards for first price epoch
             await mockFtsoManager.accrueUnearnedRewardsCall(
                 0,
@@ -660,7 +664,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             let ftsoRewardManagerBalance = web3.utils.toBN(await web3.eth.getBalance(ftsoRewardManager.address));
             assert.equal(ftsoRewardManagerBalance.toNumber(), 1999604 - 2777 + 396);
             // Since supply is stubbed out, the burn address will default to 0x0.
-            let burnAddressClosingBalance = web3.utils.toBN(await web3.eth.getBalance(burnAddress));
+            let burnAddressClosingBalance = web3.utils.toBN(await web3.eth.getBalance(BURN_ADDRESS));
             assert.equal(burnAddressClosingBalance.sub(burnAddressOpeningBalance).toNumber(), 2777);
             // Check total unearned accural
             const { 3: totalUnearnedWei } = await ftsoRewardManager.getTotals();
@@ -669,8 +673,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
 
         it("Should limit the unearned rewards burned on any given receive inflation event", async () => {
             // Assemble
-            const burnAddress = "0x000000000000000000000000000000000000dEaD";
-            let burnAddressOpeningBalance = web3.utils.toBN(await web3.eth.getBalance(burnAddress));
+            let burnAddressOpeningBalance = web3.utils.toBN(await web3.eth.getBalance(BURN_ADDRESS));
             // Simulate ftso in fallback by accruing unearned rewards for many price epochs
             // Should be 2777 * 150 = 416550
             for (var p = 1; p < 157; p++) {
@@ -687,7 +690,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             const txReceipt = await mockInflation.receiveInflation({ value: "2000000" });
 
             // Amount burned should be limited to 20% of received inflation;
-            let burnAddressClosingBalance = web3.utils.toBN(await web3.eth.getBalance(burnAddress));
+            let burnAddressClosingBalance = web3.utils.toBN(await web3.eth.getBalance(BURN_ADDRESS));
             assert.equal(burnAddressClosingBalance.sub(burnAddressOpeningBalance).toNumber(), 400000, "Burn address does not contain correct balance");
             // Check totalBurnedWei()
             const { 4: totalBurnedWei } = await ftsoRewardManager.getTotals();
@@ -803,8 +806,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockFtsoManager.givenMethodReturnUint(getCurrentRewardEpoch, 2);
 
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             await ftsoRewardManager.enableClaims();
 
             await ftsoRewardManager.setInitialRewardData();
@@ -1478,7 +1481,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
         it("Should gracefully receive self-destruct proceeds", async () => {
             // Assemble
             // Give suicidal some NAT
-            let balanceBefore = await web3.eth.getBalance(burnAddress);
+            let balanceBefore = await web3.eth.getBalance(BURN_ADDRESS);
             await web3.eth.sendTransaction({ from: accounts[0], to: mockSuicidal.address, value: 1 });
             // Sneak it into ftso reward manager
             await mockSuicidal.die();
@@ -1487,13 +1490,13 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockInflation.receiveInflation({ value: "1" });
             // Assert
             assert.equal(await web3.eth.getBalance(ftsoRewardManager.address), "1");
-            let balanceAfter = await web3.eth.getBalance(burnAddress);
+            let balanceAfter = await web3.eth.getBalance(BURN_ADDRESS);
             assert.equal(parseInt(balanceAfter) - parseInt(balanceBefore), 1);
         });
 
         it("Should gracefully receive self-destruct proceeds - initial balance > 0", async () => {
             // Add some initial balance (inflation)
-            let balanceBefore = await web3.eth.getBalance(burnAddress);
+            let balanceBefore = await web3.eth.getBalance(BURN_ADDRESS);
             await mockInflation.receiveInflation({ value: "1" });
             assert.equal(await web3.eth.getBalance(ftsoRewardManager.address), "1");
             // Assemble
@@ -1506,7 +1509,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockInflation.receiveInflation({ value: "1" });
             // Assert
             assert.equal(await web3.eth.getBalance(ftsoRewardManager.address), "2");
-            let balanceAfter = await web3.eth.getBalance(burnAddress);
+            let balanceAfter = await web3.eth.getBalance(BURN_ADDRESS);
             assert.equal(parseInt(balanceAfter) - parseInt(balanceBefore), 1);
         });
 
@@ -1601,7 +1604,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await distributeRewards(accounts, startTs);
             await travelToAndSetNewRewardEpoch(1, startTs, ftsoRewardManager, accounts[0]);
 
-            let balance1 = await web3.eth.getBalance(burnAddress);
+            let balance1 = await web3.eth.getBalance(BURN_ADDRESS);
             // Give suicidal some NAT
             await web3.eth.sendTransaction({ from: accounts[0], to: mockSuicidal.address, value: 1 });
             // Sneak it into ftso reward manager
@@ -1616,7 +1619,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             // a4 -> a3 claimed should be (2000000 / 720) * 0.25 * 2 price epochs / 2 (half vote power was delegated) = 695
             let natClosingBalance = web3.utils.toBN(await web3.eth.getBalance(accounts[3]));
             assert.equal(natClosingBalance.sub(natOpeningBalance).toNumber(), 695);
-            let balance2 = await web3.eth.getBalance(burnAddress);
+            let balance2 = await web3.eth.getBalance(BURN_ADDRESS);
             assert.equal(parseInt(balance2) - parseInt(balance1), 1);
 
             // Create another suicidal
@@ -1634,7 +1637,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             // a1 -> a5 claimed should be (2000000 / 720) * 0.25 * 2 price epochs / 2 (half vote power was delegated) = 695
             let natClosingBalance2 = web3.utils.toBN(await web3.eth.getBalance(accounts[5]));
             assert.equal(natClosingBalance2.sub(natOpeningBalance2).toNumber(), 695);
-            let balance3 = await web3.eth.getBalance(burnAddress);
+            let balance3 = await web3.eth.getBalance(BURN_ADDRESS);
             assert.equal(parseInt(balance3) - parseInt(balance2), 1);
         });
 
@@ -1926,7 +1929,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await distributeRewards(accounts, startTs);
             await travelToAndSetNewRewardEpoch(1, startTs, ftsoRewardManager, accounts[0]);
 
-            let balance1 = await web3.eth.getBalance(burnAddress);
+            let balance1 = await web3.eth.getBalance(BURN_ADDRESS);
             // Give suicidal some NAT
             await web3.eth.sendTransaction({ from: accounts[0], to: mockSuicidal.address, value: 1 });
             // Sneak it into ftso reward manager
@@ -1941,7 +1944,7 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             // a4 -> a3 claimed should be (2000000 / 720) * 0.25 * 2 price epochs = 695 * 2 = 1390
             let natClosingBalance = web3.utils.toBN(await web3.eth.getBalance(accounts[3]));
             assert.equal(natClosingBalance.sub(natOpeningBalance).toNumber(), 1390);
-            let balance2 = await web3.eth.getBalance(burnAddress);
+            let balance2 = await web3.eth.getBalance(BURN_ADDRESS);
             assert.equal(parseInt(balance2) - parseInt(balance1), 1);
         });
 
@@ -2576,8 +2579,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
         it("Should only expire correct reward epoch and proceed - ftso manager", async () => {
             // update ftso manager to accounts[0] to be able to call closeExpiredRewardEpoch
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, accounts[0], wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, accounts[0], wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             await ftsoRewardManager.closeExpiredRewardEpoch(0); // should work
             await expectRevert(ftsoRewardManager.closeExpiredRewardEpoch(0), "wrong epoch id");
@@ -2605,8 +2608,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             );
 
             await ftsoRewardManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockInflation.address, mockFtsoManager.address, wNat.address, claimSetupManager.address, supplyMock.address], { from: ADDRESS_UPDATER });
             await ftsoRewardManager.enableClaims();
 
             await ftsoRewardManager.setInitialRewardData();
@@ -2707,8 +2710,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockRewardManager.givenMethodRunOutOfGas(claimReward);
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             // add (mock) reward manager which will revert with message
             const mockRewardManager1 = await MockContract.new();
@@ -2716,8 +2719,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockRewardManager1.givenMethodRevertWithMessage(claimReward1, "unable to claim");
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             let claim1 = await ftsoRewardManager.autoClaim([accounts[1]], 0, { from: accounts[1] });
 
@@ -2814,8 +2817,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await travelToAndSetNewRewardEpoch(1, startTs, ftsoRewardManager, accounts[0]);
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             // add (mock) reward manager which will revert with message
             const mockRewardManager1 = await MockContract.new();
@@ -2823,8 +2826,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockRewardManager1.givenMethodRevertWithMessage(claimReward1, "unable to claim");
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             let claim = await ftsoRewardManager.autoClaim([accounts[55], accounts[2], accounts[3]], 0, { from: executor });
 
@@ -2870,8 +2873,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await travelToAndSetNewRewardEpoch(1, startTs, ftsoRewardManager, accounts[0]);
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             // add (mock) reward manager which will revert with message
             const mockRewardManager1 = await MockContract.new();
@@ -2879,8 +2882,8 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await mockRewardManager1.givenMethodRevertWithMessage(claimReward1, "unable to claim");
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             let claim = await ftsoRewardManager.autoClaim([accounts[1]], 0, { from: executor });
 
@@ -2913,12 +2916,12 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             await travelToAndSetNewRewardEpoch(1, startTs, ftsoRewardManager, accounts[0]);
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             await claimSetupManager.updateContractAddresses(
-                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address], { from: ADDRESS_UPDATER });
+                encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.SUPPLY]),
+                [ADDRESS_UPDATER, mockFtsoManager.address, wNat.address, supplyMock.address], { from: ADDRESS_UPDATER });
 
             let claim = await ftsoRewardManager.autoClaim([accounts[1]], 0, { from: executor });
 

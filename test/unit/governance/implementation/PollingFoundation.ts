@@ -91,7 +91,7 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
     priceSubmitter = await PriceSubmitter.new();
     await priceSubmitter.initialiseFixedAddress();
 
-    voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, priceSubmitter.address, 10);
+    voterWhitelister = await VoterWhitelister.new(GOVERNANCE_GENESIS_ADDRESS, ADDRESS_UPDATER, priceSubmitter.address, 10, constants.ZERO_ADDRESS);
 
     mockFtsoRegistry = await MockRegistry.new();
 

@@ -47,7 +47,7 @@
   {
     "name": "VoterWhitelister",
     "contractName": "VoterWhitelister.sol",
-    "address": "0xEaA8968E9B70dd2559066E3e801Df1596a4CFA23"
+    "address": "0xFAe0fd738dAbc8a0426F47437322b6d026A9FD95"
   },
   {
     "name": "FtsoManager",
@@ -143,5 +143,10 @@
     "name": "FlareContractRegistry",
     "contractName": "FlareContractRegistry.sol",
     "address": "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019"
+  },
+  {
+    "name": "PollingFtso",
+    "contractName": "PollingFtso.sol",
+    "address": "0xD036a8F254ef782cb93af4F829A1568E992c3864"
   }
 ]
