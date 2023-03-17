@@ -131,7 +131,7 @@ interface IPollingFtso {
         uint256 _removeAfterNotRewardedEpochs,
         uint256 _removeAfterEligibleProposals,
         uint256 _removeAfterNonParticipatingProposals,
-        uint256 _removeForEpochs
+        uint256 _removeForDays
     )
     external;
 
