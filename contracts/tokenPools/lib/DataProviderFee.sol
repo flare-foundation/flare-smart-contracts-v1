@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
+import "../../utils/implementation/Burner.sol";
+
 
 library DataProviderFee {
     struct FeePercentage {          // used for storing data provider fee percentage settings
@@ -11,15 +13,15 @@ library DataProviderFee {
     struct State {
         uint256 feePercentageUpdateOffset; // fee percentage update timelock measured in reward epochs
         uint256 defaultFeePercentage; // default value for fee percentage
-        
+
         mapping(address => FeePercentage[]) dataProviderFeePercentages;
     }
 
     uint256 constant internal MAX_BIPS = 1e4;
-    
+
     string internal constant ERR_FEE_PERCENTAGE_INVALID = "invalid fee percentage value";
     string internal constant ERR_FEE_PERCENTAGE_UPDATE_FAILED = "fee percentage can not be updated";
-    
+
     /**
      * @notice Allows data provider to set (or update last) fee percentage.
      * @param _feePercentageBIPS    number representing fee percentage in BIPS
@@ -29,7 +31,7 @@ library DataProviderFee {
         State storage _state,
         uint256 _feePercentageBIPS,
         uint256 _currentRewardEpoch
-    ) 
+    )
         external
         returns (uint256)
     {
@@ -44,7 +46,7 @@ library DataProviderFee {
             // do not allow updating the settings in the past
             // (this can only happen if the sharing percentage epoch offset is updated)
             require(rewardEpoch >= fps[position - 1].validFromEpoch, ERR_FEE_PERCENTAGE_UPDATE_FAILED);
-            
+
             if (rewardEpoch == fps[position - 1].validFromEpoch) {
                 // update
                 position = position - 1;
@@ -64,6 +66,16 @@ library DataProviderFee {
     }
 
     /**
+     * @notice Helper method to burn unclaimed rewards using self-destruct transfer
+     */
+    function burn(address _burnAddress, uint256 _amountWei) external {
+        Burner burner = new Burner(payable(_burnAddress));
+        //slither-disable-next-line arbitrary-send-eth
+        address(burner).transfer(_amountWei);
+        burner.die();
+    }
+
+    /**
      * @notice Returns the scheduled fee percentage changes of `_dataProvider`
      * @param _dataProvider         address representing data provider
      * @return _feePercentageBIPS   positional array of fee percentages in BIPS
@@ -80,7 +92,7 @@ library DataProviderFee {
             uint256[] memory _feePercentageBIPS,
             uint256[] memory _validFromEpoch,
             bool[] memory _fixed
-        ) 
+        )
     {
         FeePercentage[] storage fps = _state.dataProviderFeePercentages[_dataProvider];
         if (fps.length > 0) {
@@ -100,7 +112,7 @@ library DataProviderFee {
                     _fixed[i] = (_validFromEpoch[i] - currentEpoch) != _state.feePercentageUpdateOffset;
                 }
             }
-        }        
+        }
     }
 
     /**
@@ -126,5 +138,5 @@ library DataProviderFee {
         }
         return _state.defaultFeePercentage;
     }
-   
+
 }
