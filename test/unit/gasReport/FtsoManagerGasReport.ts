@@ -261,7 +261,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       registry = await FtsoRegistry.at(ftsoRegistryProxy.address);
       await registry.initialiseRegistry(ADDRESS_UPDATER);
       // create whitelister
-      whitelist = await VoterWhitelister.new(governance, priceSubmitter.address, 100);
+      whitelist = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 500, constants.ZERO_ADDRESS);
 
       cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance);
 
@@ -300,7 +300,9 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
         [ADDRESS_UPDATER, ftsoManager.address], {from: ADDRESS_UPDATER});
 
-      await whitelist.setContractAddresses(registry.address, ftsoManager.address, {from: governance});
+      await whitelist.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
+        [ADDRESS_UPDATER, registry.address, ftsoManager.address], {from: ADDRESS_UPDATER});
       await ftsoRewardManager.setContractAddresses(inflation, ftsoManager.address, wNat.address, {from: governance});
       await ftsoRewardManager.activate({ from: governance });
 

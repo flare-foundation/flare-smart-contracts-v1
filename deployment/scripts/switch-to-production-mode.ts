@@ -47,21 +47,26 @@ export async function switchToProductionMode(
     web3.eth.defaultAccount = deployerAccount.address;
 
     // Contract definitions
-    const GovernanceSettings = artifacts.require("GovernanceSettings");
     const AddressUpdater = artifacts.require("AddressUpdater");
     const FtsoManager = artifacts.require("FtsoManager");
     const FtsoRegistry = artifacts.require("FtsoRegistry");
     const PollingFoundation = artifacts.require("PollingFoundation");
+    const VoterWhitelister = artifacts.require("VoterWhitelister");
+    const PollingFtso = artifacts.require("PollingFtso");
 
     // Get deployed contracts
     const addressUpdater = await AddressUpdater.at(contracts.getContractAddress(Contracts.ADDRESS_UPDATER));
     const ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
     const ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
     const pollingFoundation = await PollingFoundation.at(contracts.getContractAddress(Contracts.POLLING_FOUNDATION));
+    const voterWhitelister = await VoterWhitelister.at(contracts.getContractAddress(Contracts.VOTER_WHITELISTER));
+    const pollingFtso = await PollingFtso.at(contracts.getContractAddress(Contracts.POLLING_FTSO));
 
     // switch to production mode
     await addressUpdater.switchToProductionMode();
     await ftsoManager.switchToProductionMode();
     await ftsoRegistry.switchToProductionMode();
     await pollingFoundation.switchToProductionMode();
+    await voterWhitelister.switchToProductionMode();
+    await pollingFtso.switchToProductionMode();
 }

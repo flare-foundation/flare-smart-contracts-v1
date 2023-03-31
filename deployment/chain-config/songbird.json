@@ -53,7 +53,7 @@
     "deployDistributionContract": false,
     "deployDummyXAssetTokensAndMinters": false,
     "deployNATFtso": true,
-    "NATMultiAssets": ["XRP","LTC","BTC"],
+    "NATMultiAssets": ["XRP", "LTC", "BTC"],
     "assets": [
         {
             "assetSymbol": "XRP",
@@ -169,5 +169,17 @@
     "proposers": [
         "0x51e40f275feeca0a859cda9d499afbcbe3804b71",
         "0xBe6a26eAA777001A260DA7FcEAc67d2604cc5069"
-    ]
+    ],
+    "maintainer": "0x51e40f275feeca0a859cda9d499afbcbe3804b71",
+    "votingDelaySeconds": 0,
+    "votingPeriodSeconds": 172800,
+    "thresholdConditionBIPS": 6600,
+    "majorityConditionBIPS": 5000,
+    "proposalFeeValueNAT": 100,
+    "addAfterRewardedEpochs": 10,
+    "addAfterNotChilledEpochs": 10,
+    "removeAfterNotRewardedEpochs": 2,
+    "removeAfterEligibleProposals": 4,
+    "removeAfterNonParticipatingProposals": 2,
+    "removeForDays": 7
 }

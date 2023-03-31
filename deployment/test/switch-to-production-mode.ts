@@ -82,4 +82,16 @@ contract(`switch-to-production-mode.ts system tests`, async accounts => {
     });
   });
 
+  describe(Contracts.VOTER_WHITELISTER, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.VOTER_WHITELISTER);
+    });
+  });
+
+  describe(Contracts.POLLING_FTSO, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.POLLING_FTSO);
+    });
+  });
+
 });

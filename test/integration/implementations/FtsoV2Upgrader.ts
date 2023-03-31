@@ -12,7 +12,7 @@ import { FtsoRegistryV1MockInstance } from '../../../typechain-truffle/FtsoRegis
 import { defaultPriceEpochCyclicBufferSize, GOVERNANCE_GENESIS_ADDRESS } from "../../utils/constants";
 import { testDeployGovernanceSettings } from '../../utils/contract-test-helpers';
 import { createMockSupplyContract } from "../../utils/FTSO-test-utils";
-import { toBN } from '../../utils/test-helpers';
+import { toBN, encodeContractNames } from '../../utils/test-helpers';
 import { setDefaultVPContract } from "../../utils/token-test-helpers";
 const hardhat = require('hardhat');
 
@@ -49,6 +49,7 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
 
     const governance = GOVERNANCE_GENESIS_ADDRESS;
     const deployerAccount = accounts[2];
+    const ADDRESS_UPDATER = accounts[16];
 
     // contains a fresh contract for each test
     let priceSubmitter: PriceSubmitterInstance;
@@ -83,7 +84,7 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
     beforeEach(async () => {
         priceSubmitter = await PriceSubmitter.new();
         await priceSubmitter.initialiseFixedAddress();
-        voterWhitelister = await VoterWhitelister.new(governance, priceSubmitter.address, 10);
+        voterWhitelister = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 10, constants.ZERO_ADDRESS);
         cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance);
         flareDaemon = await FlareDaemon.new();
         await flareDaemon.initialiseFixedAddress();
@@ -124,7 +125,9 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
         await ftsoRewardManager.setContractAddresses(mockInflation.address, oldFtsoManager.address, wNat.address, {from: governance});
 
         await oldFtsoRegistry.setFtsoManagerAddress(oldFtsoManager.address, {from: governance});
-        await voterWhitelister.setContractAddresses(oldFtsoRegistry.address, oldFtsoManager.address, {from: governance});
+        await voterWhitelister.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
+            [ADDRESS_UPDATER, oldFtsoRegistry.address, oldFtsoManager.address], {from: ADDRESS_UPDATER});
         await cleanupBlockNumberManager.setTriggerContractAddress(oldFtsoManager.address, {from: governance});
 
         await mockInflation.setDailyAuthorizedInflation(BN(1000000));
@@ -271,7 +274,9 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
         tx = await priceSubmitter.setContractAddresses(ftsoRegistry.address, voterWhitelister.address, ftsoManager.address, { from: governance });
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
-        tx = await voterWhitelister.setContractAddresses(ftsoRegistry.address, ftsoManager.address, { from: governance });
+        tx = await voterWhitelister.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
+            [ADDRESS_UPDATER, oldFtsoRegistry.address, ftsoManager.address], {from: ADDRESS_UPDATER});
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
         tx = await cleanupBlockNumberManager.setTriggerContractAddress(ftsoManager.address, { from: governance });
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));

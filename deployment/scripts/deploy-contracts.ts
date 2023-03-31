@@ -8,7 +8,7 @@
  */
 
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { AddressUpdaterContract, CleanupBlockNumberManagerContract, DistributionContract, FlareContractRegistryContract, FlareDaemonContract, FlareDaemonInstance, FtsoContract, FtsoInstance, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryProxyContract, FtsoRewardManagerContract, GovernanceSettingsContract, GovernanceSettingsInstance, GovernanceVotePowerContract, InflationAllocationContract, InflationContract, PollingFoundationContract, PriceSubmitterContract, PriceSubmitterInstance, StateConnectorContract, StateConnectorInstance, SupplyContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract } from '../../typechain-truffle';
+import { AddressUpdaterContract, CleanupBlockNumberManagerContract, DistributionContract, FlareContractRegistryContract, FlareDaemonContract, FlareDaemonInstance, FtsoContract, FtsoInstance, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryProxyContract, FtsoRewardManagerContract, GovernanceSettingsContract, GovernanceSettingsInstance, GovernanceVotePowerContract, InflationAllocationContract, InflationContract, PollingFoundationContract, PollingFtsoContract, PriceSubmitterContract, PriceSubmitterInstance, StateConnectorContract, StateConnectorInstance, SupplyContract, TestableFlareDaemonContract, VoterWhitelisterContract, WNatContract } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
 import {
@@ -74,6 +74,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const GovernanceVotePower: GovernanceVotePowerContract = artifacts.require("GovernanceVotePower");
   const FtsoRegistryProxy: FtsoRegistryProxyContract = artifacts.require("FtsoRegistryProxy");
   const PollingFoundation: PollingFoundationContract = artifacts.require("PollingFoundation");
+  const PollingFtso: PollingFtsoContract = artifacts.require("PollingFtso");
 
   // Initialize the state connector
   let stateConnector: StateConnectorInstance;
@@ -271,7 +272,12 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   spewNewContractInfo(contracts, addressUpdaterContracts, FtsoRegistry.contractName, `FtsoRegistry.sol`, registry.address, quiet);
 
   // VoterWhitelisting
-  const voterWhitelister = await VoterWhitelister.new(deployerAccount.address, priceSubmitter.address, parameters.defaultVoterWhitelistSize);
+  const voterWhitelister = await VoterWhitelister.new(
+    deployerAccount.address,
+    addressUpdater.address,
+    priceSubmitter.address,
+    parameters.defaultVoterWhitelistSize,
+    "0x0000000000000000000000000000000000000000");
   spewNewContractInfo(contracts, addressUpdaterContracts, VoterWhitelister.contractName, `VoterWhitelister.sol`, voterWhitelister.address, quiet);
 
   // Distribution Contract
@@ -317,6 +323,28 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   );
   spewNewContractInfo(contracts, addressUpdaterContracts, PollingFoundation.contractName, `PollingFoundation.sol`, pollingFoundation.address, quiet);
 
+  // Deploy polling ftso
+  const pollingFtso = await PollingFtso.new(
+      deployerAccount.address,
+      addressUpdater.address
+  );
+  await pollingFtso.setMaintainer(deployerAccount.address);
+  await pollingFtso.setParameters( // can be called only from maintainer address
+    parameters.votingDelaySeconds,
+    parameters.votingPeriodSeconds,
+    parameters.thresholdConditionBIPS,
+    parameters.majorityConditionBIPS,
+    BN(parameters.proposalFeeValueNAT).mul(BN(10).pow(BN(18))),
+    parameters.addAfterRewardedEpochs,
+    parameters.addAfterNotChilledEpochs,
+    parameters.removeAfterNotRewardedEpochs,
+    parameters.removeAfterEligibleProposals,
+    parameters.removeAfterNonParticipatingProposals,
+    parameters.removeForDays
+  );
+  await pollingFtso.setMaintainer(parameters.maintainer);
+  spewNewContractInfo(contracts, addressUpdaterContracts, PollingFtso.contractName, `PollingFtso.sol`, pollingFtso.address, quiet);
+
   // Tell address updater about all contracts
   await addressUpdater.addOrUpdateContractNamesAndAddresses(
     addressUpdaterContracts, addressUpdaterContracts.map(name => contracts.getContractAddress(name))
@@ -326,7 +354,9 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   let addressUpdatableContracts = [
     registry.address,
     ftsoManager.address,
-    pollingFoundation.address
+    pollingFoundation.address,
+    voterWhitelister.address,
+    pollingFtso.address
   ];
   await addressUpdater.updateContractAddresses(addressUpdatableContracts);
 
@@ -334,8 +364,6 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   await flareDaemon.setInflation(inflation.address, { from: genesisGovernance });
   await priceSubmitter.setContractAddresses(registry.address, voterWhitelister.address, ftsoManager.address, { from: genesisGovernance });
   await cleanupBlockNumberManager.setTriggerContractAddress(ftsoManager.address);
-  await voterWhitelister.setContractAddresses(registry.address, ftsoManager.address);
-
 
   let assetToContracts = new Map<string, AssetContracts>();
 

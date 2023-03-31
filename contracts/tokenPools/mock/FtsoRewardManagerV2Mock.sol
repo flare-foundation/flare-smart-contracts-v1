@@ -13,6 +13,7 @@ import "../../utils/implementation/SafePct.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/SafeCast.sol";
+import "../../inflation/implementation/Supply.sol";
 
 
 /**
@@ -50,7 +51,6 @@ contract FtsoRewardManagerV2Mock is IIFtsoRewardManagerV2, GovernedV2, Reentranc
     uint256 constant internal ALMOST_FULL_DAY_SEC = 1 days - 1;
     uint256 constant internal MAX_BURNABLE_PCT = 20;
     uint256 constant internal FIRST_CLAIMABLE_EPOCH = uint(-1);
-    address payable constant internal BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     bool public override active;
     uint256 public override firstClaimableRewardEpoch;  // first epochs will not be claimable - those epochs will 
@@ -90,6 +90,7 @@ contract FtsoRewardManagerV2Mock is IIFtsoRewardManagerV2, GovernedV2, Reentranc
 
     /// addresses
     IIFtsoManager public ftsoManager;
+    Supply public supply;
     IIClaimSetupManager public claimSetupManager;
     address private inflation;
     WNat public wNat;
@@ -830,8 +831,7 @@ contract FtsoRewardManagerV2Mock is IIFtsoRewardManagerV2, GovernedV2, Reentranc
         uint256 currentBalance = address(this).balance;
         if (currentBalance > _expectedBalance) {
             // Then assume extra were self-destruct proceeds and burn it
-            //slither-disable-next-line arbitrary-send-eth
-            BURN_ADDRESS.transfer(currentBalance.sub(_expectedBalance));
+            DataProviderFee.burn(supply.burnAddress(), currentBalance.sub(_expectedBalance));
         } else if (currentBalance < _expectedBalance) {
             // This is a coding error
             assert(false);
@@ -869,8 +869,7 @@ contract FtsoRewardManagerV2Mock is IIFtsoRewardManagerV2, GovernedV2, Reentranc
                 lastBalance = lastBalance.sub(toBurnWei);
 
                 // Burn
-                //slither-disable-next-line arbitrary-send-eth
-                BURN_ADDRESS.transfer(toBurnWei);
+                DataProviderFee.burn(supply.burnAddress(), toBurnWei);
 
                 // Emit event to signal what we did
                 emit RewardsBurned(toBurnWei);
@@ -1070,6 +1069,7 @@ contract FtsoRewardManagerV2Mock is IIFtsoRewardManagerV2, GovernedV2, Reentranc
     {
         inflation = _getContractAddress(_contractNameHashes, _contractAddresses, "Inflation");
         ftsoManager = IIFtsoManager(_getContractAddress(_contractNameHashes, _contractAddresses, "FtsoManager"));
+        supply = Supply(_getContractAddress(_contractNameHashes, _contractAddresses, "Supply"));
         wNat = WNat(payable(_getContractAddress(_contractNameHashes, _contractAddresses, "WNat")));
         claimSetupManager = IIClaimSetupManager(
             _getContractAddress(_contractNameHashes, _contractAddresses, "ClaimSetupManager"));
