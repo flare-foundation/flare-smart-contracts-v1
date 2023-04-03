@@ -41,6 +41,10 @@
         "0x92561f28ec438ee9831d00d1d59fbdc981b762b2",
         "0x2ffd013aaa7b5a7da93336c2251075202b33fb2b"
     ],
+    "executorFeeValueUpdateOffsetEpochs": 3,
+    "executorMinFeeValueWei": "0",
+    "executorMaxFeeValueNAT": 100,
+    "executorRegisterFeeValueNAT": 100,
     "rewardFeePercentageUpdateOffsetEpochs": 3,
     "defaultRewardFeePercentageBIPS": 0,
     "ftsoRewardExpiryOffsetDays": 0.01,
@@ -52,7 +56,6 @@
     "inflationTopUpFactorsx100": [300],
     "inflationGasLimit": 2000000,
     "ftsoManagerGasLimit": 40000000,
-    "deployDistributionContract": false,
     "deployDummyXAssetTokensAndMinters": false,
     "deployNATFtso": true,
     "NATMultiAssets": ["XRP", "LTC", "DOGE"],

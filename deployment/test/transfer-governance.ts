@@ -48,12 +48,6 @@ contract(`transfer-governance.ts system tests`, async accounts => {
     });
   });
 
-  describe(Contracts.FTSO_REWARD_MANAGER, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.FTSO_REWARD_MANAGER);
-    });
-  });
-
   describe(Contracts.PRICE_SUBMITTER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.PRICE_SUBMITTER);
@@ -63,28 +57,6 @@ contract(`transfer-governance.ts system tests`, async accounts => {
   describe(Contracts.SUPPLY, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.SUPPLY);
-    });
-  });
-
-  describe(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER);
-    });
-  });
-
-  describe(Contracts.DISTRIBUTION, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async function() {
-      if (!parameters.deployDistributionContract) return this.skip();
-      await checkGovernance(Contracts.DISTRIBUTION);
-    });
-    it("Should not have deployed", async function () {
-      if (parameters.deployDistributionContract) return this.skip();
-      try {
-        await checkGovernance(Contracts.DISTRIBUTION);
-        assert.fail('The expected Error was not thrown.');
-      } catch (err: any) {
-        assert.include(err.message, `${Contracts.DISTRIBUTION} not found`);
-      }
     });
   });
 

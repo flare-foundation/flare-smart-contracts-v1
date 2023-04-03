@@ -72,9 +72,6 @@ Should add up to 100 Percent
 
 ## Deployment options settings 
 
-- `deployDistributionContract` - 
-    Whether `Distribution` contract should be deployed
-
 - `deployDummyXAssetTokensAndMinters` -
     Whether dummy FAsset tokens should be deployed. Option with `true` is used for dev testing.
 

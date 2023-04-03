@@ -16,12 +16,23 @@ export async function linkContracts(hre: HardhatRuntimeEnvironment) {
   };
   
   // deploy libraries
+  
+  const DataProviderFee = artifacts.require("DataProviderFee");
+  const deployedDataProviderFee = await DataProviderFee.new();
+
   const FtsoManagement = artifacts.require("FtsoManagement");
   const deployedFtsoManagement = await FtsoManagement.new();
 
   // add to config for compilation
   
   const lines: string[] = [];
+  
+  overrideTempl.settings.libraries = {
+    "contracts/tokenPools/lib/DataProviderFee.sol": {
+      "DataProviderFee": deployedDataProviderFee.address
+    }
+  };
+  lines.push(`"contracts/tokenPools/implementation/FtsoRewardManager.sol": ${JSON.stringify(overrideTempl, null, 2)}`);
 
   overrideTempl.settings.libraries = {
     "contracts/ftso/lib/FtsoManagement.sol": {

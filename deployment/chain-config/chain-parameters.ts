@@ -176,11 +176,6 @@ export interface ChainParameters {
     // Deployment options settings
 
     /**
-     * Whether `Distribution` contract should be deployed.
-     */
-    deployDistributionContract: boolean;
-
-    /**
      * Whether dummy FAsset tokens should be deployed. Only `true` for dev testing deploys.
      */
     deployDummyXAssetTokensAndMinters: boolean;
@@ -323,6 +318,32 @@ export interface ChainParameters {
      * If expiry value is 90 days and reward epoch length is 10 days, any reward epoch that was opened more then 90 days ago will expire. 
      */
     ftsoRewardExpiryOffsetDays: number;
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Executors on PDA
+
+    /**
+     * Executor fee value update timelock measured in reward epochs.
+     * The parameter determines in how many reward epochs the new fee value submitted by an executor becomes effective. 
+     * For test purposes we recommend 3.
+     */
+    executorFeeValueUpdateOffsetEpochs: integer;
+
+    /**
+     * Min allowed executor fee value, in natural currency Wei.
+     * Big integer, formatted as string.
+     */
+    executorMinFeeValueWei: string;
+
+    /**
+     * Max allowed executor fee value. In whole native units, not Wei.
+     */
+    executorMaxFeeValueNAT: integer;
+
+    /**
+     * Executor registration fee value. In whole native units, not Wei.
+     */
+     executorRegisterFeeValueNAT: integer;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Other currency settings

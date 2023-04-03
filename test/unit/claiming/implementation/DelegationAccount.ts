@@ -6,6 +6,9 @@ const getTestFile = require('../../../utils/constants').getTestFile;
 
 const DelegationAccount = artifacts.require("DelegationAccount");
 const MockContract = artifacts.require("MockContract");
+const FtsoRewardManager = artifacts.require("FtsoRewardManager");
+const DataProviderFee = artifacts.require("DataProviderFee" as any);
+const WNat = artifacts.require("WNat");
 
 const ERR_TRANSFER_FAILURE = "transfer failed";
 const ERR_MANAGER_ONLY = "only manager";
@@ -15,6 +18,11 @@ contract(`DelegationAccount.sol; ${getTestFile(__filename)}; Delegation account 
   const CLAIM_SETUP_MANAGER_ADDRESS = accounts[18];
   let delegationAccount: DelegationAccountInstance;
   let wNatMock: MockContractInstance;
+
+  before(async() => {
+    FtsoRewardManager.link(await DataProviderFee.new() as any);
+  });
+
 
   describe("Initialization", async() => {
 
@@ -29,7 +37,7 @@ contract(`DelegationAccount.sol; ${getTestFile(__filename)}; Delegation account 
 
       let owner = await delegationAccount.owner();
       expect(owner).to.equals(OWNER_ADDRESS);
-
+    
       let manager = await delegationAccount.manager();
       expect(manager).to.equals(CLAIM_SETUP_MANAGER_ADDRESS);
     });

@@ -43,7 +43,7 @@ async function timed<T>(call: () => Promise<T>): Promise<T> {
 }
 
 async function setDefaultVPContract_ethers(token: VPToken, governance: string) {
-    const replacement = await token.vpContractInitialized();
+    const replacement = await token.needsReplacementVPContract();
     const vpContract = await ethersNew(VPContract__factory, token.address, replacement);
     await token.setWriteVpContract(vpContract.address, { from: governance });
     await token.setReadVpContract(vpContract.address, { from: governance });
