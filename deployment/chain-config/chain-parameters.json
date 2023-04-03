@@ -88,10 +88,6 @@
             "description": "Inital size for voter whitelist for price submission. It can later be changed for each FTSO by the governance.",
             "type": "integer"
         },
-        "deployDistributionContract": {
-            "description": "Whether `Distribution` contract should be deployed.",
-            "type": "boolean"
-        },
         "deployDummyXAssetTokensAndMinters": {
             "description": "Whether dummy FAsset tokens should be deployed. Only `true` for dev testing deploys.",
             "type": "boolean"
@@ -106,6 +102,22 @@
         },
         "elasticBandRewardBIPS": {
             "description": "Hybrid reward band, where elasticBandRewardBIPS goes to the elastic band and 10000 - elasticBandRewardBIPS to the IQR. \n For test purposes we recommend 0.",
+            "type": "integer"
+        },
+        "executorFeeValueUpdateOffsetEpochs": {
+            "description": "Executor fee value update timelock measured in reward epochs.\nThe parameter determines in how many reward epochs the new fee value submitted by an executor becomes effective. \nFor test purposes we recommend 3.",
+            "type": "integer"
+        },
+        "executorMaxFeeValueNAT": {
+            "description": "Max allowed executor fee value. In whole native units, not Wei.",
+            "type": "integer"
+        },
+        "executorMinFeeValueWei": {
+            "description": "Min allowed executor fee value, in natural currency Wei.\nBig integer, formatted as string.",
+            "type": "string"
+        },
+        "executorRegisterFeeValueNAT": {
+            "description": "Executor registration fee value. In whole native units, not Wei.",
             "type": "integer"
         },
         "flareDaemonAddress": {
@@ -350,11 +362,14 @@
         "burnAddress",
         "defaultRewardFeePercentageBIPS",
         "defaultVoterWhitelistSize",
-        "deployDistributionContract",
         "deployDummyXAssetTokensAndMinters",
         "deployNATFtso",
         "deployerPrivateKey",
         "elasticBandRewardBIPS",
+        "executorFeeValueUpdateOffsetEpochs",
+        "executorMaxFeeValueNAT",
+        "executorMinFeeValueWei",
+        "executorRegisterFeeValueNAT",
         "flareDaemonAddress",
         "flareDaemonGasExceededHoldoffBlocks",
         "ftsoManagerGasLimit",

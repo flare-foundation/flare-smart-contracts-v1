@@ -85,7 +85,7 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
     mockPriceSubmitter = await MockContract.new();
     mockRewardManager = await MockContract.new();
     mockVoterWhitelister = await MockContract.new();
-    cleanupBlockNumberManager = await CleanupBlockNumberManager.new(accounts[0]);
+    cleanupBlockNumberManager = await CleanupBlockNumberManager.new(accounts[0], ADDRESS_UPDATER, "FtsoManager");
     mockSupply = await createMockSupplyContract(accounts[0], 10000);
 
     priceSubmitter = await PriceSubmitter.new();
@@ -157,7 +157,7 @@ contract(`PollingFoundation.sol; ${getTestFile(__filename)}; PollingFoundation u
     await wNat.deposit({ from: accounts[5], value: toBN(3000) });
     await wNat.deposit({ from: accounts[6], value: toBN(100) });
 
-    // mock contract for proposals executable on chain
+    // mock contract for proposals executable on chain 
     executeMock = await ExecuteMock.new();
 
     // activate ftso manager

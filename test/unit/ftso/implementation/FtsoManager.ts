@@ -9,8 +9,7 @@ import {
   MockVPTokenContract,
   MockVPTokenInstance,
   MockUpdateValidatorsInstance,
-  FtsoRegistryProxyInstance,
-  FtsoRewardManagerV2MockInstance
+  FtsoRegistryProxyInstance
 } from "../../../../typechain-truffle";
 import { defaultPriceEpochCyclicBufferSize } from "../../../utils/constants";
 import { createMockSupplyContract } from "../../../utils/FTSO-test-utils";
@@ -30,10 +29,9 @@ const getTestFile = require('../../../utils/constants').getTestFile;
 
 const FtsoRegistry = artifacts.require("FtsoRegistry");
 const FtsoRewardManager = artifacts.require("FtsoRewardManager");
-const FtsoRewardManagerV2Mock = artifacts.require("FtsoRewardManagerV2Mock");
+const DataProviderFee = artifacts.require("DataProviderFee" as any);
 const FtsoManager = artifacts.require("FtsoManager");
 const FtsoManagement = artifacts.require("FtsoManagement");
-const DataProviderFee = artifacts.require("DataProviderFee" as any);
 const CleanupBlockNumberManager = artifacts.require("CleanupBlockNumberManager");
 const Ftso = artifacts.require("Ftso");
 const MockFtso = artifacts.require("MockContract");
@@ -71,7 +69,6 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
   let startTs: BN;
   let mockRewardManager: MockContractInstance;
   let ftsoRewardManagerInterface: FtsoRewardManagerInstance;
-  let ftsoRewardManagerV2MockInterface: FtsoRewardManagerV2MockInstance;
   let mockFtso: MockContractInstance;
   let ftsoInterface: FtsoInstance;
   let ftsoRegistry: FtsoRegistryInstance;
@@ -93,7 +90,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
   
   before(async() => {
     FtsoManager.link(await FtsoManagement.new() as any);
-    FtsoRewardManagerV2Mock.link(await DataProviderFee.new() as any);
+    FtsoRewardManager.link(await DataProviderFee.new() as any);
   });
 
   beforeEach(async () => {
@@ -121,13 +118,6 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
 
     mockRewardManager = await MockContract.new();
     ftsoRewardManagerInterface = await FtsoRewardManager.new(
-      accounts[0],
-      constants.ZERO_ADDRESS,
-      3,
-      0
-    );
-
-    ftsoRewardManagerV2MockInterface = await FtsoRewardManagerV2Mock.new(
       accounts[0],
       ADDRESS_UPDATER,
       constants.ZERO_ADDRESS,
@@ -172,7 +162,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       VOTE_POWER_BOUNDARY_FRACTION
     );
 
-    cleanupBlockNumberManager = await CleanupBlockNumberManager.new(accounts[0]);
+    cleanupBlockNumberManager = await CleanupBlockNumberManager.new(accounts[0], ADDRESS_UPDATER, "FtsoManager");
 
     await ftsoManager.updateContractAddresses(
       encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.PRICE_SUBMITTER, Contracts.FTSO_REWARD_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER]),
@@ -1910,7 +1900,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       await ftsoManager.daemonize(); // initialize price epoch
       await increaseTimeTo(startTs, REVEAL_EPOCH_DURATION_S + PRICE_EPOCH_DURATION_S);
 
-      const accrueUnearnedRewards = ftsoRewardManagerV2MockInterface.contract.methods.accrueUnearnedRewards(
+      const accrueUnearnedRewards = ftsoRewardManagerInterface.contract.methods.accrueUnearnedRewards(
         0,
         120,
         startTs.addn(PRICE_EPOCH_DURATION_S - 1)
@@ -1937,7 +1927,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       await ftsoManager.daemonize(); // initialize price epoch
       await increaseTimeTo(startTs, REVEAL_EPOCH_DURATION_S + PRICE_EPOCH_DURATION_S);
 
-      const accrueUnearnedRewards = ftsoRewardManagerV2MockInterface.contract.methods.accrueUnearnedRewards(
+      const accrueUnearnedRewards = ftsoRewardManagerInterface.contract.methods.accrueUnearnedRewards(
         0,
         120,
         startTs.addn(PRICE_EPOCH_DURATION_S - 1)
@@ -2269,7 +2259,9 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
 
     it("Should set cleanup block after finalization", async () => {
       // Assemble
-      await cleanupBlockNumberManager.setTriggerContractAddress(ftsoManager.address);
+      await cleanupBlockNumberManager.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
+        [ADDRESS_UPDATER, ftsoManager.address], {from: ADDRESS_UPDATER});
       const mockVpToken = await MockContract.new();
       await cleanupBlockNumberManager.registerToken(mockVpToken.address);
       await ftsoManager.activate();
@@ -2931,7 +2923,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       await ftsoManager.daemonize(); // initialize price epoch
       await increaseTimeTo(startTs, REVEAL_EPOCH_DURATION_S + PRICE_EPOCH_DURATION_S);
 
-      const accrueUnearnedRewards = ftsoRewardManagerV2MockInterface.contract.methods.accrueUnearnedRewards(
+      const accrueUnearnedRewards = ftsoRewardManagerInterface.contract.methods.accrueUnearnedRewards(
         0,
         120,
         startTs.addn(PRICE_EPOCH_DURATION_S - 1)
@@ -2958,7 +2950,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       await ftsoManager.daemonize(); // initialize price epoch
       await increaseTimeTo(startTs, REVEAL_EPOCH_DURATION_S + PRICE_EPOCH_DURATION_S);
 
-      const accrueUnearnedRewards = ftsoRewardManagerV2MockInterface.contract.methods.accrueUnearnedRewards(
+      const accrueUnearnedRewards = ftsoRewardManagerInterface.contract.methods.accrueUnearnedRewards(
         0,
         120,
         startTs.addn(PRICE_EPOCH_DURATION_S - 1)
@@ -3109,7 +3101,9 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
     }); 
 
     it("Should trigger update active validators", async () => {
-      await cleanupBlockNumberManager.setTriggerContractAddress(ftsoManager.address);
+      await cleanupBlockNumberManager.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
+        [ADDRESS_UPDATER, ftsoManager.address], {from: ADDRESS_UPDATER});
 
       await ftsoManager.activate();
       await increaseTimeTo(startTs, REVEAL_EPOCH_DURATION_S);
@@ -3144,7 +3138,9 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
 
 
     it("Should revert with message while trying to update active validators", async () => {
-      await cleanupBlockNumberManager.setTriggerContractAddress(ftsoManager.address);
+      await cleanupBlockNumberManager.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
+        [ADDRESS_UPDATER, ftsoManager.address], {from: ADDRESS_UPDATER});
 
       await ftsoManager.activate();
       await increaseTimeTo(startTs, REVEAL_EPOCH_DURATION_S);
@@ -3214,7 +3210,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       // uint256 epochId,
       // uint256 priceEpochDurationSeconds,
       // uint256 priceEpochEndTime, // end time included in epoch
-      const accrueUnearnedRewards = ftsoRewardManagerV2MockInterface.contract.methods.accrueUnearnedRewards(
+      const accrueUnearnedRewards = ftsoRewardManagerInterface.contract.methods.accrueUnearnedRewards(
         0,
         120,
         startTs.addn(120 - 1)
@@ -3247,7 +3243,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; Ftso manager unit tests`,
       // uint256 epochId,
       // uint256 priceEpochDurationSeconds,
       // uint256 priceEpochEndTime, // end time included in epoch
-      const accrueUnearnedRewards = ftsoRewardManagerV2MockInterface.contract.methods.accrueUnearnedRewards(
+      const accrueUnearnedRewards = ftsoRewardManagerInterface.contract.methods.accrueUnearnedRewards(
         0,
         120,
         startTs.addn(120 - 1)

@@ -18,6 +18,7 @@ const OldFtsoManager = artifacts.require("FtsoManagerV1Mock");
 const FtsoManagement = artifacts.require("FtsoManagement");
 const FtsoManager = artifacts.require("FtsoManager");
 const FtsoV2Upgrader = artifacts.require("FtsoV2Upgrader");
+const DataProviderFee = artifacts.require("DataProviderFee" as any);
 
 const PRICE_EPOCH_DURATION_S = 120;   // 2 minutes
 const REVEAL_EPOCH_DURATION_S = 30;
@@ -39,6 +40,7 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader unit 
 
     before(async () => {
         FtsoManager.link(await FtsoManagement.new() as any);
+        FtsoRewardManager.link(await DataProviderFee.new() as any);
         await testDeployGovernanceSettings(governance, 1, [governance]);
     });
 
@@ -77,6 +79,7 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader unit 
 
         ftsoRewardManagerInterface = await FtsoRewardManager.new(
             governance,
+            addressUpdater.address,
             constants.ZERO_ADDRESS,
             3,
             2000

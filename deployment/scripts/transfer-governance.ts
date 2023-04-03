@@ -7,7 +7,6 @@ export async function transferGovernance(
   deployerPrivateKey: string,
   genesisGovernancePrivateKey: string,
   newGovernanceAccountAddress: string,
-  distributionDeployed: boolean,
   quiet: boolean = false) {
 
   const web3 = hre.web3;
@@ -42,11 +41,8 @@ export async function transferGovernance(
   const InflationAllocation = artifacts.require("InflationAllocation");
   const FlareDaemon = artifacts.require("FlareDaemon");
   const Inflation = artifacts.require("Inflation");
-  const FtsoRewardManager = artifacts.require("FtsoRewardManager");
   const PriceSubmitter = artifacts.require("PriceSubmitter");
   const Supply = artifacts.require("Supply");
-  const CleanupBlockNumberManager = artifacts.require("CleanupBlockNumberManager");
-  const Distribution = artifacts.require("Distribution");
   const WNat = artifacts.require("WNat");
 
   // Get deployed contracts
@@ -54,9 +50,7 @@ export async function transferGovernance(
   const inflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
   const inflationAllocation = await InflationAllocation.at(contracts.getContractAddress(Contracts.INFLATION_ALLOCATION));
   const flareDaemon = await FlareDaemon.at(contracts.getContractAddress(Contracts.FLARE_DAEMON));
-  const ftsoRewardManager = await FtsoRewardManager.at(contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER));
   const priceSubmitter = await PriceSubmitter.at(contracts.getContractAddress(Contracts.PRICE_SUBMITTER));
-  const cleanupBlockNumberManager = await CleanupBlockNumberManager.at(contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER));
   const wNat = await WNat.at(contracts.getContractAddress(Contracts.WNAT));
 
   // Transfer
@@ -64,12 +58,6 @@ export async function transferGovernance(
   await inflation.transferGovernance(newGovernanceAccountAddress);
   await inflationAllocation.transferGovernance(newGovernanceAccountAddress);
   await flareDaemon.transferGovernance(newGovernanceAccountAddress, { from: genesisGovernanceAccount.address });
-  await ftsoRewardManager.transferGovernance(newGovernanceAccountAddress);
-  if (distributionDeployed) {
-    const distribution = await Distribution.at(contracts.getContractAddress(Contracts.DISTRIBUTION));
-    await distribution.transferGovernance(newGovernanceAccountAddress);
-  }
   await priceSubmitter.transferGovernance(newGovernanceAccountAddress, { from: genesisGovernanceAccount.address });
-  await cleanupBlockNumberManager.transferGovernance(newGovernanceAccountAddress);
   await wNat.transferGovernance(newGovernanceAccountAddress);
 }

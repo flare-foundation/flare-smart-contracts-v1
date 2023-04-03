@@ -14,7 +14,7 @@ import { setDefaultVPContract } from "../../utils/token-test-helpers";
 import { constants, expectRevert, expectEvent, time } from '@openzeppelin/test-helpers';
 import { defaultPriceEpochCyclicBufferSize } from "../../utils/constants";
 import { createMockSupplyContract } from "../../utils/FTSO-test-utils";
-import { encodeContractNames, toBN } from "../../utils/test-helpers";
+import { encodeContractNames } from "../../utils/test-helpers";
 import { Contracts } from "../../../deployment/scripts/Contracts";
 const getTestFile = require('../../utils/constants').getTestFile;
 
@@ -22,6 +22,7 @@ const BN = web3.utils.toBN;
 
 const FtsoRegistry = artifacts.require("FtsoRegistry");
 const FtsoRewardManager = artifacts.require("FtsoRewardManager");
+const DataProviderFee = artifacts.require("DataProviderFee" as any);
 const FtsoManager = artifacts.require("FtsoManager");
 const FtsoManagement = artifacts.require("FtsoManagement");
 const Ftso = artifacts.require("Ftso");
@@ -49,11 +50,13 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
     let mockVoterWhitelister: MockContractInstance;
     let mockSupply: MockContractInstance;
     let mockCleanupBlockNumberManager: MockContractInstance;
+    let mockClaimSetupManager: MockContractInstance;
     var ftsoRegistryProxy: FtsoRegistryProxyInstance;
     var registry: FtsoRegistryInstance;
 
     before(async () => {
         FtsoManager.link(await FtsoManagement.new() as any);
+        FtsoRewardManager.link(await DataProviderFee.new() as any);
     });
 
     beforeEach(async () => {
@@ -80,6 +83,7 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
         
         ftsoRewardManager = await FtsoRewardManager.new(
             accounts[0],
+            ADDRESS_UPDATER,
             constants.ZERO_ADDRESS,
             3,
             0
@@ -99,6 +103,7 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
         )
 
         mockVoterWhitelister = await MockContract.new();
+        mockClaimSetupManager = await MockContract.new();
 
         mockSupply = await createMockSupplyContract(accounts[0], 10000);
         mockCleanupBlockNumberManager = await MockContract.new();
@@ -130,7 +135,10 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
         wNat = await WNAT.new(accounts[0], "Wrapped NAT", "WNAT");
         await setDefaultVPContract(wNat, accounts[0]);
 
-        await ftsoRewardManager.setContractAddresses(mockInflation.address, ftsoManager.address, wNat.address, {from: accounts[0]});
+        await ftsoRewardManager.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
+            [ADDRESS_UPDATER, mockInflation.address, ftsoManager.address, wNat.address, mockClaimSetupManager.address], {from: ADDRESS_UPDATER});
+        
         await mockInflation.setDailyAuthorizedInflation(BN(2000000));
 
         await ftsoRewardManager.activate();
@@ -159,6 +167,7 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
             // Time travel to price epoch initialization time
             await time.increaseTo(startTs.addn(REVEAL_EPOCH_DURATION_S));
             await ftsoManager.daemonize(); // initialize reward epoch
+            await ftsoRewardManager.enableClaims();
             // Trigger price epoch initialization
             await ftsoManager.daemonize();
 
@@ -170,47 +179,14 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
             await ftsoManager.daemonize();
 
             // Assert
-          // a1 should be (2000000 / 720) * 0.25 = 695
-          // a2 should be = (2000000 / 720) * 0.75 = 2082
-          // There is a remainder. It is not being allocated. It should get progressively
-          // smaller using a double declining balance allocation.
-          let a1UnclaimedReward = await ftsoRewardManager.getUnclaimedReward(0, accounts[1]);
-          let a2UnclaimedReward = await ftsoRewardManager.getUnclaimedReward(0, accounts[2]);
-          assert.equal(a1UnclaimedReward[0].toString(), "695");
-          assert.equal(a2UnclaimedReward[0].toString(), "2082");
-        });
-
-        it("Should finalize price epoch and try to accrue unearned rewards", async () => {
-            // Assemble
-            // give reward manager some nat to distribute
-            await mockInflation.receiveInflation({ value: "2000000" } );
-
-            await setDefaultGovernanceParameters(ftsoManager);
-            // add fakey ftso
-            await ftsoManager.addFtso(mockFtso.address, { from: accounts[0] });
-
-            // activte ftso manager
-            await ftsoManager.activate();
-            // set ftso manager in fallback mode
-            await ftsoManager.setFallbackMode(true);
-            // Time travel to price epoch initialization time
-            await time.increaseTo(startTs.addn(REVEAL_EPOCH_DURATION_S));
-            await ftsoManager.daemonize(); // initialize reward epoch
-            // Trigger price epoch initialization
-            await ftsoManager.daemonize();
-
-            // Time travel over the price epoch plus the reveal
-            await time.increaseTo(startTs.addn(PRICE_EPOCH_DURATION_S + REVEAL_EPOCH_DURATION_S));
-
-            // Act
-            // Simulate the daemon tickling ftso manager to finalize the price epoch
-            let tx = await ftsoManager.daemonize();
-
-            expectEvent(tx, "AccruingUnearnedRewardsFailed", { epochId: toBN(0) });
+            // a1 should be (2000000 / 720) * 0.25 = 695
+            // a2 should be = (2000000 / 5040) * 0.75 = 2777 - 695 = 2082
+            // There is a remainder. It is not being allocated. It should get progressively
+            // smaller using a double declining balance allocation.
             let a1UnclaimedReward = await ftsoRewardManager.getUnclaimedReward(0, accounts[1]);
             let a2UnclaimedReward = await ftsoRewardManager.getUnclaimedReward(0, accounts[2]);
-            assert.equal(a1UnclaimedReward[0].toString(), "0");
-            assert.equal(a2UnclaimedReward[0].toString(), "0");
+            assert.equal(a1UnclaimedReward[0].toString(), "695");
+            assert.equal(a2UnclaimedReward[0].toString(), "2082");
         });
     });
 
@@ -239,6 +215,7 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
             // Time travel to price epoch initialization time
             await time.increaseTo(startTs.addn(REVEAL_EPOCH_DURATION_S));
             await ftsoManager.daemonize(); // initialize reward epoch
+            await ftsoRewardManager.enableClaims();
             // Trigger price epoch initialization
             await ftsoManager.daemonize();
             // Time travel to price epoch finalization time
@@ -260,9 +237,9 @@ contract(`RewardManager.sol and FtsoManager.sol; ${ getTestFile(__filename) }; R
             await ftsoRewardManager.claimReward(accounts[3], [0], { from: accounts[1] });
 
             // Assert
-          // a1 -> a3 claimed should be (2000000 / 720) * 0.25 * 2 finalizations = 1390
-          let natClosingBalance = web3.utils.toBN(await web3.eth.getBalance(accounts[3]));
-          assert.equal(natClosingBalance.sub(natOpeningBalance).toNumber(), Math.ceil(2000000 / 720 * 0.25) * 2);
+            // a1 -> a3 claimed should be (2000000 / 720) * 0.25 * 2 finalizations = 695 * 2 = 1390
+            let natClosingBalance = web3.utils.toBN(await web3.eth.getBalance(accounts[3]));
+            assert.equal(natClosingBalance.sub(natOpeningBalance).toNumber(), Math.ceil(2000000 / 720 * 0.25) * 2);
         });
     });
 });

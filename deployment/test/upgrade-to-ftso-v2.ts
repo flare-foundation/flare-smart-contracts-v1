@@ -542,10 +542,6 @@ contract(`upgrade-to-ftso-v2.ts system tests`, async accounts => {
         Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER,
         Contracts.GOVERNANCE_VOTE_POWER, Contracts.GOVERNANCE_SETTINGS, Contracts.POLLING_FOUNDATION];
 
-      if (parameters.deployDistributionContract) {
-        contractNames.push(Contracts.DISTRIBUTION);
-      }
-
       for (let name of contractNames) {
         // Act
         const address = await addressUpdater.getContractAddress(name);

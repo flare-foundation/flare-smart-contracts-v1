@@ -13,6 +13,7 @@ const PriceSubmitter = artifacts.require("PriceSubmitter");
 const Supply = artifacts.require("Supply");
 const MockContract = artifacts.require("MockContract");
 const FtsoRewardManager = artifacts.require("FtsoRewardManager");
+const DataProviderFee = artifacts.require("DataProviderFee" as any);
 const AssetToken = artifacts.require("AssetToken");
 const FtsoManager = artifacts.require("FtsoManager");
 const FtsoManagement = artifacts.require("FtsoManagement");
@@ -63,6 +64,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
 
   before(async () => {
     FtsoManager.link(await FtsoManagement.new() as any);
+    FtsoRewardManager.link(await DataProviderFee.new() as any);
   });
 
   async function createFtso(symbol: string, initialPrice: BN) {
@@ -161,6 +163,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
     vpBlockNumber = (await ftsoManager.getRewardEpochVotePowerBlock(0)).toNumber();
     assert(vpBlockNumber > 0, "first reward epoch not initialized");
     console.log(`initialize first reward epoch: ${initializeFirstRewardEpochTx.receipt.gasUsed}`);
+    await ftsoRewardManager.enableClaims({ from: governance });
 
     epochId = await getCurrentEpochId();
     assert(epochId > 0, "epochId == 0");
@@ -239,15 +242,18 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
 
   describe("Ftso manager gas benchmarking", async () => {
     const ADDRESS_UPDATER = accounts[16];
+    let mockClaimSetupManager: MockContractInstance;
 
     beforeEach(async () => {
       // create price submitter
       priceSubmitter = await PriceSubmitter.new();
       await priceSubmitter.initialiseFixedAddress();
+      mockClaimSetupManager = await MockContract.new();
 
       // create ftso reward manager
       ftsoRewardManager = await FtsoRewardManager.new(
         governance,
+        ADDRESS_UPDATER,
         constants.ZERO_ADDRESS,
         3,
         0
@@ -263,7 +269,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       // create whitelister
       whitelist = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 500, constants.ZERO_ADDRESS);
 
-      cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance);
+      cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance, ADDRESS_UPDATER, "FtsoManager");
 
       // create ftso manager
       startTs = await time.latest();
@@ -285,6 +291,7 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       await ftsoManager.updateContractAddresses(
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.PRICE_SUBMITTER, Contracts.FTSO_REWARD_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER]),
         [ADDRESS_UPDATER, priceSubmitter.address, ftsoRewardManager.address, registry.address, whitelist.address, supplyInterface.address, cleanupBlockNumberManager.address], {from: ADDRESS_UPDATER});
+    
 
       trustedVoters = accounts.slice(1, 6);
       await ftsoManager.setGovernanceParameters(0, 10, 10, 0, 3000000000, 100, 0, 0, 1, trustedVoters, { from: governance });
@@ -299,11 +306,12 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       await registry.updateContractAddresses(
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
         [ADDRESS_UPDATER, ftsoManager.address], {from: ADDRESS_UPDATER});
-
       await whitelist.updateContractAddresses(
         encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
         [ADDRESS_UPDATER, registry.address, ftsoManager.address], {from: ADDRESS_UPDATER});
-      await ftsoRewardManager.setContractAddresses(inflation, ftsoManager.address, wNat.address, {from: governance});
+      await ftsoRewardManager.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
+        [ADDRESS_UPDATER, inflation, ftsoManager.address, wNat.address, mockClaimSetupManager.address], {from: ADDRESS_UPDATER});
       await ftsoRewardManager.activate({ from: governance });
 
       // set the daily authorized inflation...this proxies call to ftso reward manager

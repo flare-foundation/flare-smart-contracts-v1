@@ -32,12 +32,12 @@
   {
     "name": "FtsoRewardManager",
     "contractName": "FtsoRewardManager.sol",
-    "address": "0xA3E8b413713D80137ecf81209380049094eb61E2"
+    "address": "0xfD36176C63dA52E783a347DE3544B0b44C7054a6"
   },
   {
     "name": "CleanupBlockNumberManager",
     "contractName": "CleanupBlockNumberManager.sol",
-    "address": "0x7357995781475c3Cae1eDcDa23589fab898D9547"
+    "address": "0xB50DAcdaA3Af02F8A0533902C117ADFC31A31Ccf"
   },
   {
     "name": "FtsoRegistry",
@@ -148,5 +148,25 @@
     "name": "PollingFtso",
     "contractName": "PollingFtso.sol",
     "address": "0xD036a8F254ef782cb93af4F829A1568E992c3864"
+  },
+  {
+    "name": "ClaimSetupManager",
+    "contractName": "ClaimSetupManager.sol",
+    "address": "0x3F55A3c8012C26B140AcC23d061E7c4626d64e01"
+  },
+  {
+    "name": "DelegationAccount",
+    "contractName": "DelegationAccount.sol",
+    "address": "0xE2Ee339b2608Fe20ca2f721e938a640e0E5ee546"
+  },
+  {
+    "name": "FlareAssetRegistry",
+    "contractName": "FlareAssetRegistry.sol",
+    "address": "0x92B87cc4205265e9500d570D452A3f7F91926e91"
+  },
+  {
+    "name": "WNatRegistryProvider",
+    "contractName": "WNatRegistryProvider.sol",
+    "address": "0x9819645ab3E99a0A2c0ECF797Da4B9312b31121F"
   }
 ]

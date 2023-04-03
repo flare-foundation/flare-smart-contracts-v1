@@ -39,6 +39,7 @@ const FtsoV2Upgrader = artifacts.require("FtsoV2Upgrader");
 const MockContract = artifacts.require("MockContract");
 const FtsoRegistryProxy = artifacts.require("FtsoRegistryProxy");
 const PollingFoundation = artifacts.require("PollingFoundation");
+const DataProviderFee = artifacts.require("DataProviderFee" as any);
 
 const PRICE_EPOCH_DURATION_S = 120;   // 2 minutes
 const REVEAL_EPOCH_DURATION_S = 30;
@@ -63,6 +64,7 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
     let wNat: WNatInstance;
     let mockInflation: InflationMockInstance;
     let mockSupply: MockContractInstance;
+    let mockClaimSetupManager: MockContractInstance;
     let mockGovernanceVotePower: MockContractInstance;
 
     async function createFtso(ftsoManagerAddress: string, symbol: string, initialPrice: number = 0): Promise<FtsoInstance> {
@@ -81,16 +83,21 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
         );
     }
 
+    before(async () => {
+        FtsoRewardManager.link(await DataProviderFee.new() as any);
+    });
+
     beforeEach(async () => {
         priceSubmitter = await PriceSubmitter.new();
         await priceSubmitter.initialiseFixedAddress();
         voterWhitelister = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 10, constants.ZERO_ADDRESS);
-        cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance);
+        cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance, ADDRESS_UPDATER, "FtsoManager");
         flareDaemon = await FlareDaemon.new();
         await flareDaemon.initialiseFixedAddress();
         oldFtsoRegistry = await OldFtsoRegistry.new(governance);
         ftsoRewardManager = await FtsoRewardManager.new(
             governance,
+            ADDRESS_UPDATER,
             constants.ZERO_ADDRESS,
             3,
             0
@@ -101,6 +108,7 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
         await mockInflation.setInflationReceiver(ftsoRewardManager.address);
 
         mockSupply = await createMockSupplyContract(governance, 10000);
+        mockClaimSetupManager = await MockContract.new();
 
         mockGovernanceVotePower = await MockContract.new();
 
@@ -122,13 +130,17 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
 
         await flareDaemon.setInflation(mockInflation.address, {from: governance});
         await priceSubmitter.setContractAddresses(oldFtsoRegistry.address, voterWhitelister.address, oldFtsoManager.address, {from: governance});
-        await ftsoRewardManager.setContractAddresses(mockInflation.address, oldFtsoManager.address, wNat.address, {from: governance});
+        await ftsoRewardManager.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
+            [ADDRESS_UPDATER, mockInflation.address, oldFtsoManager.address, wNat.address, mockClaimSetupManager.address], {from: ADDRESS_UPDATER});
 
         await oldFtsoRegistry.setFtsoManagerAddress(oldFtsoManager.address, {from: governance});
         await voterWhitelister.updateContractAddresses(
             encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
             [ADDRESS_UPDATER, oldFtsoRegistry.address, oldFtsoManager.address], {from: ADDRESS_UPDATER});
-        await cleanupBlockNumberManager.setTriggerContractAddress(oldFtsoManager.address, {from: governance});
+        await cleanupBlockNumberManager.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
+            [ADDRESS_UPDATER, oldFtsoManager.address], {from: ADDRESS_UPDATER});
 
         await mockInflation.setDailyAuthorizedInflation(BN(1000000));
         await ftsoRewardManager.activate({from: governance});
@@ -270,7 +282,9 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
         console.log("should upgrade");
         let gasUsed = toBN(0);
         // update addresses
-        let tx: any = await ftsoRewardManager.setContractAddresses(mockInflation.address, ftsoManager.address, wNat.address, { from: governance });
+        let tx: any = await ftsoRewardManager.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
+            [ADDRESS_UPDATER, mockInflation.address, ftsoManager.address, wNat.address, mockClaimSetupManager.address], {from: ADDRESS_UPDATER});
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
         tx = await priceSubmitter.setContractAddresses(ftsoRegistry.address, voterWhitelister.address, ftsoManager.address, { from: governance });
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
@@ -278,7 +292,9 @@ contract(`FtsoV2Upgrader.sol; ${ getTestFile(__filename) }; FtsoV2Upgrader integ
             encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_REGISTRY, Contracts.FTSO_MANAGER]),
             [ADDRESS_UPDATER, oldFtsoRegistry.address, ftsoManager.address], {from: ADDRESS_UPDATER});
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
-        tx = await cleanupBlockNumberManager.setTriggerContractAddress(ftsoManager.address, { from: governance });
+        tx = await cleanupBlockNumberManager.updateContractAddresses(
+            encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
+            [ADDRESS_UPDATER, ftsoManager.address], {from: ADDRESS_UPDATER});
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
         tx = await oldFtsoRegistry.setFtsoManagerAddress(ftsoManager.address, { from: governance });
         gasUsed = gasUsed.add(toBN(tx.receipt.gasUsed));
