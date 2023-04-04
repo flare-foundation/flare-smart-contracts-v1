@@ -77,7 +77,7 @@
   {
     "name": "VoterWhitelister",
     "contractName": "VoterWhitelister.sol",
-    "address": "0x0F45493e4C321b238e1fA242692BFFf3f30fBdfD"
+    "address": "0x072A199670fAD8883c7A92D108dFA56828EfCE87"
   },
   {
     "name": "DistributionToDelegators",
@@ -208,5 +208,10 @@
     "name": "FlareContractRegistry",
     "contractName": "FlareContractRegistry.sol",
     "address": "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019"
+  },
+  {
+    "name": "PollingFtso",
+    "contractName": "PollingFtso.sol",
+    "address": "0x461c4219d5fcAF0fEA304F57a4b0f8061f08064A"
   }
 ]
