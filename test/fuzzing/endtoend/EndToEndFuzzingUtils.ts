@@ -39,10 +39,15 @@ export async function internalLinkContracts() {
     const FtsoManager = hre.artifacts.require('FtsoManager');
     const FtsoManagement = hre.artifacts.require('FtsoManagement' as any);
     FtsoManager.link(await FtsoManagement.new() as any);
+    // link FtsoRewardManager
+    const FtsoRewardManager = hre.artifacts.require('FtsoRewardManager');
+    const DataProviderFee = hre.artifacts.require('DataProviderFee' as any);
+    FtsoRewardManager.link(await DataProviderFee.new() as any);
     // hack artifacts.require to return linked contracts
     const oldRequire = hre.artifacts.require;
     hre.artifacts.require = function (name: string) {
         if (name === 'FtsoManager') return FtsoManager;
+        if (name === 'FtsoRewardManager') return FtsoRewardManager;
         return oldRequire.call(hre.artifacts, name);
     };
 }
@@ -51,13 +56,11 @@ export async function internalFullDeploy(parameters: ChainParameters, quiet: boo
     await internalLinkContracts();
     const deployed = await deployContracts(hre, parameters, quiet);
     const contracts = deployed.contracts!;
-    await daemonizeContracts(hre, contracts, parameters.deployerPrivateKey, parameters.inflationReceivers,
-        parameters.inflationGasLimit, parameters.ftsoManagerGasLimit, quiet);
+    await daemonizeContracts(hre, contracts, parameters.deployerPrivateKey, parameters.genesisGovernancePrivateKey,
+        parameters.inflationReceivers, parameters.inflationGasLimit, parameters.ftsoManagerGasLimit, quiet);
     await activateManagers(hre, contracts, parameters.deployerPrivateKey, quiet);
-    await transferGovernance(hre, contracts, parameters.deployerPrivateKey, parameters.genesisGovernancePrivateKey,
-        parameters.governancePublicKey, parameters.deployDistributionContract, quiet);
-    await switchToProductionMode(hre, contracts, parameters.deployerPrivateKey, parameters.genesisGovernancePrivateKey, 
-        parameters.deployDistributionContract, quiet);
+    await transferGovernance(hre, contracts, parameters.deployerPrivateKey, parameters.genesisGovernancePrivateKey, parameters.governancePublicKey, quiet);
+    await switchToProductionMode(hre, contracts, parameters.deployerPrivateKey, parameters.genesisGovernancePrivateKey, quiet);
     return deployed;
 }
 

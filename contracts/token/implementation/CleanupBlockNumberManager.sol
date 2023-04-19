@@ -1,44 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.7.6;
 
-import "../../governance/implementation/Governed.sol";
+import "../../governance/implementation/GovernedV2.sol";
+import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "../../token/interface/IICleanable.sol";
 
 
 /**
  * @title Token history cleanup manager
- * @notice Maintains the list of cleanable tokens for which history cleanup can be collectively cleaned u 
+ * @notice Maintains the list of cleanable tokens for which history cleanup can be collectively cleaned up
  */
-contract CleanupBlockNumberManager is Governed {
+contract CleanupBlockNumberManager is GovernedV2, AddressUpdatable {
 
     string internal constant ERR_CONTRACT_NOT_FOUND = "contract not found";
-    string internal constant ERR_TRIGGER_CONTRACT_OR_GOVERNANCE_ONLY = "trigger or governance only";
+    string internal constant ERR_TRIGGER_CONTRACT_ONLY = "trigger contract only";
 
     IICleanable[] public registeredTokens;
     address public triggerContract;
+    string public triggerContractName; // needed for updating trigger contract through AddressUpdater call
 
     event RegistrationUpdated (IICleanable theContract, bool add);
     event CleanupBlockNumberSet (IICleanable theContract, uint256 blockNumber, bool success);
-        
-    modifier onlyTriggerOrGovernance {
-        require(
-            msg.sender == address(triggerContract) || 
-            msg.sender == governance, ERR_TRIGGER_CONTRACT_OR_GOVERNANCE_ONLY
-        );
+
+    modifier onlyTrigger {
+        require(msg.sender == triggerContract, ERR_TRIGGER_CONTRACT_ONLY);
         _;
     }
 
-    constructor(address _governance) Governed(_governance) {
-        /* empty block */
+    constructor(
+        address _governance,
+        address _addressUpdater,
+        string memory _triggerContractName
+    )
+        GovernedV2(_governance) AddressUpdatable(_addressUpdater)
+    {
+        triggerContractName = _triggerContractName;
     }
 
-    /**
-     * @notice Sets trigger contract address. 
-     * @dev Usually this is FTSO Manager contract address.
-     */
-    function setTriggerContractAddress(address _triggerContract) external onlyGovernance {
-        triggerContract = _triggerContract;
-    }
     /**
      * @notice Register a contract of which history cleanup index is to be managed
      * @param _cleanableToken     The address of the contract to be managed.
@@ -62,7 +60,7 @@ contract CleanupBlockNumberManager is Governed {
      * @notice Unregiseter a contract from history cleanup index management
      * @param _cleanableToken     The address of the contract to unregister.
      */
-    function unregisterToken(IICleanable _cleanableToken) external onlyGovernance {        
+    function unregisterToken(IICleanable _cleanableToken) external onlyGovernance {
         uint256 len = registeredTokens.length;
 
         for (uint256 i = 0; i < len; i++) {
@@ -81,7 +79,7 @@ contract CleanupBlockNumberManager is Governed {
      * @notice Sets clean up block number on managed cleanable tokens
      * @param _blockNumber cleanup block number
      */
-    function setCleanUpBlockNumber(uint256 _blockNumber) external onlyTriggerOrGovernance {
+    function setCleanUpBlockNumber(uint256 _blockNumber) external onlyTrigger {
         uint256 len = registeredTokens.length;
         for (uint256 i = 0; i < len; i++) {
             try registeredTokens[i].setCleanupBlockNumber(_blockNumber) {
@@ -90,5 +88,17 @@ contract CleanupBlockNumberManager is Governed {
                 emit CleanupBlockNumberSet(registeredTokens[i], _blockNumber, false);
             }
         }
+    }
+
+    /**
+     * @notice Implementation of the AddressUpdatable abstract method.
+     */
+    function _updateContractAddresses(
+        bytes32[] memory _contractNameHashes,
+        address[] memory _contractAddresses
+    )
+        internal override
+    {
+        triggerContract = _getContractAddress(_contractNameHashes, _contractAddresses, triggerContractName);
     }
 }
