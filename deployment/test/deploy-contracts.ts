@@ -114,7 +114,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       for (let i = 0; i < parameters.inflationReceivers.length; i++) {
         let receiverName = parameters.inflationReceivers[i];
         let receiverSharingBIPS = parameters.inflationSharingBIPS[i];
-        let receiverAddress = "";        
+        let receiverAddress = "";
         switch (receiverName) {
           case "FtsoRewardManager":
             receiverAddress = ftsoRewardManager.address
@@ -468,7 +468,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         FtsoAsset = artifacts.require("Ftso");
         ftsoAsset = await FtsoAsset.at(contracts.getContractAddress(`Ftso${pascalCase(asset.assetSymbol)}`));
       });
-      
+
       it(`Should be on oracle for ${asset.assetSymbol}`, async () => {
         // Assemble
         // Act
@@ -485,7 +485,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         // Assemble
         // Act
         const ftsoManager = await ftsoAsset.ftsoManager();
-        // Assert 
+        // Assert
         assert.equal(ftsoManager, contracts.getContractAddress(Contracts.FTSO_MANAGER));
       });
 
@@ -617,13 +617,9 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
 
     it("Should know about all contracts", async () => {
       let contractNames = [Contracts.STATE_CONNECTOR, Contracts.FLARE_DAEMON, Contracts.PRICE_SUBMITTER, Contracts.WNAT,
-        Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER,
-        Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.GOVERNANCE_VOTE_POWER,
-        Contracts.GOVERNANCE_SETTINGS, Contracts.POLLING_FOUNDATION, Contracts.FLARE_CONTRACT_REGISTRY, Contracts.POLLING_FTSO];
-
-      if (parameters.deployDistributionContract) {
-        contractNames.push(Contracts.DISTRIBUTION);
-      }
+        Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.CLAIM_SETUP_MANAGER,
+        Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.GOVERNANCE_VOTE_POWER, Contracts.FLARE_CONTRACT_REGISTRY,
+        Contracts.GOVERNANCE_SETTINGS, Contracts.POLLING_FOUNDATION, Contracts.FLARE_ASSET_REGISTRY, Contracts.POLLING_FTSO];
 
       for (let name of contractNames) {
         // Act
@@ -634,7 +630,8 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
     });
 
     it("Address updatable contracts should know about address updater", async () => {
-      let contractNames = [Contracts.FTSO_MANAGER, Contracts.FTSO_REGISTRY, Contracts.POLLING_FOUNDATION, Contracts.FLARE_CONTRACT_REGISTRY, Contracts.POLLING_FTSO];
+      let contractNames = [Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.CLAIM_SETUP_MANAGER, Contracts.FLARE_CONTRACT_REGISTRY,
+        Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.FTSO_MANAGER, Contracts.POLLING_FOUNDATION, Contracts.WNAT_REGISTRY_PROVIDER, Contracts.POLLING_FTSO];
 
       for (let name of contractNames) {
         // Act

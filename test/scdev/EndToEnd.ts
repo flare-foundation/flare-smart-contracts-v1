@@ -202,8 +202,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
-    rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
+    rewardEpochsStartTs = (await ftsoManager.getRewardEpochConfiguration())[0];
+    rewardEpochDurationSeconds = (await ftsoManager.getRewardEpochConfiguration())[1];
 
     console.log("Depositing and delegating NAT...");
 
@@ -242,6 +242,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
       rewardEpochsStartTs.toNumber(), 
       rewardEpochDurationSeconds.toNumber(), 
       currentRewardEpoch);
+
+    await rewardManager.enableClaims({from: await rewardManager.governance()});
 
   });
 
@@ -367,8 +369,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     // Compute what we should have distributed for one price epoch
     const almostFullDaySec = BN(3600 * 24 - 1);
     // Get the daily inflation authorized on ftso reward manager
-    const dailyAuthorizedInflation = await rewardManager.dailyAuthorizedInflation();
-    const authorizedInflationTimestamp = await rewardManager.lastInflationAuthorizationReceivedTs();
+    const totals = await getRewardTotals(rewardManager);
+    const dailyAuthorizedInflation = totals.dailyAuthorizedInflation;
+    const authorizedInflationTimestamp = totals.lastInflationAuthorizationReceivedTs;
 
     // use the same formula as in ftso reward manager to calculate claimable value
     const dailyPeriodEndTs = authorizedInflationTimestamp.add(almostFullDaySec);

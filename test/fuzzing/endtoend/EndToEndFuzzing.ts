@@ -396,6 +396,10 @@ contract(`EndToEndFuzzing.sol; ${getTestFile(__filename)}; End to end fuzzing te
         let currentRevealEpoch = currentPriceEpoch - 1;    // this one will not be used
         events.push({ address: 'fake', event: 'SubmitEpochStarted', args: { epochId: currentPriceEpoch } });
         transactionRunner.comment(`PRICE EPOCH START:  submitEpoch=${currentPriceEpoch}`);
+        
+        // enable reward claiming
+        await transactionRunner.runMethod(ftsoRewardManager, f => f.enableClaims({ gasLimit: 1_000_000 }),
+            { signer: governance, method: "ftsoRewardManager.enableClaims()", comment: `Enabling ftso reward claims` });
 
         // run very long loop
         let startEvent = 0;

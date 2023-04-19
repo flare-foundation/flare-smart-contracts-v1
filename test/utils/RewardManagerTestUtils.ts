@@ -1,4 +1,4 @@
-import { FtsoRewardManagerV2MockInstance } from "../../typechain-truffle";
+import { FtsoRewardManagerInstance } from "../../typechain-truffle";
 import { increaseTimeTo } from "./test-helpers";
 
 /**
@@ -12,7 +12,7 @@ import { increaseTimeTo } from "./test-helpers";
   await increaseTimeTo(finalizeTimestamp);
 }
 
-export async function getRewardTotals(ftsoRewardManager: FtsoRewardManagerV2MockInstance) {
+export async function getRewardTotals(ftsoRewardManager: FtsoRewardManagerInstance) {
   const {
     0: totalAwardedWei,
     1: totalClaimedWei,

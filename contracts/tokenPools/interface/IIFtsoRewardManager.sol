@@ -9,8 +9,10 @@ interface IIFtsoRewardManager is IFtsoRewardManager, IIInflationReceiver, IIToke
 
     event DailyAuthorizedInflationSet(uint256 authorizedAmountWei);
     event InflationReceived(uint256 amountReceivedWei);
+    event RewardsBurned(uint256 amountBurnedWei);
 
     function activate() external;
+    function enableClaims() external;
     function deactivate() external;
     function closeExpiredRewardEpoch(uint256 _rewardEpochId) external;
 
@@ -25,6 +27,14 @@ interface IIFtsoRewardManager is IFtsoRewardManager, IIInflationReceiver, IIToke
         uint256 priceEpochEndTime,
         uint256 votePowerBlock
     ) external;
+
+    function accrueUnearnedRewards(
+        uint256 epochId,
+        uint256 priceEpochDurationSeconds,
+        uint256 priceEpochEndTime
+    ) external;
+
+    function firstClaimableRewardEpoch() external view returns (uint256);
 
     /**
      * @notice Returns the information on unclaimed reward of `_dataProvider` for `_rewardEpoch`

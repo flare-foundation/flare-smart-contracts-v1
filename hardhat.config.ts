@@ -191,7 +191,6 @@ task("switch-to-production-mode", "Switch governed contracts to production mode.
         contracts,
         parameters.deployerPrivateKey,
         parameters.genesisGovernancePrivateKey,
-        parameters.deployDistributionContract,
         args.quiet
       );
     } else {
@@ -212,7 +211,6 @@ task("propose-governance", "Propose governance change for all governed contracts
         parameters.deployerPrivateKey, 
         parameters.genesisGovernancePrivateKey, 
         parameters.governancePublicKey, 
-        parameters.deployDistributionContract,
         args.quiet);
     } else {
       throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
@@ -232,7 +230,6 @@ task("transfer-governance", "Transfer governance directly for all governed contr
         parameters.deployerPrivateKey, 
         parameters.genesisGovernancePrivateKey, 
         parameters.governancePublicKey, 
-        parameters.deployDistributionContract,
         args.quiet);
     } else {
       throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")
@@ -265,7 +262,6 @@ task("claim-governance", "Claim governance change for all governed contracts.")
         hre,
         contracts, 
         parameters.governancePrivateKey, 
-        parameters.deployDistributionContract,
         args.quiet);
     } else {
       throw Error("CHAIN_CONFIG environment variable not set. Must be parameter json file name.")

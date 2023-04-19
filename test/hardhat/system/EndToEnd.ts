@@ -22,7 +22,7 @@ import {
 } from "../../../typechain-truffle";
 import { moveToFinalizeStart, moveToRevealStart } from "../../utils/FTSO-test-utils";
 import { PriceInfo } from '../../utils/PriceInfo';
-import { moveToRewardFinalizeStart } from "../../utils/RewardManagerTestUtils";
+import { getRewardTotals, moveToRewardFinalizeStart } from "../../utils/RewardManagerTestUtils";
 import { getRandom, submitPriceHash } from '../../utils/test-helpers';
 
 const getTestFile = require('../../utils/constants').getTestFile;
@@ -295,8 +295,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     revealEpochDurationSeconds = (await ftsoWnat.getPriceEpochConfiguration())[2];
 
     // Set the ftso manager configuration parameters for time travel
-    rewardEpochsStartTs = await ftsoManager.rewardEpochsStartTs();
-    rewardEpochDurationSeconds = await ftsoManager.rewardEpochDurationSeconds();
+    rewardEpochsStartTs = (await ftsoManager.getRewardEpochConfiguration())[0];
+    rewardEpochDurationSeconds = (await ftsoManager.getRewardEpochConfiguration())[1];
 
     // Set up the suicidal mock contract so we can conjure NAT into the daemon by self-destruction
     SuicidalMock = artifacts.require("SuicidalMock");
@@ -356,7 +356,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     }
 
     // Verify that rewards epoch did not start yet
-    await expectRevert.unspecified(ftsoManager.rewardEpochs(0))
+    await expectRevert.unspecified(ftsoManager.getRewardEpochData(0))
 
     // Jump to reward epoch start
     await time.increaseTo(rewardEpochsStartTs.sub(BN(1)));
@@ -364,8 +364,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await time.increaseTo(rewardEpochsStartTs.add(BN(1))); // sometimes we get a glitch
 
     await flareDaemon.trigger({ gas: 2_000_000 }); // initialize reward epoch - also start of new price epoch
-    let firstRewardEpoch = await ftsoManager.rewardEpochs(0);
-    let votePowerBlock = firstRewardEpoch[0];
+    let firstRewardEpoch = await ftsoManager.getRewardEpochData(0);
+    let votePowerBlock = firstRewardEpoch.votepowerBlock;
+    await ftsoRewardManager.enableClaims({ from: await ftsoRewardManager.governance() });
 
     assert((await wNAT.votePowerOfAt(p1, votePowerBlock)).gt(BN(0)), "Vote power of p1 must be > 0")
     assert((await wNAT.votePowerOfAt(p2, votePowerBlock)).gt(BN(0)), "Vote power of p2 must be > 0")
@@ -405,7 +406,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
   it("Should submit prices for first price epoch and claim for first reward epoch", async () => {
     rewardExpiryOffsetSeconds = (await ftsoManager.getRewardExpiryOffsetSeconds()).toNumber();
 
-    // get the firs reward
+    // get the first reward
     while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
       let result = await submitRevealAndFinalizeRewardEpoch(submitters, ftsos, ftsoIndices, priceSeries);
       if (firstPriceEpoch < 0 && firstRewardEpochId < 0) {
@@ -491,8 +492,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     // Compute what we should have distributed for one price epoch
     const almostFullDaySec = BN(3600 * 24 - 1);
     // Get the daily inflation authorized on ftso reward manager
-    const dailyAuthorizedInflation = await ftsoRewardManager.dailyAuthorizedInflation();
-    const authorizedInflationTimestamp = await ftsoRewardManager.lastInflationAuthorizationReceivedTs();
+    const totals = await getRewardTotals(ftsoRewardManager);
+    const dailyAuthorizedInflation = totals.dailyAuthorizedInflation;
+    const authorizedInflationTimestamp = totals.lastInflationAuthorizationReceivedTs;
 
     // use the same formula as in ftso reward manager to calculate claimable value
     const dailyPeriodEndTs = authorizedInflationTimestamp.add(almostFullDaySec);

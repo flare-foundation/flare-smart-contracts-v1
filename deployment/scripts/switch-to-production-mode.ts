@@ -49,24 +49,36 @@ export async function switchToProductionMode(
     // Contract definitions
     const AddressUpdater = artifacts.require("AddressUpdater");
     const FtsoManager = artifacts.require("FtsoManager");
-    const FtsoRegistry = artifacts.require("FtsoRegistry");
-    const PollingFoundation = artifacts.require("PollingFoundation");
+    const FtsoRewardManager = artifacts.require("FtsoRewardManager");
     const VoterWhitelister = artifacts.require("VoterWhitelister");
+    const CleanupBlockNumberManager = artifacts.require("CleanupBlockNumberManager");
+    const FtsoRegistry = artifacts.require("FtsoRegistry");
+    const ClaimSetupManager = artifacts.require("ClaimSetupManager");
+    const PollingFoundation = artifacts.require("PollingFoundation");
+    const FlareAssetRegistry = artifacts.require("FlareAssetRegistry");
     const PollingFtso = artifacts.require("PollingFtso");
 
     // Get deployed contracts
     const addressUpdater = await AddressUpdater.at(contracts.getContractAddress(Contracts.ADDRESS_UPDATER));
+    const ftsoRewardManager = await FtsoRewardManager.at(contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER));
     const ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
+    const voterWhitelister = await VoterWhitelister.at(contracts.getContractAddress(Contracts.VOTER_WHITELISTER));
+    const cleanupBlockNumberManager = await CleanupBlockNumberManager.at(contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER));
     const ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
     const pollingFoundation = await PollingFoundation.at(contracts.getContractAddress(Contracts.POLLING_FOUNDATION));
-    const voterWhitelister = await VoterWhitelister.at(contracts.getContractAddress(Contracts.VOTER_WHITELISTER));
+    const flareAssetRegistry = await FlareAssetRegistry.at(contracts.getContractAddress(Contracts.FLARE_ASSET_REGISTRY));
+    const claimSetupManager = await ClaimSetupManager.at(contracts.getContractAddress(Contracts.CLAIM_SETUP_MANAGER));
     const pollingFtso = await PollingFtso.at(contracts.getContractAddress(Contracts.POLLING_FTSO));
 
     // switch to production mode
     await addressUpdater.switchToProductionMode();
+    await ftsoRewardManager.switchToProductionMode();
+    await claimSetupManager.switchToProductionMode();
     await ftsoManager.switchToProductionMode();
+    await voterWhitelister.switchToProductionMode();
+    await cleanupBlockNumberManager.switchToProductionMode();
     await ftsoRegistry.switchToProductionMode();
     await pollingFoundation.switchToProductionMode();
-    await voterWhitelister.switchToProductionMode();
+    await flareAssetRegistry.switchToProductionMode();
     await pollingFtso.switchToProductionMode();
 }

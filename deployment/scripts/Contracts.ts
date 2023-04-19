@@ -22,7 +22,6 @@ export class Contracts {
   public static readonly FTSO_V2_UPGRADER = "FtsoV2Upgrader";
   public static readonly CLEANUP_BLOCK_NUMBER_MANAGER = "CleanupBlockNumberManager";
   public static readonly FTSO_REGISTRY = "FtsoRegistry";
-  public static readonly DISTRIBUTION = "Distribution";
   public static readonly CLAIM_SETUP_MANAGER = "ClaimSetupManager";
   public static readonly SUPPLY = "Supply";
   public static readonly INFLATION_ALLOCATION = "InflationAllocation";
@@ -36,6 +35,8 @@ export class Contracts {
   public static readonly WNAT = "WNat";
   public static readonly GOVERNANCE_VOTE_POWER = "GovernanceVotePower";
   public static readonly POLLING_FOUNDATION = "PollingFoundation";
+  public static readonly FLARE_ASSET_REGISTRY = "FlareAssetRegistry";
+  public static readonly WNAT_REGISTRY_PROVIDER = "WNatRegistryProvider";
   public static readonly FLARE_CONTRACT_REGISTRY = "FlareContractRegistry";
   public static readonly POLLING_FTSO = "PollingFtso";
   public static readonly FTSO_WNAT = "FtsoWnat";

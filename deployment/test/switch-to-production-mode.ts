@@ -70,6 +70,24 @@ contract(`switch-to-production-mode.ts system tests`, async accounts => {
     });
   });
 
+  describe(Contracts.FTSO_REWARD_MANAGER, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.FTSO_REWARD_MANAGER);
+    });
+  });
+
+  describe(Contracts.VOTER_WHITELISTER, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.VOTER_WHITELISTER);
+    });
+  });
+
+  describe(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER);
+    });
+  });
+
   describe(Contracts.FTSO_REGISTRY, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkProductionSwitch(Contracts.FTSO_REGISTRY);
@@ -82,9 +100,15 @@ contract(`switch-to-production-mode.ts system tests`, async accounts => {
     });
   });
 
-  describe(Contracts.VOTER_WHITELISTER, async () => {
+  describe(Contracts.FLARE_ASSET_REGISTRY, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkProductionSwitch(Contracts.VOTER_WHITELISTER);
+      await checkProductionSwitch(Contracts.FLARE_ASSET_REGISTRY);
+    });
+  });
+
+  describe(Contracts.CLAIM_SETUP_MANAGER, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async function() {
+      await checkProductionSwitch(Contracts.CLAIM_SETUP_MANAGER);
     });
   });
 

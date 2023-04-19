@@ -10,7 +10,7 @@ import "../lib/FtsoManagement.sol";
 import "../../genesis/implementation/FlareDaemon.sol";
 import "../../genesis/interface/IIPriceSubmitter.sol";
 import "../../inflation/interface/IISupply.sol";
-import "../../tokenPools/interface/IIFtsoRewardManagerV2.sol";
+import "../../tokenPools/interface/IIFtsoRewardManager.sol";
 import "../../token/implementation/CleanupBlockNumberManager.sol";
 import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "../../utils/implementation/GovernedAndFlareDaemonizedV2.sol";
@@ -95,7 +95,7 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonizedV2, AddressUpda
     uint256 internal nextRewardEpochToExpire;
 
     IIPriceSubmitter public priceSubmitter;
-    IIFtsoRewardManagerV2 public rewardManager;
+    IIFtsoRewardManager public rewardManager;
     IISupply public supply;
     CleanupBlockNumberManager public cleanupBlockNumberManager;
     IUpdateValidators public updateOnRewardEpochSwitchover;
@@ -1063,7 +1063,7 @@ contract FtsoManager is IIFtsoManager, GovernedAndFlareDaemonizedV2, AddressUpda
     {
         priceSubmitter = IIPriceSubmitter(
             _getContractAddress(_contractNameHashes, _contractAddresses, "PriceSubmitter"));
-        rewardManager = IIFtsoRewardManagerV2(
+        rewardManager = IIFtsoRewardManager(
             _getContractAddress(_contractNameHashes, _contractAddresses, "FtsoRewardManager"));
         supply = IISupply(
             _getContractAddress(_contractNameHashes, _contractAddresses, "Supply"));

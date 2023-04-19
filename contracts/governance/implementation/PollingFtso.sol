@@ -5,7 +5,7 @@ pragma abicoder v2;
 import "../../userInterfaces/IPollingFtso.sol";
 import "../../addressUpdater/implementation/AddressUpdatable.sol";
 import "../../userInterfaces/IVoterWhitelister.sol";
-import "../../tokenPools/interface/IIFtsoRewardManagerV2.sol";
+import "../../tokenPools/interface/IIFtsoRewardManager.sol";
 import "../../utils/implementation/SafePct.sol";
 import "./GovernedV2.sol";
 import "../../utils/implementation/AddressSet.sol";
@@ -43,7 +43,7 @@ contract PollingFtso is IPollingFtso, AddressUpdatable, GovernedV2 {
     // address of voter whitelister contract
     IVoterWhitelister public voterWhitelister;
     // address of ftso reward manager contract
-    IIFtsoRewardManagerV2 public ftsoRewardManager;
+    IIFtsoRewardManager public ftsoRewardManager;
 
     //// voting parameters
     // period between proposal creation and start of the vote, in seconds
@@ -634,7 +634,7 @@ contract PollingFtso is IPollingFtso, AddressUpdatable, GovernedV2 {
         voterWhitelister = IVoterWhitelister(
             _getContractAddress(_contractNameHashes, _contractAddresses, "VoterWhitelister"));
 
-        ftsoRewardManager = IIFtsoRewardManagerV2(
+        ftsoRewardManager = IIFtsoRewardManager(
             _getContractAddress(_contractNameHashes, _contractAddresses, "FtsoRewardManager"));
     }
 
