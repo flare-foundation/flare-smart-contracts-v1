@@ -185,6 +185,11 @@
     "address": "0x9a039B2677EDD9cbfAf65AF080b08749c6b59487"
   },
   {
+    "name": "WNatRegistryProvider",
+    "contractName": "WNatRegistryProvider.sol",
+    "address": "0x2Ce1d8653BbCa3F636A63E35136f4e015f0b4647"
+  },
+  {
     "name": "ValidatorRewardManager",
     "contractName": "ValidatorRewardManager.sol",
     "address": "0xc0CF3Aaf93bd978C5BC662564Aa73E331f2eC0B5"
