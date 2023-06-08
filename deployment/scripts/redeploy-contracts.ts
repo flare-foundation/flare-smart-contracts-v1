@@ -1,10 +1,10 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { ClaimSetupManagerContract, CleanupBlockNumberManagerContract, DelegationAccountContract, FlareAssetRegistryContract, FtsoRewardManagerContract, WNatRegistryProviderContract } from '../../typechain-truffle';
+import { FtsoContract, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryInstance } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
 import {
-  spewNewContractInfo,
-  verifyParameters
+  verifyParameters,
+  spewNewContractInfo
 } from './deploy-utils';
 
 
@@ -39,78 +39,37 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
   web3.eth.defaultAccount = deployerAccount.address;
 
   // Contract definitions
-  const FtsoRewardManager: FtsoRewardManagerContract = artifacts.require("FtsoRewardManager");
-  const CleanupBlockNumberManager: CleanupBlockNumberManagerContract = artifacts.require("CleanupBlockNumberManager");
-  const DelegationAccount: DelegationAccountContract = artifacts.require("DelegationAccount");
-  const ClaimSetupManager: ClaimSetupManagerContract = artifacts.require("ClaimSetupManager");
-  const FlareAssetRegistry: FlareAssetRegistryContract = artifacts.require("FlareAssetRegistry");
-  const WNatRegistryProvider: WNatRegistryProviderContract = artifacts.require("WNatRegistryProvider");
+  const Ftso: FtsoContract = artifacts.require("Ftso");
+  const FtsoRegistry: FtsoRegistryContract = artifacts.require("FtsoRegistry");
+  const FtsoManager: FtsoManagerContract = artifacts.require("FtsoManager");
 
+  let ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
+  let ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
 
-  // FtsoRewardManager contract (must link first)
-  const ftsoRewardManager = await FtsoRewardManager.new(
-    parameters.governancePublicKey, // small multisig
-    deployerAccount.address, // temp addressUpdater
-    contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER), // old ftso reward manager
-    parameters.rewardFeePercentageUpdateOffsetEpochs,
-    parameters.defaultRewardFeePercentageBIPS);
-  spewNewContractInfo(contracts, addressUpdaterContracts, FtsoRewardManager.contractName, `FtsoRewardManager.sol`, ftsoRewardManager.address, quiet);
+  // get currently supported assets
+  let supportedSymbols = (await ftsoRegistry.getSupportedIndicesAndSymbols())[1];
 
-  // CleanupBlockNumberManager contract
-  const cleanupBlockNumberManager = await CleanupBlockNumberManager.new(
-    deployerAccount.address,
-    deployerAccount.address, // temp addressUpdater
-    "FtsoManager"
-  );
-  spewNewContractInfo(contracts, addressUpdaterContracts, CleanupBlockNumberManager.contractName, `CleanupBlockNumberManager.sol`, cleanupBlockNumberManager.address, quiet);
+  // deploy new assets
+  let ftsosToAdd: string[] = [];
+  let startTs = (await ftsoManager.getPriceEpochConfiguration())[0];
+  for (let asset of parameters.assets) {
 
-  await cleanupBlockNumberManager.registerToken(contracts.getContractAddress(Contracts.WNAT));
+    // Deploy an FTSO only for the new assets
+    if (!supportedSymbols.includes(asset.assetSymbol)) {
+      if (!quiet) {
+        console.error(`Deploying ${asset.assetSymbol}`);
+      }
+      const ftso = await Ftso.new(asset.assetSymbol, asset.ftsoDecimals, contracts.getContractAddress(Contracts.PRICE_SUBMITTER), contracts.getContractAddress(Contracts.WNAT), contracts.getContractAddress(Contracts.FTSO_MANAGER), startTs, parameters.priceEpochDurationSeconds, parameters.revealEpochDurationSeconds, asset.initialPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
 
-  // ClaimSetupManager contract
-  const claimSetupManager = await ClaimSetupManager.new(
-    deployerAccount.address,
-    deployerAccount.address, // temp addressUpdater
-    parameters.executorFeeValueUpdateOffsetEpochs,
-    BN(parameters.executorMinFeeValueWei.replace(/\s/g, '')),
-    BN(parameters.executorMaxFeeValueNAT).mul(BN(10).pow(BN(18))),
-    BN(parameters.executorRegisterFeeValueNAT).mul(BN(10).pow(BN(18)))
-  );
-  spewNewContractInfo(contracts, addressUpdaterContracts, ClaimSetupManager.contractName, `ClaimSetupManager.sol`, claimSetupManager.address, quiet);
+      spewNewContractInfo(contracts, null, `FTSO ${asset.assetSymbol}`, `Ftso.sol`, ftso.address, quiet);
+      ftsosToAdd.push(ftso.address);
+    }
+  }
 
-  // DelegationAccount contract
-  const delegationAccount = await DelegationAccount.new();
-  spewNewContractInfo(contracts, null, DelegationAccount.contractName, `DelegationAccount.sol`, delegationAccount.address, quiet);
-  await delegationAccount.initialize(claimSetupManager.address, claimSetupManager.address);
-  await claimSetupManager.setLibraryAddress(delegationAccount.address);
+  console.error(`Deployed FTSOs ${ftsosToAdd}`);
 
-  // FlareAssetRegistry contract
-  const flareAssetRegistry = await FlareAssetRegistry.new(deployerAccount.address);
-  spewNewContractInfo(contracts, addressUpdaterContracts, FlareAssetRegistry.contractName, `FlareAssetRegistry.sol`, flareAssetRegistry.address, quiet);
-
-  // WNatRegistryProvider contract
-  const wNatRegistryProvider = await WNatRegistryProvider.new(contracts.getContractAddress(Contracts.ADDRESS_UPDATER), flareAssetRegistry.address);
-  await flareAssetRegistry.registerProvider(wNatRegistryProvider.address, true);
-  spewNewContractInfo(contracts, null, WNatRegistryProvider.contractName, `WNatRegistryProvider.sol`, wNatRegistryProvider.address, quiet);
-
-  // set other contract addresses
-  await ftsoRewardManager.updateContractAddresses(
-    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION, Contracts.FTSO_MANAGER, Contracts.WNAT, Contracts.CLAIM_SETUP_MANAGER]),
-    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), contracts.getContractAddress(Contracts.INFLATION), contracts.getContractAddress(Contracts.FTSO_MANAGER),
-      contracts.getContractAddress(Contracts.WNAT), claimSetupManager.address]);
-
-  await cleanupBlockNumberManager.updateContractAddresses(
-    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER]),
-    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), contracts.getContractAddress(Contracts.FTSO_MANAGER)]);
-
-  await claimSetupManager.updateContractAddresses(
-    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.FTSO_MANAGER, Contracts.WNAT]),
-    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), contracts.getContractAddress(Contracts.FTSO_MANAGER), contracts.getContractAddress(Contracts.WNAT)]);
 
   // switch to production mode
-  await cleanupBlockNumberManager.switchToProductionMode();
-  await claimSetupManager.switchToProductionMode();
-  await flareAssetRegistry.switchToProductionMode();
-
 
   if (!quiet) {
     console.error("Contracts in JSON:");

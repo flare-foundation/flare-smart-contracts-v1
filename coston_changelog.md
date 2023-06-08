@@ -1,5 +1,14 @@
 # Coston change log
 
+## Update FTSO price pairs - June 2023
+### Background: [STP.04 | Flare Governance Proposals](https://proposals.flare.network/STP/STP_4.html)
+
+Price pairs provided by the FTSO system were updated:
+  *  `BCH` and `DGB` were removed.
+  *  `ARB`, `AVAX`, `BNB`, `MATIC`, `SOL`, `USDC`, `USDT` and `XDC` were added.
+
+The list of supported price pairs is: `ADA`, `ALGO`, `ARB`, `AVAX`, `BNB`, `BTC`, `DOGE`, `ETH`, `FIL`, `LTC`, `MATIC`, `SGB`, `SOL`, `USDC`, `USDT`, `XDC`, `XLM` and `XRP`.
+
 ## Align Coston contracts - April 2023
 ### Background: [SIP.01 | Flare Governance Proposals](https://proposals.flare.network/SIP/SIP_1.html)
 
