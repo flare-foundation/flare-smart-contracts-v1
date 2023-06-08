@@ -55,10 +55,10 @@ let ftsoFltc: FtsoInstance;
 let ftsoFxdg: FtsoInstance;
 let ftsoFxrp: FtsoInstance;
 let ftsoWnat: FtsoInstance;
-let ftsoFdgb: FtsoInstance;
 let ftsoFada: FtsoInstance;
 let ftsoFalgo: FtsoInstance;
-let ftsoFbch: FtsoInstance;
+let ftsoFsol: FtsoInstance;
+let ftsoFavax: FtsoInstance;
 let firstPriceEpochStartTs: BN;
 let priceEpochDurationSeconds: BN;
 let revealEpochDurationSeconds: BN;
@@ -365,8 +365,8 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     ftsoFxdg = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_DOGE));
     ftsoFada = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_ADA));
     ftsoFalgo = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_ALGO));
-    ftsoFbch = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_BCH));
-    ftsoFdgb = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_DGB));
+    ftsoFsol = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_SOL));
+    ftsoFavax = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_AVAX));
 
     // Set the ftso epoch configuration parameters (from a random ftso) so we can time travel
     firstPriceEpochStartTs = (await ftsoWnat.getPriceEpochConfiguration())[0];
@@ -447,16 +447,16 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     let xdgPrices = [0.37, 0.45, 0.48];
     let adaPrices = [1.84, 1.90, 1.91];
     let algoPrices = [1.00, 1.33, 1.35];
-    let bchPrices = [1100, 1203, 1210];
-    let dgbPrices = [0.08, 0.11, 0.13];
-    ftsos = [ftsoWnat, ftsoFxrp, ftsoFltc, ftsoFxdg, ftsoFada, ftsoFalgo, ftsoFbch, ftsoFdgb];
+    let solPrices = [20.65, 21.57, 23.99];
+    let avaxPrices = [13.86, 14.79, 16.02];
+    ftsos = [ftsoWnat, ftsoFxrp, ftsoFltc, ftsoFxdg, ftsoFada, ftsoFalgo, ftsoFsol, ftsoFavax];
 
     // get the indices of all ftsos
     for (let ftso of ftsos) {
       ftsoIndices.push(await registry.getFtsoIndex(await ftso.symbol()));
     }
 
-    let pricesMatrix = [natPrices, xrpPrices, ltcPrices, xdgPrices, adaPrices, algoPrices, bchPrices, dgbPrices];
+    let pricesMatrix = [natPrices, xrpPrices, ltcPrices, xdgPrices, adaPrices, algoPrices, solPrices, avaxPrices];
     // transpose
     priceSeries = pricesMatrix[0].map((_, colIndex) => pricesMatrix.map(row => row[colIndex]));
     submitters = [p1, p2, p3];

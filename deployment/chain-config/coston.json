@@ -63,7 +63,7 @@
             "elasticBandWidthPPM": 150,
             "xAssetName": "cAsset XRP",
             "xAssetSymbol": "cXRP",
-            "dummyAssetMinterMax": 7000000000,
+            "dummyAssetMinterMax": 22000000000,
             "initialPriceUSDDec5": 0
         },
         {
@@ -73,17 +73,17 @@
             "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Litecoin",
             "xAssetSymbol": "cLTC",
-            "dummyAssetMinterMax": 4000000000,
+            "dummyAssetMinterMax": 12000000000,
             "initialPriceUSDDec5": 0
         },
         {
             "assetSymbol": "testXLM",
-            "assetDecimals": 6,
+            "assetDecimals": 7,
             "ftsoDecimals": 5,
             "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset XLM (Lumen)",
             "xAssetSymbol": "cXLM",
-            "dummyAssetMinterMax": 7000000000,
+            "dummyAssetMinterMax": 1200000000000,
             "initialPriceUSDDec5": 0
         },
         {
@@ -93,57 +93,37 @@
             "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Dogecoin",
             "xAssetSymbol": "cDOGE",
-            "dummyAssetMinterMax": 13000000000000,
+            "dummyAssetMinterMax": 14000000000000,
             "initialPriceUSDDec5": 0
         },
         {
             "assetSymbol": "testADA",
-            "assetDecimals": 8,
+            "assetDecimals": 6,
             "ftsoDecimals": 5,
             "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset ADA (Cardano)",
             "xAssetSymbol": "cADA",
-            "dummyAssetMinterMax": 45000000000,
+            "dummyAssetMinterMax": 27000000000,
             "initialPriceUSDDec5": 0
         },
         {
             "assetSymbol": "testALGO",
-            "assetDecimals": 8,
+            "assetDecimals": 6,
             "ftsoDecimals": 5,
             "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset Algorand",
             "xAssetSymbol": "cALGO",
-            "dummyAssetMinterMax": 5000000000,
-            "initialPriceUSDDec5": 0
-        },
-        {
-            "assetSymbol": "testBCH",
-            "assetDecimals": 8,
-            "ftsoDecimals": 5,
-            "elasticBandWidthPPM": 200,
-            "xAssetName": "cAsset Bitcoin Cash",
-            "xAssetSymbol": "cBCH",
-            "dummyAssetMinterMax": 21000000000,
-            "initialPriceUSDDec5": 0
-        },
-        {
-            "assetSymbol": "testDGB",
-            "assetDecimals": 8,
-            "ftsoDecimals": 5,
-            "elasticBandWidthPPM": 500,
-            "xAssetName": "cAsset Digibyte",
-            "xAssetSymbol": "cDGB",
-            "dummyAssetMinterMax": 10000000000,
+            "dummyAssetMinterMax": 63000000000,
             "initialPriceUSDDec5": 0
         },
         {
             "assetSymbol": "testBTC",
-            "assetDecimals": 6,
+            "assetDecimals": 8,
             "ftsoDecimals": 5,
             "elasticBandWidthPPM": 100,
             "xAssetName": "cAsset BTC",
             "xAssetSymbol": "cBTC",
-            "dummyAssetMinterMax": 7000000000,
+            "dummyAssetMinterMax": 37000000,
             "initialPriceUSDDec5": 0
         },
         {
@@ -153,7 +133,7 @@
             "elasticBandWidthPPM": 150,
             "xAssetName": "cAsset ETH",
             "xAssetSymbol": "cETH",
-            "dummyAssetMinterMax": 10000000000,
+            "dummyAssetMinterMax": 5500000000000000,
             "initialPriceUSDDec5": 0
         },
         {
@@ -163,7 +143,87 @@
             "elasticBandWidthPPM": 200,
             "xAssetName": "cAsset FIL",
             "xAssetSymbol": "cFIL",
+            "dummyAssetMinterMax": 2200000000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testARB",
+            "assetDecimals": 18,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset ARB",
+            "xAssetSymbol": "cARB",
+            "dummyAssetMinterMax": 880000000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testAVAX",
+            "assetDecimals": 9,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset AVAX",
+            "xAssetSymbol": "cAVAX",
+            "dummyAssetMinterMax": 700000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testBNB",
+            "assetDecimals": 8,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset BNB",
+            "xAssetSymbol": "cBNB",
+            "dummyAssetMinterMax": 3200000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testMATIC",
+            "assetDecimals": 18,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset MATIC",
+            "xAssetSymbol": "cMATIC",
+            "dummyAssetMinterMax": 1150000000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testSOL",
+            "assetDecimals": 9,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset SOL",
+            "xAssetSymbol": "cSOL",
+            "dummyAssetMinterMax": 500000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testUSDC",
+            "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset USDC",
+            "xAssetSymbol": "cUSDC",
             "dummyAssetMinterMax": 10000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testUSDT",
+            "assetDecimals": 6,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset USDT",
+            "xAssetSymbol": "cUSDT",
+            "dummyAssetMinterMax": 10000000000,
+            "initialPriceUSDDec5": 0
+        },
+        {
+            "assetSymbol": "testXDC",
+            "assetDecimals": 18,
+            "ftsoDecimals": 5,
+            "elasticBandWidthPPM": 0,
+            "xAssetName": "cAsset XDC",
+            "xAssetSymbol": "cXDC",
+            "dummyAssetMinterMax": 3300000000000000,
             "initialPriceUSDDec5": 0
         }
     ],

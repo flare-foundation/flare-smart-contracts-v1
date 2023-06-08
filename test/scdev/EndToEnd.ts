@@ -151,10 +151,10 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
   let ftsoDoge: FtsoInstance;
   let ftsoFxrp: FtsoInstance;
   let ftsoWnat: FtsoInstance;
-  let ftsoFdgb: FtsoInstance;
+  let ftsoFsol: FtsoInstance;
   let ftsoFada: FtsoInstance;
   let ftsoFalgo: FtsoInstance;
-  let ftsoFbch: FtsoInstance;
+  let ftsoFavax: FtsoInstance;
   let firstPriceEpochStartTs: BN;
   let priceEpochDurationSeconds: BN;
   let revealEpochDurationSeconds: BN;
@@ -191,10 +191,10 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     ftsoDoge = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_DOGE));
     ftsoFxrp = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_XRP));
     ftsoWnat = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_WNAT));
-    ftsoFdgb = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_DGB));
+    ftsoFsol = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_SOL));
     ftsoFada = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_ADA));
     ftsoFalgo = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_ALGO));
-    ftsoFbch = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_BCH));
+    ftsoFavax = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_AVAX));
 
     // Set the ftso epoch configuration parameters (from a random ftso) so we can time travel
     firstPriceEpochStartTs = (await ftsoWnat.getPriceEpochConfiguration())[0];
@@ -252,14 +252,14 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     // Providers submit prices
 
     const ftsoIndices = [];
-    const ftsos = [ftsoWnat, ftsoFalgo, ftsoFbch, ftsoFada, ftsoFxrp, ftsoFltc, ftsoDoge, ftsoFdgb];
+    const ftsos = [ftsoWnat, ftsoFalgo, ftsoFsol, ftsoFada, ftsoFxrp, ftsoFltc, ftsoDoge, ftsoFavax];
     for(let ftso of ftsos){
       ftsoIndices.push(await ftsoRegistry.getFtsoIndex( await ftso.symbol()));
     }
 
-    const p1SubmitterPrices = await submitPricePriceSubmitter(ftsos, ftsoIndices, priceSubmiter, [0.35, 1.00, 1100, 1.84, 1.40, 320, 0.37, 0.08], p1);
-    const p2SubmitterPrices = await submitPricePriceSubmitter(ftsos, ftsoIndices, priceSubmiter, [0.40, 1.33, 1203, 1.90, 1.50, 340, 0.45, 0.11], p2);
-    const p3SubmitterPrices = await submitPricePriceSubmitter(ftsos, ftsoIndices, priceSubmiter, [0.50, 1.35, 1210, 1.91, 1.35, 350, 0.48, 0.13], p3);    
+    const p1SubmitterPrices = await submitPricePriceSubmitter(ftsos, ftsoIndices, priceSubmiter, [0.35, 1.00, 20.65, 1.84, 1.40, 320, 0.37, 13.86], p1);
+    const p2SubmitterPrices = await submitPricePriceSubmitter(ftsos, ftsoIndices, priceSubmiter, [0.40, 1.33, 21.57, 1.90, 1.50, 340, 0.45, 14.79], p2);
+    const p3SubmitterPrices = await submitPricePriceSubmitter(ftsos, ftsoIndices, priceSubmiter, [0.50, 1.35, 23.99, 1.91, 1.35, 350, 0.48, 16.02], p3);    
 
 
     const epochData = await ftsoWnat.getPriceEpochData();

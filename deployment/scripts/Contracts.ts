@@ -55,12 +55,12 @@ export class Contracts {
   public static readonly ALGO = `${Contracts.WRAP_SYMBOL}ALGO`;
   public static readonly DUMMY_ALGO_MINTER = `Dummy${Contracts.WRAP_SYMBOL_MINT}AlgoMinter`;
   public static readonly FTSO_ALGO = "FtsoAlgo";
-  public static readonly BCH = `${Contracts.WRAP_SYMBOL}BCH`;
-  public static readonly DUMMY_BCH_MINTER = `Dummy${Contracts.WRAP_SYMBOL_MINT}BchMinter`;
-  public static readonly FTSO_BCH = "FtsoBch";
-  public static readonly DGB = `${Contracts.WRAP_SYMBOL}DGB`;
-  public static readonly DUMMY_DGB_MINTER = `Dummy${Contracts.WRAP_SYMBOL_MINT}DgbMinter`;
-  public static readonly FTSO_DGB = "FtsoDgb";
+  public static readonly SOL = `${Contracts.WRAP_SYMBOL}SOL`;
+  public static readonly DUMMY_SOL_MINTER = `Dummy${Contracts.WRAP_SYMBOL_MINT}SolMinter`;
+  public static readonly FTSO_SOL = "FtsoSol";
+  public static readonly AVAX = `${Contracts.WRAP_SYMBOL}AVAX`;
+  public static readonly DUMMY_AVAX_MINTER = `Dummy${Contracts.WRAP_SYMBOL_MINT}AvaxMinter`;
+  public static readonly FTSO_AVAX = "FtsoAvax";
   // NOTE: this is not exhaustive list. Constants here are defined on on-demand basis (usually motivated by tests).
 
   constructor() {
