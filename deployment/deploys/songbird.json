@@ -90,16 +90,6 @@
     "address": "0x502dD637B79B21b709Fdf5B61a4b824d584224C3"
   },
   {
-    "name": "FtsoBch",
-    "contractName": "Ftso.sol",
-    "address": "0xd1D12609851170e7c48E5D5022BF973Cd285fbdF"
-  },
-  {
-    "name": "FtsoDgb",
-    "contractName": "Ftso.sol",
-    "address": "0x72Fd7A3A012370bee1F64BF55AB168524e69c24c"
-  },
-  {
     "name": "FtsoBtc",
     "contractName": "Ftso.sol",
     "address": "0x602B1c4c6A7F192D9c9cFf7dCb3ec272cA3dFC81"
@@ -118,6 +108,46 @@
     "name": "FtsoWnat",
     "contractName": "Ftso.sol",
     "address": "0xf9660C1421a095FE2C49E8e4396E9eAF39d3D7f3"
+  },
+  {
+    "name": "FtsoArb",
+    "contractName": "Ftso.sol",
+    "address": "0x6d1a518C5Fc08F51f02304Bfe74D4AE1721ea705"
+  },
+  {
+    "name": "FtsoAvax",
+    "contractName": "Ftso.sol",
+    "address": "0xEdA86dEB4C53B1Da83f1b624e519ECFC16d91E75"
+  },
+  {
+    "name": "FtsoBnb",
+    "contractName": "Ftso.sol",
+    "address": "0x529D9445584AC239b695170ACF51E5724648875D"
+  },
+  {
+    "name": "FtsoMatic",
+    "contractName": "Ftso.sol",
+    "address": "0x9C666bdB6Ed097a696478da885F6888102e2b913"
+  },
+  {
+    "name": "FtsoSol",
+    "contractName": "Ftso.sol",
+    "address": "0xbEAB293895119b0f241d3a4199368850f4732f74"
+  },
+  {
+    "name": "FtsoUsdc",
+    "contractName": "Ftso.sol",
+    "address": "0xea4345A8Bb2F376e848A1FCFec5f087eEB22dA07"
+  },
+  {
+    "name": "FtsoUsdt",
+    "contractName": "Ftso.sol",
+    "address": "0x33Cf6c1D68AA00DdA633460A031952C3e89BE897"
+  },
+  {
+    "name": "FtsoXdc",
+    "contractName": "Ftso.sol",
+    "address": "0xDf902e2b5F8D95455952D3171e1852feAF775BdB"
   },
   {
     "name": "GovernanceSettings",
