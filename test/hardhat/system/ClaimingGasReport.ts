@@ -55,10 +55,10 @@ let ftsoFltc: FtsoInstance;
 let ftsoFxdg: FtsoInstance;
 let ftsoFxrp: FtsoInstance;
 let ftsoWnat: FtsoInstance;
-let ftsoFdgb: FtsoInstance;
+let ftsoFsol: FtsoInstance;
 let ftsoFada: FtsoInstance;
 let ftsoFalgo: FtsoInstance;
-let ftsoFbch: FtsoInstance;
+let ftsoFavax: FtsoInstance;
 let firstPriceEpochStartTs: BN;
 let priceEpochDurationSeconds: BN;
 let revealEpochDurationSeconds: BN;
@@ -289,10 +289,10 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     ftsoFxdg = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_DOGE));
     ftsoFxrp = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_XRP));
     ftsoWnat = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_WNAT));
-    ftsoFdgb = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_DGB));
+    ftsoFsol = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_SOL));
     ftsoFada = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_ADA));
     ftsoFalgo = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_ALGO));
-    ftsoFbch = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_BCH));
+    ftsoFavax = await Ftso.at(contracts.getContractAddress(Contracts.FTSO_AVAX));
 
     // Set the ftso epoch configuration parameters (from a random ftso) so we can time travel
     firstPriceEpochStartTs = (await ftsoWnat.getPriceEpochConfiguration())[0];

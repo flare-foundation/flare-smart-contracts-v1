@@ -1,7 +1,16 @@
 # Songbird change log
 
+## Update FTSO price pairs - June 2023
+### Background: [STP.04 | Flare Governance Proposals](https://proposals.flare.network/STP/STP_4.html)
+
+Price pairs provided by the FTSO system were updated:
+  *  `BCH` and `DGB` were removed.
+  *  `ARB`, `AVAX`, `BNB`, `MATIC`, `SOL`, `USDC`, `USDT` and `XDC` were added.
+
+The list of supported price pairs is: `ADA`, `ALGO`, `ARB`, `AVAX`, `BNB`, `BTC`, `DOGE`, `ETH`, `FIL`, `LTC`, `MATIC`, `SGB`, `SOL`, `USDC`, `USDT`, `XDC`, `XLM` and `XRP`.
+
 ## Align Songbird contracts - April 2023
-### Background: SIP 01 [SIP.01 | Flare Governance Proposals](https://proposals.flare.network/SIP/SIP_1.html)
+### Background: [SIP.01 | Flare Governance Proposals](https://proposals.flare.network/SIP/SIP_1.html)
 
 #### Upgraded contract: **FtsoRewardManager**
 The upgrade adds support for claim-and-wrap and autoclaim.
@@ -18,13 +27,13 @@ Enables public executors to register themselves. Enables token holders to define
 Enables a user to set a personal delegation account. See [the flare documentation](https://docs.flare.network/user/personal-delegation-account/) for more details.
 
 ## FTSO polling - March 2023
-### Background: STP 03 [STP.03 | Flare Governance Proposals](https://proposals.flare.network/STP/STP_3.html)
+### Background: [STP.03 | Flare Governance Proposals](https://proposals.flare.network/STP/STP_3.html)
 
 #### Upgraded contract: **VoterWhitelister**
 The upgraded contract now has governance APIs to enable chilling of FTSO providers and to view chilling data.
  - A chilled data provider cannot be whitelisted or submit prices.
  - The data provider can whitelist itself again after the chill period is over.
- - There is one new method chilledUntilRewardEpoch(address) that can be used to check when chill periods are over for a specific address.
+ - There is one new method `chilledUntilRewardEpoch(address)` that can be used to check when chill periods are over for a specific address.
 
 #### New Contract: **PollingFtso**
-The voting contract for the FTSO management group. Each member of the group can submit a chilling proposal and vote on active chilling proposals. See more in STP 03.
+The voting contract for the FTSO management group. Each member of the group can submit a chilling proposal and vote on active chilling proposals. See more in STP.03.
