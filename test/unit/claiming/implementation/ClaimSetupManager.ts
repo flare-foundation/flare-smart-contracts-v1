@@ -186,7 +186,6 @@ contract(`ClaimSetupManager.sol; ${getTestFile(__filename)}; Claim setup manager
         accounts[0],
         accounts[0],
         ADDRESS_UPDATER,
-        accounts[7],
         constants.ZERO_ADDRESS,
         startTs,
         PRICE_EPOCH_DURATION_S,
