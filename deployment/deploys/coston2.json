@@ -107,7 +107,7 @@
   {
     "name": "FtsoManager",
     "contractName": "FtsoManager.sol",
-    "address": "0xBb6d2b7db567Bb65b93570e5BeBF34A2B4a90cEA"
+    "address": "0x4F52e61907B0ED9f26b88F16B2510a4CA524d6d0"
   },
   {
     "name": "WNat",
@@ -127,62 +127,62 @@
   {
     "name": "FtsoWnat",
     "contractName": "Ftso.sol",
-    "address": "0xf25C6619B38330EF3bB2a90261Bb21B30a07A246"
+    "address": "0xD2Ce99c898Df43F7774432BA57153ff79B9f2AFf"
   },
   {
     "name": "FtsoTestXrp",
     "contractName": "Ftso.sol",
-    "address": "0x684A1413910AF0Fabe047E896eB2B9e30cE27f86"
+    "address": "0x9fFF391F0A1bb7393E3Abc67477d93cfcbA4F907"
   },
   {
     "name": "FtsoTestLtc",
     "contractName": "Ftso.sol",
-    "address": "0x39D3aBC4465eA44618642eb353A4af7522BfFBd9"
+    "address": "0x6B39CfC2513De4F4381AC3F7D5aD68fBAeBaB283"
   },
   {
     "name": "FtsoTestXlm",
     "contractName": "Ftso.sol",
-    "address": "0x010279F40cbEaE04E747a30832a74A79B5853cCb"
+    "address": "0x6175e63fc4dd91e1A100b4cB35F314CD7615c6d8"
   },
   {
     "name": "FtsoTestDoge",
     "contractName": "Ftso.sol",
-    "address": "0x15dA4ff09C64EA4ABb2CA7B24b414c20469Db1BE"
+    "address": "0x20d2F840231A2dF5fAf0031D12e611Ac3D7Bce3c"
   },
   {
     "name": "FtsoTestAda",
     "contractName": "Ftso.sol",
-    "address": "0x603f146aAC7546C1a1D99065DBc5725D95d703B7"
+    "address": "0x7cC235691B10e478A25D4CE7dDF028CA0fbe1233"
   },
   {
     "name": "FtsoTestAlgo",
     "contractName": "Ftso.sol",
-    "address": "0xFa8B594Ae19CeD7b2B0a8F347B363A73ce093D4B"
+    "address": "0x6E5C9E3C2747921D5eAd15e64Bb14be9D853e653"
   },
   {
     "name": "FtsoTestBch",
     "contractName": "Ftso.sol",
-    "address": "0x5870535484e684056fEE3D203d258895b298C5ED"
+    "address": "0x47684a15d6faA2Df39fc209f0203cd3FB50456ef"
   },
   {
     "name": "FtsoTestDgb",
     "contractName": "Ftso.sol",
-    "address": "0x3596D3ef13b16d80D75a1532c6F0145B53176A20"
+    "address": "0x5B3EEa7e17f39FBF393ABfFbbE39ddBbaCFF9221"
   },
   {
     "name": "FtsoTestBtc",
     "contractName": "Ftso.sol",
-    "address": "0x5123e699A8a4d0903Be1Ef39d27b35CB25ba80DF"
+    "address": "0xBABAA833f7C0efeC6965C09A0bc6E445374f65e7"
   },
   {
     "name": "FtsoTestEth",
     "contractName": "Ftso.sol",
-    "address": "0x591EB76844CC11Dc5bb876f4EfE3Fa0e10c29f1D"
+    "address": "0x6D861767198e7D7a33E459f41e4809C350FaA627"
   },
   {
     "name": "FtsoTestFil",
     "contractName": "Ftso.sol",
-    "address": "0x05640ef0E5eA50B62aFD3c6E5EF51B28E340046c"
+    "address": "0xC9d0E3Ef07FF407E1329730bA82c866c7fA50274"
   },
   {
     "name": "PollingFoundation",

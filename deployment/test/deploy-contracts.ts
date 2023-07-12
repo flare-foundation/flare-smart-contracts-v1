@@ -796,6 +796,14 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         // Assert
         assert(found);
       });
+
+      it(`Should have correct elastic band width set for ${asset.assetSymbol} FTSO`, async () => {
+        // Assemble
+        // Act
+        const elasticBandWidthPPM = await ftsoManager.getElasticBandWidthPPMFtso(contracts.getContractAddress(`Ftso${pascalCase(asset.assetSymbol)}`));
+        // Assert
+        assert.equal(elasticBandWidthPPM.toNumber(), asset.elasticBandWidthPPM);
+      });
     }
 
     if (parameters.deployNATFtso) {
@@ -805,6 +813,14 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
         const found = await findFtso(ftsoManager, contracts.getContractAddress(Contracts.FTSO_WNAT));
         // Assert
         assert(found);
+      });
+
+      it("Should have correct elastic band width set fro WNAT FTSO", async () => {
+        // Assemble
+        // Act
+        const elasticBandWidthPPM = await ftsoManager.getElasticBandWidthPPMFtso(contracts.getContractAddress(Contracts.FTSO_WNAT));
+        // Assert
+        assert.equal(elasticBandWidthPPM.toNumber(), parameters.nativeElasticBandWidthPPM);
       });
     }
 
@@ -818,6 +834,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       const highAssetThresholdUSDDec5 = settings[3];
       const highAssetTurnoutThresholdBIPS = settings[4];
       const lowNatTurnoutThresholdBIPS = settings[5];
+      const elasticBandRewardBIPS = settings[6];
       // Assert
       assert.equal(maxVotePowerNatThresholdFraction.toNumber(), parameters.maxVotePowerNatThresholdFraction);
       assert.equal(maxVotePowerAssetThresholdFraction.toNumber(), parameters.maxVotePowerAssetThresholdFraction);
@@ -825,6 +842,7 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       assert.equal(highAssetThresholdUSDDec5.toNumber(), parameters.highAssetThresholdUSDDec5);
       assert.equal(highAssetTurnoutThresholdBIPS.toNumber(), parameters.highAssetTurnoutThresholdBIPS);
       assert.equal(lowNatTurnoutThresholdBIPS.toNumber(), parameters.lowNatTurnoutThresholdBIPS);
+      assert.equal(elasticBandRewardBIPS.toNumber(), parameters.elasticBandRewardBIPS);
     });
   });
 

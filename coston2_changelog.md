@@ -1,5 +1,14 @@
 # Coston2 change log
 
+## FTSO secondary reward band - July 2023
+### Background: [FIP.03 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_3.html)
+
+#### Upgraded contract: **FtsoManager**
+The upgrade adds governance APIs to enable setting parameters for the secondary reward band.
+
+#### Upgraded contract: **Ftso**
+The `PriceFinalized` event was updated to include information regarding the secondary band.
+
 ## FTSO polling - March 2023
 ### Background: [FIP.02 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_2.html)
 

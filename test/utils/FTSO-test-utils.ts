@@ -56,9 +56,6 @@ export interface VoteInfo {
  * Auxiliary interface for JSON returned by FTSO function `getFullEpochReport`
  */
 export interface EpochResultRaw {
-    _epochSubmitStartTime: BigNumber;
-    _epochSubmitEndTime: BigNumber;
-    _epochRevealEndTime: BigNumber;
     _epochFinalizedTimestamp: BigNumber;
     _price: BigNumber;
     _lowRewardPrice: BigNumber;
@@ -536,7 +533,7 @@ export function resultsFromTestData(data: TestExample, addresses: string[], natS
                     continue;
                 }
             }
-            rewardedVotes.push({ weightNat: voteInfo.weightNat, address: voteInfo.address! } as RewardedVoteInfo);
+            rewardedVotes.push({ weightNat: voteInfo.weightNat * 10000, address: voteInfo.address! } as RewardedVoteInfo);
         }
     }
     logger.log("Done filtering the reward addresses");
@@ -730,15 +727,10 @@ export function randomizePriceGenerator(testExample: TestExample) {
 }
 
 export async function createMockSupplyContract(address: string, circulatingSupply: number): Promise<MockContractInstance> {
-    const Supply = artifacts.require("Supply");
     const MockSupply = artifacts.require("MockContract");
 
-    // balance is not zeroed for every test, so if there were some nats burned before test, zero address's balance may be positive
-    // the problem is that this makes Supply.new fail if that balance is greater than initial genesis amount
-    let zeroAddressBalance = toBN(await web3.eth.getBalance(constants.ZERO_ADDRESS));
-    let supplyInterface = await Supply.new(address, address, zeroAddressBalance.addn(1000), 0, []);
     let mockSupply = await MockSupply.new();
-    const getCirculatingSupplyAtCached = supplyInterface.contract.methods.getCirculatingSupplyAtCached(0).encodeABI();
+    const getCirculatingSupplyAtCached = web3.utils.sha3("getCirculatingSupplyAtCached(uint256)")!.slice(0, 10); // first 4 bytes is function selector
     const getCirculatingSupplyAtCachedReturn = web3.eth.abi.encodeParameter('uint256', circulatingSupply);
     await mockSupply.givenMethodReturn(getCirculatingSupplyAtCached, getCirculatingSupplyAtCachedReturn);
 

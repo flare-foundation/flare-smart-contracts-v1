@@ -373,14 +373,14 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     let algoPrices = [1.00, 1.33, 1.35];
     let bchPrices = [1100, 1203, 1210];
     let dgbPrices = [0.08, 0.11, 0.13];
-    ftsos = [ftsoFxrp, ftsoFltc, ftsoFxdg, ftsoFada, ftsoFalgo, ftsoFbch, ftsoFdgb, ftsoWnat];
+    ftsos = [ftsoWnat, ftsoFxrp, ftsoFltc, ftsoFxdg, ftsoFada, ftsoFalgo, ftsoFbch, ftsoFdgb];
 
     // get the indices of all ftsos
     for (let ftso of ftsos) {
       ftsoIndices.push(await registry.getFtsoIndex(await ftso.symbol()));
     }
 
-    let pricesMatrix = [xrpPrices, ltcPrices, xdgPrices, adaPrices, algoPrices, bchPrices, dgbPrices, natPrices];
+    let pricesMatrix = [natPrices, xrpPrices, ltcPrices, xdgPrices, adaPrices, algoPrices, bchPrices, dgbPrices];
     // transpose
     priceSeries = pricesMatrix[0].map((_, colIndex) => pricesMatrix.map(row => row[colIndex]));
     submitters = [p1, p2, p3];
@@ -396,7 +396,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     rewardExpiryOffsetSeconds = (await ftsoManager.getRewardExpiryOffsetSeconds()).toNumber();
 
     // get the first reward
-    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
+    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp as number < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
       let result = await submitRevealAndFinalizeRewardEpoch(submitters, ftsos, ftsoIndices, priceSeries);
       if (firstPriceEpoch < 0 && firstRewardEpochId < 0) {
         firstPriceEpoch = result.firstPriceEpoch;
@@ -504,7 +504,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await submitRevealAndFinalizeRewardEpoch(submitters, ftsos, ftsoIndices, priceSeries);
 
     // make sure to expire reward epoch
-    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
+    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp as number < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
       await FinalizeRewardEpochs(1);
     }
 
