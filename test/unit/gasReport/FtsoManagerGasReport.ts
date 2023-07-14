@@ -260,14 +260,14 @@ contract(`FtsoManager.sol; ${getTestFile(__filename)}; gas consumption tests`, a
       );
 
       // create supply
-      supplyInterface = await Supply.new(governance, constants.ZERO_ADDRESS, inflation, 10_000, 0, []);
+      supplyInterface = await Supply.new(governance, ADDRESS_UPDATER, 10_000, 0, [], [], constants.ZERO_ADDRESS);
       // create registry
       ftsoRegistry = await FtsoRegistry.new();
       ftsoRegistryProxy = await FtsoRegistryProxy.new(accounts[0], ftsoRegistry.address);
       registry = await FtsoRegistry.at(ftsoRegistryProxy.address);
       await registry.initialiseRegistry(ADDRESS_UPDATER);
       // create whitelister
-      whitelist = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 500, constants.ZERO_ADDRESS);
+      whitelist = await VoterWhitelister.new(governance, ADDRESS_UPDATER, priceSubmitter.address, 100, constants.ZERO_ADDRESS);
 
       cleanupBlockNumberManager = await CleanupBlockNumberManager.new(governance, ADDRESS_UPDATER, "FtsoManager");
 

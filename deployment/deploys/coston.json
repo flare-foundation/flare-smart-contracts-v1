@@ -2,7 +2,7 @@
   {
     "name": "InflationAllocation",
     "contractName": "InflationAllocation.sol",
-    "address": "0x1B5A184869aD208E736BFecF53560e9940c3E67f"
+    "address": "0xD11CB940C8375c119CAe7b8A75844ec35371F2E0"
   },
   {
     "name": "StateConnector",
@@ -22,12 +22,12 @@
   {
     "name": "Inflation",
     "contractName": "Inflation.sol",
-    "address": "0x712BE218E44e2c93Cc1CF8179956b668EA7d8D3B"
+    "address": "0x12d20f1b378cd8ee8dA4729262645EC62FD52307"
   },
   {
     "name": "Supply",
     "contractName": "Supply.sol",
-    "address": "0xE8fc8D1eec5b5b24EAe805c3569518f787C30F3f"
+    "address": "0x98D2B1835A8D4a7c9915Ca212bDb5AA259642fac"
   },
   {
     "name": "FtsoRewardManager",

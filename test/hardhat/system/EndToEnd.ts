@@ -5,20 +5,10 @@
 import { expectEvent, expectRevert, time } from '@openzeppelin/test-helpers';
 import { Contracts } from "../../../deployment/scripts/Contracts";
 import {
-  FlareDaemonContract,
-  FlareDaemonInstance,
-  FtsoContract,
-  FtsoInstance,
-  FtsoManagerContract,
-  FtsoManagerInstance, FtsoRegistryInstance, FtsoRewardManagerContract,
-  FtsoRewardManagerInstance,
-  PriceSubmitterContract,
-  PriceSubmitterInstance,
-  SuicidalMockContract,
-  SuicidalMockInstance,
-  SupplyContract,
-  SupplyInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatContract,
-  WNatInstance
+  FlareDaemonContract, FlareDaemonInstance, FtsoContract, FtsoInstance, FtsoManagerContract,
+  FtsoManagerInstance, FtsoRegistryInstance, FtsoRewardManagerContract, FtsoRewardManagerInstance,
+  PriceSubmitterContract, PriceSubmitterInstance, SuicidalMockContract, SuicidalMockInstance, SupplyContract,
+  SupplyInstance, VoterWhitelisterContract, VoterWhitelisterInstance, WNatContract, WNatInstance
 } from "../../../typechain-truffle";
 import { moveToFinalizeStart, moveToRevealStart } from "../../utils/FTSO-test-utils";
 import { PriceInfo } from '../../utils/PriceInfo';
@@ -339,10 +329,13 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
 
   it("Should establish vote power and mint ", async () => {
 
-    // Supply contract - inflatable balance should be updated
+    // Supply contract - inflatable balance should not be updated (nothing was claimed yet)
     const initialGenesisAmountWei = await supply.initialGenesisAmountWei();
+    const totalFoundationSupplyWei = (await supply.totalExcludedSupplyWei()).sub(await supply.distributedExcludedSupplyWei());
+    const totalLockedWei = await supply.totalLockedWei();
+    const totalInflationAuthorizedWei = await supply.totalInflationAuthorizedWei();
     const inflatableBalanceWei = await supply.getInflatableBalance();
-    assert(inflatableBalanceWei.gt(initialGenesisAmountWei), "Authorized inflation not distributed...");
+    assert(initialGenesisAmountWei.sub(totalFoundationSupplyWei).sub(totalLockedWei).eq(inflatableBalanceWei) && totalInflationAuthorizedWei.gtn(0), "Authorized inflation not distributed...");
 
     // A minting request should be pending...
     const mintingRequestWei = await flareDaemon.totalMintingRequestedWei();
@@ -407,7 +400,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     rewardExpiryOffsetSeconds = (await ftsoManager.getRewardExpiryOffsetSeconds()).toNumber();
 
     // get the first reward
-    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
+    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp as number < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
       let result = await submitRevealAndFinalizeRewardEpoch(submitters, ftsos, ftsoIndices, priceSeries);
       if (firstPriceEpoch < 0 && firstRewardEpochId < 0) {
         firstPriceEpoch = result.firstPriceEpoch;
@@ -515,7 +508,7 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     await submitRevealAndFinalizeRewardEpoch(submitters, ftsos, ftsoIndices, priceSeries);
 
     // make sure to expire reward epoch
-    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
+    while ((await web3.eth.getBlock(await web3.eth.getBlockNumber())).timestamp as number < rewardEpochsStartTs.toNumber() + rewardExpiryOffsetSeconds) {
       await FinalizeRewardEpochs(1);
     }
 
