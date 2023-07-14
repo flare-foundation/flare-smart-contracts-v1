@@ -128,19 +128,19 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       }
     });
 
-    it("Should fetch an ftso annual inflation percentage", async () => {
+    it("Should fetch last time slot inflation percentage", async () => {
       // Assemble
       // Act
-      const percentage = await inflationAllocation.lastAnnualInflationPercentageBips();
+      const percentage = await inflationAllocation.lastTimeSlotInflationPercentageBips();
       // Assert
       assert(percentage.gt(BN(0)));
     });
 
-    it("Should new annual inflation percentage be correct", async () => {
+    it("Should new time slot inflation percentage be correct", async () => {
       // Assemble
       // Act
-      const percentage = await inflationAllocation.annualInflationPercentagesBips(0);
-      const percentage2 = await inflationAllocation.lastAnnualInflationPercentageBips();
+      const percentage = await inflationAllocation.timeSlotInflationPercentagesBips(0);
+      const percentage2 = await inflationAllocation.lastTimeSlotInflationPercentageBips();
       // Assert
       assert(percentage.eq(BN(parameters.scheduledInflationPercentageBIPS[0])));
       assert(percentage2.eq(BN(parameters.scheduledInflationPercentageBIPS[0])));
@@ -279,27 +279,6 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
       supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
       FlareDaemon = artifacts.require("FlareDaemon");
       flareDaemon = await FlareDaemon.at(contracts.getContractAddress(Contracts.FLARE_DAEMON));
-    });
-
-    // TODO: This test is almost unnecessary immediatelly after deployment on Flare node since
-    // reward epoch starts with delay. 
-    // It also does not work with deployment on hardhat network.
-    // Skipped for now
-    it.skip("Should have recognized inflation set if rewarding started", async () => {
-      // Assemble
-      const rewardEpochStartTs = await inflation.rewardEpochStartTs();
-      const startTs = await time.latest();
-      // Act
-      try {  // This is unnecessary on Flare chain and it fails. It is relevant on hardhat chain.
-        await flareDaemon.trigger();
-      } catch (e) {
-        console.log(e)
-      }
-      // Assert
-      if (rewardEpochStartTs.lt(startTs)) {
-        const { 0: recognizedInflationWei } = await inflation.getCurrentAnnum() as any;
-        assert(BN(recognizedInflationWei).gt(BN(0)));
-      }
     });
 
     it("Should know about supply contract", async () => {
@@ -631,7 +610,8 @@ contract(`deploy-contracts.ts system tests`, async accounts => {
 
     it("Address updatable contracts should know about address updater", async () => {
       let contractNames = [Contracts.FTSO_REWARD_MANAGER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.CLAIM_SETUP_MANAGER, Contracts.FLARE_CONTRACT_REGISTRY,
-        Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.FTSO_MANAGER, Contracts.POLLING_FOUNDATION, Contracts.WNAT_REGISTRY_PROVIDER, Contracts.POLLING_FTSO];
+        Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION, Contracts.INFLATION, Contracts.FTSO_MANAGER,
+        Contracts.POLLING_FOUNDATION, Contracts.WNAT_REGISTRY_PROVIDER, Contracts.POLLING_FTSO];
 
       for (let name of contractNames) {
         // Act

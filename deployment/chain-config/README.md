@@ -16,7 +16,7 @@ All numeric parameter names have units appended at the end. Most unit names are 
     Flare daemon contract address. It is deployed in the genesis block with the fixed address "0x1000000000000000000000000000000000000002".
 
 - `priceSubmitterAddress` - 
-    Price submitter contract address. It is deployed to the genesis block with the fixed address "0x1000000000000000000000000000000000000003".
+    Price submiter contract address. It is deployed to the genesis block with the fixed address  "0x1000000000000000000000000000000000000003".
 
 - `burnAddress` - 
     Burn address. Used by Supply contract to track burned Native token. Always "0x0000000000000000000000000000000000000000".
@@ -91,6 +91,9 @@ Should add up to 100 Percent
 
 - `priceEpochDurationSeconds` - 
     Price epoch duration, in seconds. Typical production value is 180 seconds (3 minutes).
+
+- `inflationStartDelaySeconds` -
+    Offset of the start of the first inflation time slot from the time of deploy, in seconds (0 seconds).
 
 - `rewardEpochsStartDelayPriceEpochs` - 
     Offset of the start of reward epochs from the time of deploy, in number of price epochs. Typical production value is 3, so first reward epoch starts after `rewardEpochsStartDelayPriceEpochs * priceEpochDurationSeconds + revealEpochDurationSeconds` (10.5 minutes).

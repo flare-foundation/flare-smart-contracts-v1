@@ -64,15 +64,33 @@ contract(`switch-to-production-mode.ts system tests`, async accounts => {
     });
   });
 
+  describe(Contracts.INFLATION_ALLOCATION, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.INFLATION_ALLOCATION);
+    });
+  });
+
   describe(Contracts.FTSO_MANAGER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkProductionSwitch(Contracts.FTSO_MANAGER);
     });
   });
 
+  describe(Contracts.INFLATION, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.INFLATION);
+    });
+  });
+
   describe(Contracts.FTSO_REWARD_MANAGER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkProductionSwitch(Contracts.FTSO_REWARD_MANAGER);
+    });
+  });
+
+  describe(Contracts.SUPPLY, async () => {
+    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
+      await checkProductionSwitch(Contracts.SUPPLY);
     });
   });
 

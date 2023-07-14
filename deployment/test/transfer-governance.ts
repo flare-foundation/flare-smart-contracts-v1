@@ -30,33 +30,15 @@ contract(`transfer-governance.ts system tests`, async accounts => {
     assert.equal(governance.toLowerCase(), parameters.governancePublicKey.toLowerCase());
   }
 
-  describe(Contracts.INFLATION_ALLOCATION, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.INFLATION_ALLOCATION);
-    });
-  });
-
   describe(Contracts.FLARE_DAEMON, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.FLARE_DAEMON);
     });
   });
 
-  describe(Contracts.INFLATION, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.INFLATION);
-    });
-  });
-
   describe(Contracts.PRICE_SUBMITTER, async () => {
     it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
       await checkGovernance(Contracts.PRICE_SUBMITTER);
-    });
-  });
-
-  describe(Contracts.SUPPLY, async () => {
-    it(SHOULD_HAVE_TRANSFERRED_GOVERNANCE, async () => {
-      await checkGovernance(Contracts.SUPPLY);
     });
   });
 
