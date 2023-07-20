@@ -396,7 +396,6 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     deployerAccount.address,
     flareDaemon.address,
     addressUpdater.address,
-    priceSubmitter.address,
     "0x0000000000000000000000000000000000000000", // old ftso manager
     ftsoStartTs,
     parameters.priceEpochDurationSeconds,
@@ -540,12 +539,14 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     console.error("Setting FTSO manager governance parameters...");
   }
   await ftsoManager.setGovernanceParameters(
+    0,
     parameters.maxVotePowerNatThresholdFraction,
     parameters.maxVotePowerAssetThresholdFraction,
     parameters.lowAssetThresholdUSDDec5,
     parameters.highAssetThresholdUSDDec5,
     parameters.highAssetTurnoutThresholdBIPS,
     parameters.lowNatTurnoutThresholdBIPS,
+    parameters.elasticBandRewardBIPS,
     Math.floor(parameters.ftsoRewardExpiryOffsetDays * 60 * 60 * 24),
     parameters.trustedAddresses);
 
@@ -556,13 +557,19 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
 
   let assetList = [
     ...parameters.assets,
-    ...(parameters.deployNATFtso ? [{ assetSymbol: parameters.nativeSymbol }] : [])
+    ...(parameters.deployNATFtso ? [{ assetSymbol: parameters.nativeSymbol, elasticBandWidthPPM: parameters.nativeElasticBandWidthPPM }] : [])
   ]
 
+  let ftsoAddresses: string[] = [];
+  let elasticBandWidthsPPM: number[] = [];
   for (let asset of assetList) {
     let ftsoContract = (assetToContracts.get(asset.assetSymbol) as AssetContracts).ftso;
+    ftsoAddresses.push(ftsoContract.address);
+    elasticBandWidthsPPM.push(asset.elasticBandWidthPPM);
     await waitFinalize3(hre, deployerAccount.address, () => ftsoManager.addFtso(ftsoContract.address));
   }
+
+  await ftsoManager.setElasticBandWidthPPMFtsos(0, ftsoAddresses, elasticBandWidthsPPM);
 
   if (parameters.deployNATFtso) {
     // Set FTSOs to multi Asset WNAT contract

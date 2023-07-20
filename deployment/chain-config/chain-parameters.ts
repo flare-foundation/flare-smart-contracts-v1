@@ -19,6 +19,11 @@ export interface ChainParameters {
     nativeFtsoDecimals: integer;
 
     /**
+     * Hybrid reward band, prices for native currency within nativeElasticBandWidthPPM of median are rewarded (in parts-per-million).
+     */
+    nativeElasticBandWidthPPM: integer;
+
+    /**
      * The name of the wrapped currency (e.g. Wrapped Flare / Wrapped Songbird).
      */
     wrappedNativeName: string;
@@ -338,6 +343,12 @@ export interface ChainParameters {
     lowNatTurnoutThresholdBIPS: integer;
 
     /**
+    * Hybrid reward band, where elasticBandRewardBIPS goes to the elastic band and 10000 - elasticBandRewardBIPS to the IQR. 
+     * For test purposes we recommend 0.
+     */
+    elasticBandRewardBIPS: integer;
+
+    /**
      * The list of addresses used for voting when native token turnout is below *lowNatTurnoutThreshold* or when price deviation is too big.
      * The prices from trusted addresses are also used indepepndently in f-asset system for calculating a second threshold collateral ratio for agent liquidation.
      */
@@ -493,6 +504,11 @@ export interface AssetParameters {
      * Number of decimals in FTSO USD price.
      */
     ftsoDecimals: integer;
+
+    /**
+     * Hybrid reward band, prices within elasticBandWidthPPM of median are rewarded (in parts-per-million).
+     */
+    elasticBandWidthPPM: integer;
 
     /**
      * The USD price of the asset at deploy time (in scaled USD: 1 USD = 10^5 USDDec5). 

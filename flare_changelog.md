@@ -1,5 +1,14 @@
 # Flare change log
 
+## FTSO secondary reward band - July 2023
+### Background: [FIP.03 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_3.html)
+
+#### Upgraded contract: **FtsoManager**
+The upgrade adds governance APIs to enable setting parameters for the secondary reward band.
+
+#### Upgraded contract: **Ftso**
+The `PriceFinalized` event was updated to include information regarding the secondary band.
+
 ## FTSO polling - April 2023
 ### Background: [FIP.02 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_2.html)
 
@@ -9,5 +18,5 @@ The upgraded contract now has governance APIs to enable chilling of FTSO provide
  - The data provider can whitelist itself again after the chill period is over.
  - There is one new method `chilledUntilRewardEpoch(address)` that can be used to check when chill periods are over for a specific address.
 
-#### New Contract: **PollingFtso**
+#### New contract: **PollingFtso**
 The voting contract for the FTSO management group. Each member of the group can submit a chilling proposal and vote on active chilling proposals. See more in FIP.02.

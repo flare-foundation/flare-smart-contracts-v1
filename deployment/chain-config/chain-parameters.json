@@ -17,6 +17,10 @@
                     "description": "Only used in dev testing deploys - the max amount minted.",
                     "type": "integer"
                 },
+                "elasticBandWidthPPM": {
+                    "description": "Hybrid reward band, prices within elasticBandWidthPPM of median are rewarded (in parts-per-million).",
+                    "type": "integer"
+                },
                 "ftsoDecimals": {
                     "description": "Number of decimals in FTSO USD price.",
                     "type": "integer"
@@ -38,6 +42,7 @@
                 "assetDecimals",
                 "assetSymbol",
                 "dummyAssetMinterMax",
+                "elasticBandWidthPPM",
                 "ftsoDecimals",
                 "initialPriceUSDDec5",
                 "xAssetName",
@@ -106,6 +111,10 @@
         "distributionTreasuryAddress": {
             "description": "Distribution treasury contract address. It is deployed to the genesis block with the fixed address  \"0x1000000000000000000000000000000000000004\".",
             "type": "string"
+        },
+        "elasticBandRewardBIPS": {
+            "description": "Hybrid reward band, where elasticBandRewardBIPS goes to the elastic band and 10000 - elasticBandRewardBIPS to the IQR. \n For test purposes we recommend 0.",
+            "type": "integer"
         },
         "executorFeeValueUpdateOffsetEpochs": {
             "description": "Executor fee value update timelock measured in reward epochs.\nThe parameter determines in how many reward epochs the new fee value submitted by an executor becomes effective. \nFor test purposes we recommend 3.",
@@ -267,6 +276,10 @@
             "description": "Defines high threshold for native token vote power when revealing a price vote. The actual max threshold is calculated as \n`total_NAT_vote_power / maxVotePowerNatThresholdFraction`. \nAny provider's native token vote power is capped to this max threshold when revealing a price vote.",
             "type": "integer"
         },
+        "nativeElasticBandWidthPPM": {
+            "description": "Hybrid reward band, prices for native currency within nativeElasticBandWidthPPM of median are rewarded (in parts-per-million).",
+            "type": "integer"
+        },
         "nativeFtsoDecimals": {
             "description": "The number of decimals for USD price of the native currency.",
             "type": "integer"
@@ -403,6 +416,7 @@
         "distributionToDelegatorsGasLimit",
         "distributionTotalEntitlementWei",
         "distributionTreasuryAddress",
+        "elasticBandRewardBIPS",
         "executorFeeValueUpdateOffsetEpochs",
         "executorMaxFeeValueNAT",
         "executorMinFeeValueWei",
@@ -440,6 +454,7 @@
         "majorityConditionBIPS",
         "maxVotePowerAssetThresholdFraction",
         "maxVotePowerNatThresholdFraction",
+        "nativeElasticBandWidthPPM",
         "nativeFtsoDecimals",
         "nativeSymbol",
         "priceDeviationThresholdBIPS",
