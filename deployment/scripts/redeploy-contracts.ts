@@ -1,8 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { FtsoContract, FtsoManagerContract, FtsoV2UpgraderContract, IIFtsoManagerV1Contract } from '../../typechain-truffle';
+import { FtsoContract, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryInstance } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
-import { AssetContracts, spewNewContractInfo, verifyParameters } from './deploy-utils';
+import {
+  verifyParameters,
+  spewNewContractInfo
+} from './deploy-utils';
 
 
 export async function redeployContracts(hre: HardhatRuntimeEnvironment, contracts: Contracts, parameters: ChainParameters, quiet: boolean = false) {
@@ -27,127 +30,44 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
   try {
     deployerAccount = web3.eth.accounts.privateKeyToAccount(parameters.deployerPrivateKey);
   } catch (e) {
-    throw Error("Check .env file, if the private key is correct and is prefixed by '0x'.\n" + e)
+    throw Error("Check .env file, if the private keys are correct and are prefixed by '0x'.\n" + e)
   }
 
   // Wire up the default account that will do the deployment
   web3.eth.defaultAccount = deployerAccount.address;
 
+  // Contract definitions
   const Ftso: FtsoContract = artifacts.require("Ftso");
+  const FtsoRegistry: FtsoRegistryContract = artifacts.require("FtsoRegistry");
   const FtsoManager: FtsoManagerContract = artifacts.require("FtsoManager");
-  const FtsoV2Upgrader: FtsoV2UpgraderContract = artifacts.require("FtsoV2Upgrader");
-  const OldFtsoManager: IIFtsoManagerV1Contract = artifacts.require("IIFtsoManagerV1");
 
-  const oldFtsoManager = await OldFtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
-  const priceSubmitterAddress = contracts.getContractAddress(Contracts.PRICE_SUBMITTER);
-  const wNatAddress = contracts.getContractAddress(Contracts.WNAT);
+  let ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
+  let ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
 
-  // deploy FtsoV2Upgrader contract
-  const ftsoV2Upgrader = await FtsoV2Upgrader.new(deployerAccount.address);
-  spewNewContractInfo(contracts, null, FtsoV2Upgrader.contractName, `FtsoV2Upgrader.sol`, ftsoV2Upgrader.address, quiet);
+  // get currently supported assets
+  let supportedSymbols = (await ftsoRegistry.getSupportedIndicesAndSymbols())[1];
 
-  const priceEpochConfiguration = await oldFtsoManager.getPriceEpochConfiguration();
-  const startTs = priceEpochConfiguration[0];
-  const priceEpochDurationSeconds = priceEpochConfiguration[1];
-  const revealEpochDurationSeconds = priceEpochConfiguration[2];
-
-  // Get reward epoch start time
-  const rewardEpochStartTs = await oldFtsoManager.rewardEpochsStartTs();
-  const rewardEpochDurationSeconds = await oldFtsoManager.rewardEpochDurationSeconds();
-
-  // deploy new FtsoManager contract
-  const ftsoManager = await FtsoManager.new(
-    ftsoV2Upgrader.address, // governance
-    contracts.getContractAddress(Contracts.FLARE_DAEMON),
-    deployerAccount.address, // temp address updater
-    oldFtsoManager.address,
-    startTs,
-    priceEpochDurationSeconds,
-    revealEpochDurationSeconds,
-    rewardEpochStartTs,
-    rewardEpochDurationSeconds,
-    parameters.votePowerIntervalFraction);
-  spewNewContractInfo(contracts, null, FtsoManager.contractName, `FtsoManager.sol`, ftsoManager.address, quiet);
-
-  await ftsoManager.updateContractAddresses(
-    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.PRICE_SUBMITTER, Contracts.FTSO_REWARD_MANAGER, Contracts.FTSO_REGISTRY, Contracts.VOTER_WHITELISTER, Contracts.SUPPLY, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER]),
-    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), priceSubmitterAddress, contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER), contracts.getContractAddress(Contracts.FTSO_REGISTRY), contracts.getContractAddress(Contracts.VOTER_WHITELISTER), contracts.getContractAddress(Contracts.SUPPLY), contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER)]);
-
-
-  const assetToContracts = new Map<string, AssetContracts>();
-  // Deploy an FTSO for WNAT
-  let ftsoWnat: any;
-  if (parameters.deployNATFtso) {
-    ftsoWnat = await Ftso.new(parameters.nativeSymbol, parameters.nativeFtsoDecimals, priceSubmitterAddress, wNatAddress, ftsoManager.address, startTs, priceEpochDurationSeconds,
-      revealEpochDurationSeconds, parameters.initialWnatPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
-    spewNewContractInfo(contracts, null, `FTSO WNAT`, `Ftso.sol`, ftsoWnat.address, quiet);
-
-    assetToContracts.set(parameters.nativeSymbol, {
-      ftso: ftsoWnat,
-      assetSymbol: parameters.nativeSymbol
-    })
-  }
-
-  // Deploy asset FTSOs
+  // deploy new assets
+  let ftsosToAdd: string[] = [];
+  let startTs = (await ftsoManager.getPriceEpochConfiguration())[0];
   for (let asset of parameters.assets) {
-    if (!quiet) {
-      console.error(`Rigging ${asset.assetSymbol}...`);
+
+    // Deploy an FTSO only for the new assets
+    if (!supportedSymbols.includes(asset.assetSymbol)) {
+      if (!quiet) {
+        console.error(`Deploying ${asset.assetSymbol}`);
+      }
+      const ftso = await Ftso.new(asset.assetSymbol, asset.ftsoDecimals, contracts.getContractAddress(Contracts.PRICE_SUBMITTER), contracts.getContractAddress(Contracts.WNAT), contracts.getContractAddress(Contracts.FTSO_MANAGER), startTs, parameters.priceEpochDurationSeconds, parameters.revealEpochDurationSeconds, asset.initialPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
+
+      spewNewContractInfo(contracts, null, `FTSO ${asset.assetSymbol}`, `Ftso.sol`, ftso.address, quiet);
+      ftsosToAdd.push(ftso.address);
     }
-
-    // Deploy an FTSO for the asset
-    const ftso = await Ftso.new(asset.assetSymbol, asset.ftsoDecimals, priceSubmitterAddress, wNatAddress, ftsoManager.address, startTs, priceEpochDurationSeconds,
-      revealEpochDurationSeconds, asset.initialPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
-    spewNewContractInfo(contracts, null, `FTSO ${asset.assetSymbol}`, `Ftso.sol`, ftso.address, quiet);
-
-    assetToContracts.set(asset.assetSymbol, {
-      ftso: ftso,
-      assetSymbol: asset.assetSymbol
-    });
   }
 
-  // Setup governance parameters for the ftso manager
-  if (!quiet) {
-    console.error("Setting FTSO manager governance parameters...");
-  }
-  await ftsoV2Upgrader.setGovernanceParametersOnFtsoManager(
-    ftsoManager.address,
-    parameters.maxVotePowerNatThresholdFraction,
-    parameters.maxVotePowerAssetThresholdFraction,
-    parameters.lowAssetThresholdUSDDec5,
-    parameters.highAssetThresholdUSDDec5,
-    parameters.highAssetTurnoutThresholdBIPS,
-    parameters.lowNatTurnoutThresholdBIPS,
-    parameters.elasticBandRewardBIPS,
-    Math.floor(parameters.ftsoRewardExpiryOffsetDays * 60 * 60 * 24),
-    parameters.trustedAddresses);
+  console.error(`Deployed FTSOs ${ftsosToAdd}`);
 
-  if (!quiet) {
-    console.error(`Setting upgrade data...`);
-  }
-  let assetList = [
-    ...parameters.assets,
-    ...(parameters.deployNATFtso ? [{ assetSymbol: parameters.nativeSymbol, elasticBandWidthPPM: parameters.nativeElasticBandWidthPPM }] : [])
-  ]
-  let ftsoAddresses: string[] = [];
-  let elasticBandWidthsPPM: number[] = [];
-  for (let asset of assetList) {
-    let ftsoContract = (assetToContracts.get(asset.assetSymbol) as AssetContracts).ftso;
-    ftsoAddresses.push(ftsoContract.address);
-    elasticBandWidthsPPM.push(asset.elasticBandWidthPPM);
-  }
 
-  let multiAssetFtsos: string[] = [];
-  if (parameters.deployNATFtso) {
-    // Set FTSOs to multi Asset WNAT contract
-    let multiAssets = parameters.NATMultiAssets;
-    multiAssetFtsos = multiAssets.map((asset: any) => assetToContracts.get(asset)!.ftso!.address)
-  }
-  await ftsoV2Upgrader.setUpgradeData(ftsoAddresses, elasticBandWidthsPPM, parameters.deployNATFtso ? ftsoWnat.address : "0x0000000000000000000000000000000000000000", multiAssetFtsos);
-
-  if (!quiet) {
-    console.error(`Switching to production mode...`);
-  }
-  await ftsoV2Upgrader.switchToProductionMode();
+  // switch to production mode
 
   if (!quiet) {
     console.error("Contracts in JSON:");
