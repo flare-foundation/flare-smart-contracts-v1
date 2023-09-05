@@ -1,5 +1,14 @@
 # Flare change log
 
+## Update FTSO price pairs - August 2023
+### Background: [FIP.04 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_4.html)
+
+Price pairs provided by the FTSO system were updated:
+  *  `BCH` and `DGB` were removed.
+  *  `ARB`, `AVAX`, `BNB`, `MATIC`, `SOL`, `USDC`, `USDT` and `XDC` were added.
+
+The list of supported price pairs is: `ADA`, `ALGO`, `ARB`, `AVAX`, `BNB`, `BTC`, `DOGE`, `ETH`, `FIL`, `LTC`, `MATIC`, `SGB`, `SOL`, `USDC`, `USDT`, `XDC`, `XLM` and `XRP`.
+
 ## FTSO secondary reward band - July 2023
 ### Background: [FIP.03 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_3.html)
 
