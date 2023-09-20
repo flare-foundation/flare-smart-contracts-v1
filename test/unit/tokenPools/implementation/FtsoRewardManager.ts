@@ -1493,11 +1493,9 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
         });
 
         it("Should gracefully receive self-destruct proceeds - initial balance > 0", async () => {
-            assert.equal((await ftsoRewardManager.getExpectedBalance()).toString(), "0");
             // Add some initial balance (inflation)
             let balanceBefore = await web3.eth.getBalance(burnAddress);
             await mockInflation.receiveInflation({ value: "1" });
-            assert.equal((await ftsoRewardManager.getExpectedBalance()).toString(), "1");
             assert.equal(await web3.eth.getBalance(ftsoRewardManager.address), "1");
             // Assemble
             // Give suicidal some NAT
@@ -1505,12 +1503,10 @@ contract(`FtsoRewardManager.sol; ${getTestFile(__filename)}; Ftso reward manager
             // Sneak it into ftso reward manager
             await mockSuicidal.die();
             assert.equal(await web3.eth.getBalance(ftsoRewardManager.address), "2");
-            assert.equal((await ftsoRewardManager.getExpectedBalance()).toString(), "1");
             // Act
             await mockInflation.receiveInflation({ value: "1" });
             // Assert
             assert.equal(await web3.eth.getBalance(ftsoRewardManager.address), "2");
-            assert.equal((await ftsoRewardManager.getExpectedBalance()).toString(), "2");
             let balanceAfter = await web3.eth.getBalance(burnAddress);
             assert.equal(parseInt(balanceAfter) - parseInt(balanceBefore), 1);
         });

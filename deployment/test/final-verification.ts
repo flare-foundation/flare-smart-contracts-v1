@@ -36,13 +36,14 @@ contract(`final-verification.ts system tests`, async accounts => {
   });
 
   describe(Contracts.INFLATION, async () => {
-    it("validate first inflation annum is initialized with correct inflation percentage", async () => {
+    it("validate first inflation time slot is initialized with correct inflation percentage", async () => {
       // Assemble
 
       // Act
-      const inflationAnnum = await inflation.getCurrentAnnum();
-      const inflationWei = BN(inflationAnnum.recognizedInflationWei.toString());
-      const calculatedInflationWei = BN(parameters.totalNativeSupplyNAT).mul(BN(10).pow(BN(18))).muln(parameters.scheduledInflationPercentageBIPS[0]).divn(10000);
+      const inflationTimeSlot = await inflation.getCurrentTimeSlot();
+      const inflationWei = BN(inflationTimeSlot.recognizedInflationWei.toString());
+      const calculatedInflationWei = BN(parameters.totalNativeSupplyNAT).sub(BN(parameters.totalExcludedSupplyNAT)).mul(BN(10).pow(BN(18)))
+        .muln(parameters.scheduledInflationPercentageBIPS[0]).divn(10000).divn(12);
       // Assert
       assert(inflationWei.eq(calculatedInflationWei));
     });
@@ -54,10 +55,10 @@ contract(`final-verification.ts system tests`, async accounts => {
       const FtsoRewardManager = artifacts.require("FtsoRewardManager");
       const ftsoRewardManager = await FtsoRewardManager.at(contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER));
       // Act
-      const authorizedInflationWei = await ftsoRewardManager.totalInflationAuthorizedWei();
+      const { 5: authorizedInflationWei } = await ftsoRewardManager.getTotals();
       const balanceWei = await web3.eth.getBalance(ftsoRewardManager.address);
-      const inflationAnnum = await inflation.getCurrentAnnum();
-      const dailyInflationWei = BN(inflationAnnum.recognizedInflationWei.toString()).div(BN(inflationAnnum.daysInAnnum.toString()));
+      const inflationTimeSlot = await inflation.getCurrentTimeSlot();
+      const dailyInflationWei = BN(inflationTimeSlot.recognizedInflationWei.toString()).div(BN(30));
       const calculatedAuthorizedInflationWei = calculateAuthorizedInflationWei(parameters, dailyInflationWei, Contracts.FTSO_REWARD_MANAGER);
 
       // Assert
