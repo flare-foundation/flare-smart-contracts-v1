@@ -1,11 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { FtsoContract, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryInstance } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
-import {
-  verifyParameters,
-  spewNewContractInfo
-} from './deploy-utils';
+import { spewNewContractInfo, verifyParameters } from './deploy-utils';
+import { InflationAllocationContract, InflationContract, SupplyContract } from '../../typechain-truffle';
 
 
 export async function redeployContracts(hre: HardhatRuntimeEnvironment, contracts: Contracts, parameters: ChainParameters, quiet: boolean = false) {
@@ -26,50 +23,94 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
   verifyParameters(parameters);
   // Define accounts in play for the deployment process
   let deployerAccount: any;
-  // Define address updater contracts names list
-  const addressUpdaterContracts: string[] = [];
 
   try {
     deployerAccount = web3.eth.accounts.privateKeyToAccount(parameters.deployerPrivateKey);
   } catch (e) {
-    throw Error("Check .env file, if the private keys are correct and are prefixed by '0x'.\n" + e)
+    throw Error("Check .env file, if the private key is correct and is prefixed by '0x'.\n" + e)
   }
 
   // Wire up the default account that will do the deployment
   web3.eth.defaultAccount = deployerAccount.address;
 
   // Contract definitions
-  const Ftso: FtsoContract = artifacts.require("Ftso");
-  const FtsoRegistry: FtsoRegistryContract = artifacts.require("FtsoRegistry");
-  const FtsoManager: FtsoManagerContract = artifacts.require("FtsoManager");
+  const InflationAllocation: InflationAllocationContract = artifacts.require("InflationAllocation");
+  const Inflation: InflationContract = artifacts.require("Inflation");
+  const Supply: SupplyContract = artifacts.require("Supply");
 
-  let ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
-  let ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
+  // InflationAllocation contract
+  const inflationAllocation = await InflationAllocation.new(
+    deployerAccount.address,
+    deployerAccount.address, // temp addressUpdater
+    parameters.scheduledInflationPercentageBIPS);
+  spewNewContractInfo(contracts, null, InflationAllocation.contractName, `InflationAllocation.sol`, inflationAllocation.address, quiet);
 
-  // get currently supported assets
-  let supportedSymbols = (await ftsoRegistry.getSupportedIndicesAndSymbols())[1];
+  // Inflation contract
+  const oldInflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
+  const inflation = await Inflation.new(
+    deployerAccount.address,
+    contracts.getContractAddress(Contracts.FLARE_DAEMON),
+    deployerAccount.address, // temp addressUpdater
+    await oldInflation.rewardEpochStartTs()
+  );
+  spewNewContractInfo(contracts, null, Inflation.contractName, `Inflation.sol`, inflation.address, quiet);
 
-  // deploy new assets
-  let ftsosToAdd: string[] = [];
-  let startTs = (await ftsoManager.getPriceEpochConfiguration())[0];
-  for (let asset of parameters.assets) {
-
-    // Deploy an FTSO only for the new assets
-    if (!supportedSymbols.includes(asset.assetSymbol)) {
-      if (!quiet) {
-        console.error(`Deploying ${asset.assetSymbol}`);
-      }
-      const ftso = await Ftso.new(asset.assetSymbol, asset.ftsoDecimals, contracts.getContractAddress(Contracts.PRICE_SUBMITTER), contracts.getContractAddress(Contracts.WNAT), contracts.getContractAddress(Contracts.FTSO_MANAGER), startTs, parameters.priceEpochDurationSeconds, parameters.revealEpochDurationSeconds, asset.initialPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
-
-      spewNewContractInfo(contracts, null, `FTSO ${asset.assetSymbol}`, `Ftso.sol`, ftso.address, quiet);
-      ftsosToAdd.push(ftso.address);
+  // Supply contract
+  const oldSupply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
+  const tokenPools = [];
+  let index: number = 0;
+  while(true) {
+    try {
+      tokenPools.push((await oldSupply.tokenPools(index++))[0]);
+    } catch (e) {
+      break;
     }
   }
+  const supply = await Supply.new(
+    deployerAccount.address,
+    deployerAccount.address, // temp addressUpdater
+    BN(parameters.totalNativeSupplyNAT).mul(BN(10).pow(BN(18))),
+    BN(parameters.totalExcludedSupplyNAT).mul(BN(10).pow(BN(18))),
+    tokenPools,
+    parameters.foundationAddresses,
+    oldSupply.address
+  );
+  spewNewContractInfo(contracts, null, Supply.contractName, `Supply.sol`, supply.address, quiet);
 
-  console.error(`Deployed FTSOs ${ftsosToAdd}`);
+  // set other contract addresses
+  await inflationAllocation.updateContractAddresses(
+    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
+    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), inflation.address]);
 
+  await inflation.updateContractAddresses(
+    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION]),
+    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), supply.address, inflationAllocation.address]);
+
+  await supply.updateContractAddresses(
+    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
+    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), inflation.address]);
+
+
+  // all excluded supply was already distributed
+  await supply.increaseDistributedSupply(BN(parameters.totalExcludedSupplyNAT).mul(BN(10).pow(BN(18))));
+
+  // Inflation allocation needs to know about reward managers
+  let receiversAddresses = []
+  for (let a of parameters.inflationReceivers) {
+    receiversAddresses.push(contracts.getContractAddress(a));
+  }
+  await inflationAllocation.setSharingPercentages(receiversAddresses, parameters.inflationSharingBIPS);
+
+  // setup topup factors on inflation receivers
+  for (let i = 0; i < receiversAddresses.length; i++) {
+    await inflation.setTopupConfiguration(receiversAddresses[i], parameters.inflationTopUpTypes[i], parameters.inflationTopUpFactorsx100[i]);
+  }
 
   // switch to production mode
+  await inflationAllocation.switchToProductionMode();
+  await inflation.switchToProductionMode();
+  await supply.switchToProductionMode();
+
 
   if (!quiet) {
     console.error("Contracts in JSON:");

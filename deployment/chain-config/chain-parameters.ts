@@ -62,10 +62,6 @@ export interface ChainParameters {
      */
     governanceSettingsAddress: string;
 
-    /**
-     * Burn address
-     */
-     burnAddress: string;
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Governance
@@ -168,9 +164,14 @@ export interface ChainParameters {
     totalNativeSupplyNAT: integer;
 
     /**
-     * Non circulating supply that the foundation holds. In whole native units, not Wei.
+     * Non circulating supply that is temporary excluded (escrow, distribution). In whole native units, not Wei.
      */
-     totalFoundationSupplyNAT: integer;
+    totalExcludedSupplyNAT: integer;
+
+    /**
+     * List of Foundation addresses whose balance should be excluded from circulating supply.
+     */
+    foundationAddresses: string[];
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Deployment options settings
@@ -207,6 +208,11 @@ export interface ChainParameters {
      * Reveal epoch duration, in seconds. Usually, it should be at most half of `priceEpochDurationSeconds` (90 seconds).
      */
     revealEpochDurationSeconds: integer;
+
+    /**
+     * Offset of the start of the first inflation time slot from the time of deploy (system start parameter), in seconds.
+     */
+    inflationStartDelaySeconds: integer;
 
     /**
      * Offset of the start of reward epochs from the time of deploy (system start parameter), in number of price epochs. 

@@ -821,7 +821,7 @@ contract FtsoRewardManager is IIFtsoRewardManager, GovernedV2, ReentrancyGuard, 
     /**
      * @notice Implement this function for updating inflation receiver contracts through AddressUpdater.
      */
-    function getContractName() external pure returns (string memory) {
+    function getContractName() external pure override returns (string memory) {
         return "FtsoRewardManager";
     }
 

@@ -9,8 +9,13 @@ struct SharingPercentage {
     uint256 percentBips;
 }
 
-interface IIInflationSharingPercentageProvider {
+interface IIInflationAllocation {
     /**
+     * Return the time slot inflation rate in bips.
+     */
+    function getTimeSlotPercentageBips() external returns(uint256);
+
+        /**
      * Return the shared percentage per inflation receiver.
      * @dev Assumption is that implementer edited that percents sum to 100 pct and
      *   that receiver addresses are valid.
