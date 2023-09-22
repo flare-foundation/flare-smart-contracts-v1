@@ -2,7 +2,7 @@ import { constants, expectEvent, expectRevert, time } from "@openzeppelin/test-h
 import { Contracts } from "../../../deployment/scripts/Contracts";
 import { FlareDaemonWithInflationMockInstance, InflationAllocationInstance, InflationInstance, InflationReceiverAndTokenPoolMockInstance, SupplyInstance } from "../../../typechain-truffle";
 import { getTestFile, GOVERNANCE_GENESIS_ADDRESS } from "../../utils/constants";
-import { increaseTimeTo, toBN } from "../../utils/test-helpers";
+import { encodeContractNames, increaseTimeTo, toBN } from "../../utils/test-helpers";
 
 const Supply = artifacts.require("Supply");
 const Inflation = artifacts.require("Inflation");
@@ -25,11 +25,10 @@ function usd(x: number) {
 
 contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, async accounts => {
   const governance = GOVERNANCE_GENESIS_ADDRESS;
-  const inflationAccount: string = accounts[0];
+  const ADDRESS_UPDATER = accounts[16];
 
   const dayDurationSec = 24 * 60 * 60;
-  const rewardPeriodSec = 7 * dayDurationSec;
-  const yearDurationSec = 365 * dayDurationSec;
+  const monthDurationSec = 30 * dayDurationSec;
 
   let inflation: InflationInstance;
   let inflationAllocation: InflationAllocationInstance;
@@ -86,13 +85,14 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
 
     await increaseTimeTo(startTs.toNumber(), 'web3');
 
-    // initialize first annum
-    await expectRevert(inflation.getCurrentAnnum(), "no annum");
+    // initialize first timeSlot
+    await expectRevert(inflation.getCurrentTimeSlot(), "no time slot");
+    await expectRevert(inflation.getTimeSlot(0), "no time slot");
     let oldMintingRequest = await flareDaemon.totalMintingRequestedWei();
-    let initializeFirstAnnumTx = await flareDaemon.triggerDaemonize();
-    await expectEvent.notEmitted.inTransaction(initializeFirstAnnumTx.tx, supply, "AuthorizedInflationUpdateError");
-    await inflation.getCurrentAnnum(); // should not revert
-    console.log(`initialize first annum: ${initializeFirstAnnumTx.receipt.gasUsed}`);
+    let initializeFirstTimeSlotTx = await flareDaemon.triggerDaemonize();
+    await expectEvent.notEmitted.inTransaction(initializeFirstTimeSlotTx.tx, supply, "AuthorizedInflationUpdateError");
+    await inflation.getCurrentTimeSlot(); // should not revert
+    console.log(`initialize first timeSlot: ${initializeFirstTimeSlotTx.receipt.gasUsed}`);
     await flareDaemon.triggerReceiveMinting((await flareDaemon.totalMintingRequestedWei()).sub(oldMintingRequest));
 
     let currentDay = await getCurrentDay();
@@ -131,11 +131,11 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
       await suicidalContract.die();
     }
 
-    // finalize first annum
-    await increaseTimeTo(startTs.toNumber() + yearDurationSec, 'web3');
+    // finalize first timeSlot
+    await increaseTimeTo(startTs.toNumber() + monthDurationSec, 'web3');
     oldMintingRequest = await flareDaemon.totalMintingRequestedWei();
-    let finalizeAnnumTx = await flareDaemon.triggerDaemonize();
-    console.log(`finalize annum: ${finalizeAnnumTx.receipt.gasUsed}`);
+    let finalizeTimeSlotTx = await flareDaemon.triggerDaemonize();
+    console.log(`finalize timeSlot: ${finalizeTimeSlotTx.receipt.gasUsed}`);
     await flareDaemon.triggerReceiveMinting((await flareDaemon.totalMintingRequestedWei()).sub(oldMintingRequest));
   }
 
@@ -144,7 +144,7 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
     beforeEach(async () => {
 
       // create inflation allocation
-      inflationAllocation = await InflationAllocation.new(governance, constants.ZERO_ADDRESS, 1000);
+      inflationAllocation = await InflationAllocation.new(governance, ADDRESS_UPDATER, [1000]);
 
       // create flare daemon with inflation mock
       flareDaemon = await FlareDaemonWithInflationMock.new();
@@ -152,22 +152,30 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
 
       startTs = (await time.latest()).addn(500);
       // create inflation
-      inflation = await Inflation.new(governance, flareDaemon.address, inflationAllocation.address, inflationAllocation.address, startTs);
+      inflation = await Inflation.new(governance, flareDaemon.address, ADDRESS_UPDATER, startTs);
       
       // Supply contract
       supply = await Supply.new(
         governance,
-        constants.ZERO_ADDRESS,
-        inflation.address,
+        ADDRESS_UPDATER,
         10_000_000,
         0,
-        []
+        [],
+        [],
+        constants.ZERO_ADDRESS
       );
 
       // set contract addresses
+      await supply.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
+        [ADDRESS_UPDATER, inflation.address], {from: ADDRESS_UPDATER});
       await flareDaemon.setInflation(inflation.address, { from: governance });
-      await inflation.setSupply(supply.address, { from: governance });
-      await inflationAllocation.setInflation(inflation.address, { from: governance });
+      await inflation.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION]),
+        [ADDRESS_UPDATER, supply.address, inflationAllocation.address], {from: ADDRESS_UPDATER});
+      await inflationAllocation.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.INFLATION]),
+        [ADDRESS_UPDATER, inflation.address], {from: ADDRESS_UPDATER});
 
       // send flare daemon some initial balance
       let suicidalContract = await SuicidalMock.new(flareDaemon.address);

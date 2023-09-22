@@ -8,7 +8,6 @@ export async function switchToProductionMode(
     contracts: Contracts,
     deployerPrivateKey: string,
     genesisGovernancePrivateKey: string,
-    distributionDeployed: boolean,
     quiet: boolean = false
 ) {
     const web3 = hre.web3;
@@ -48,8 +47,11 @@ export async function switchToProductionMode(
 
     // Contract definitions
     const AddressUpdater = artifacts.require("AddressUpdater");
+    const InflationAllocation = artifacts.require("InflationAllocation");
     const FtsoManager = artifacts.require("FtsoManager");
+    const Inflation = artifacts.require("Inflation");
     const FtsoRewardManager = artifacts.require("FtsoRewardManager");
+    const Supply = artifacts.require("Supply");
     const VoterWhitelister = artifacts.require("VoterWhitelister");
     const CleanupBlockNumberManager = artifacts.require("CleanupBlockNumberManager");
     const FtsoRegistry = artifacts.require("FtsoRegistry");
@@ -60,6 +62,9 @@ export async function switchToProductionMode(
 
     // Get deployed contracts
     const addressUpdater = await AddressUpdater.at(contracts.getContractAddress(Contracts.ADDRESS_UPDATER));
+    const supply = await Supply.at(contracts.getContractAddress(Contracts.SUPPLY));
+    const inflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
+    const inflationAllocation = await InflationAllocation.at(contracts.getContractAddress(Contracts.INFLATION_ALLOCATION));
     const ftsoRewardManager = await FtsoRewardManager.at(contracts.getContractAddress(Contracts.FTSO_REWARD_MANAGER));
     const ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
     const voterWhitelister = await VoterWhitelister.at(contracts.getContractAddress(Contracts.VOTER_WHITELISTER));
@@ -72,6 +77,9 @@ export async function switchToProductionMode(
 
     // switch to production mode
     await addressUpdater.switchToProductionMode();
+    await supply.switchToProductionMode();
+    await inflation.switchToProductionMode();
+    await inflationAllocation.switchToProductionMode();
     await ftsoRewardManager.switchToProductionMode();
     await claimSetupManager.switchToProductionMode();
     await ftsoManager.switchToProductionMode();

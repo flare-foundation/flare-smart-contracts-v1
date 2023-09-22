@@ -198,12 +198,9 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   spewNewContractInfo(contracts, addressUpdaterContracts, FlareContractRegistry.contractName, `FlareContractRegistry.sol`, flareContractRegistry.address, quiet);
 
   // InflationAllocation contract
-  // Inflation will be set to 0 for now...it will be set shortly.
-  const inflationAllocation = await InflationAllocation.new(deployerAccount.address, "0x0000000000000000000000000000000000000000", parameters.scheduledInflationPercentageBIPS[0]);
+  const inflationAllocation = await InflationAllocation.new(deployerAccount.address, addressUpdater.address, parameters.scheduledInflationPercentageBIPS);
   spewNewContractInfo(contracts, addressUpdaterContracts, InflationAllocation.contractName, `InflationAllocation.sol`, inflationAllocation.address, quiet);
 
-  // set scheduled inflation
-  await inflationAllocation.setAnnualInflation(parameters.scheduledInflationPercentageBIPS)
 
   // Get the timestamp for the just mined block
   let currentBlock = await web3.eth.getBlock(await web3.eth.getBlockNumber());
@@ -216,22 +213,20 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   const inflation = await Inflation.new(
     deployerAccount.address,
     flareDaemon.address,
-    inflationAllocation.address,
-    inflationAllocation.address,
-    startTs
+    addressUpdater.address,
+    startTs.addn(parameters.inflationStartDelaySeconds)
   );
   spewNewContractInfo(contracts, addressUpdaterContracts, Inflation.contractName, `Inflation.sol`, inflation.address, quiet);
-  // InflationAllocation needs a reference to the inflation contract.
-  await inflationAllocation.setInflation(inflation.address);
 
   // Supply contract
   const supply = await Supply.new(
     deployerAccount.address,
-    parameters.burnAddress,
-    inflation.address,
+    addressUpdater.address,
     BN(parameters.totalNativeSupplyNAT).mul(BN(10).pow(BN(18))),
-    BN(parameters.totalFoundationSupplyNAT).mul(BN(10).pow(BN(18))),
-    []
+    BN(parameters.totalExcludedSupplyNAT).mul(BN(10).pow(BN(18))),
+    [],
+    parameters.foundationAddresses,
+    "0x0000000000000000000000000000000000000000" // old supply
   );
   spewNewContractInfo(contracts, addressUpdaterContracts, Supply.contractName, `Supply.sol`, supply.address, quiet);
 
@@ -267,9 +262,6 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     await inflation.setTopupConfiguration(receiversAddresses[i], parameters.inflationTopUpTypes[i], parameters.inflationTopUpFactorsx100[i])
   }
 
-  // The inflation needs a reference to the supply contract.
-  await inflation.setSupply(supply.address);
-
   // FtsoRegistryContract
   const ftsoRegistry = await FtsoRegistry.new();
   const ftsoRegistryProxy = await FtsoRegistryProxy.new(deployerAccount.address, ftsoRegistry.address);
@@ -278,12 +270,7 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
   spewNewContractInfo(contracts, addressUpdaterContracts, FtsoRegistry.contractName, `FtsoRegistry.sol`, registry.address, quiet);
 
   // VoterWhitelisting
-  const voterWhitelister = await VoterWhitelister.new(
-    deployerAccount.address,
-    addressUpdater.address,
-    priceSubmitter.address,
-    parameters.defaultVoterWhitelistSize,
-    "0x0000000000000000000000000000000000000000");
+  const voterWhitelister = await VoterWhitelister.new(deployerAccount.address, addressUpdater.address, priceSubmitter.address, parameters.defaultVoterWhitelistSize, "0x0000000000000000000000000000000000000000");
   spewNewContractInfo(contracts, addressUpdaterContracts, VoterWhitelister.contractName, `VoterWhitelister.sol`, voterWhitelister.address, quiet);
 
   // ClaimSetupManager
@@ -371,11 +358,14 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
 
   // Set other contracts on all address updatable contracts
   let addressUpdatableContracts = [
+    inflationAllocation.address,
+    inflation.address,
     registry.address,
     cleanupBlockNumberManager.address,
     voterWhitelister.address,
     ftsoManager.address,
     ftsoRewardManager.address,
+    supply.address,
     pollingFoundation.address,
     claimSetupManager.address,
     pollingFtso.address
