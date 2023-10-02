@@ -1,5 +1,29 @@
 # Flare change log
 
+## Staking Phase 2 - October 2023
+### Background: [FIP.05 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_5.html)
+In the transition to the proof of stake consensus mechanism a mirroring service was developed.
+The solution allows a C-chain address to receive validator rewards, FlareDrops and participate in governance using the funds staked on the P-chain address obtained from the same public key.
+
+#### New contract: **AddressBinder**
+Contract where P-chain and C-chain address pairs should be registered to enable getting rewards on C-chain for funds staked on P-chain.
+
+#### New contract: **PChainStakeMirror**
+Contract holding all mirrored balances and vote powers for each node ID.
+
+#### New contract: **PChainStakeMirrorMultiSigVoting**
+Contract that enables voting for the Merkle root per epoch with a limited number of trusted voters.
+
+#### New contract: **PChainStakeMirrorVerifier**
+Contract responsible for staking data verification at the time the user mirrors the stake.
+
+#### New contract: **CombinedNat**
+Contract combining the WNat and PChainStakeMirror balances. It enables claiming of FlareDrops for mirrored staked funds.
+
+#### Upgraded contract: **GovernanceVotePower**
+The upgrade enables voting by mirrored staked funds.
+
+
 ## Update FTSO price pairs - August 2023
 ### Background: [FIP.04 | Flare Governance Proposals](https://proposals.flare.network/FIP/FIP_4.html)
 

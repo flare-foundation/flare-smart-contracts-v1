@@ -1,11 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { FtsoContract, FtsoManagerContract, FtsoRegistryContract, FtsoRegistryInstance } from '../../typechain-truffle';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
-import {
-  verifyParameters,
-  spewNewContractInfo
-} from './deploy-utils';
+import { spewNewContractInfo, verifyParameters } from './deploy-utils';
+import { AddressBinderContract, CombinedNatContract, FtsoManagerContract, GovernanceVotePowerContract, PChainStakeMirrorContract, PChainStakeMirrorMultiSigVotingContract, PChainStakeMirrorVerifierContract } from '../../typechain-truffle';
 
 
 export async function redeployContracts(hre: HardhatRuntimeEnvironment, contracts: Contracts, parameters: ChainParameters, quiet: boolean = false) {
@@ -33,41 +30,74 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
     throw Error("Check .env file, if the private keys are correct and are prefixed by '0x'.\n" + e)
   }
 
-  // Wire up the default account that will do the deployment
-  web3.eth.defaultAccount = deployerAccount.address;
-
-  // Contract definitions
-  const Ftso: FtsoContract = artifacts.require("Ftso");
-  const FtsoRegistry: FtsoRegistryContract = artifacts.require("FtsoRegistry");
   const FtsoManager: FtsoManagerContract = artifacts.require("FtsoManager");
+  const AddressBinder: AddressBinderContract = artifacts.require("AddressBinder");
+  const PChainStakeMirrorMultiSigVoting: PChainStakeMirrorMultiSigVotingContract = artifacts.require("PChainStakeMirrorMultiSigVoting");
+  const PChainStakeMirrorVerifier: PChainStakeMirrorVerifierContract = artifacts.require("PChainStakeMirrorVerifier");
+  const PChainStakeMirror: PChainStakeMirrorContract = artifacts.require("PChainStakeMirror");
+  const CombinedNat: CombinedNatContract = artifacts.require("CombinedNat");
+  const GovernanceVotePower: GovernanceVotePowerContract = artifacts.require("GovernanceVotePower");
 
-  let ftsoRegistry = await FtsoRegistry.at(contracts.getContractAddress(Contracts.FTSO_REGISTRY));
-  let ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
 
-  // get currently supported assets
-  let supportedSymbols = (await ftsoRegistry.getSupportedIndicesAndSymbols())[1];
+  // AddressBinder contract
+  const addressBinder = await AddressBinder.new();
+  spewNewContractInfo(contracts, null, AddressBinder.contractName, `AddressBinder.sol`, addressBinder.address, quiet);
 
-  // deploy new assets
-  let ftsosToAdd: string[] = [];
-  let startTs = (await ftsoManager.getPriceEpochConfiguration())[0];
-  for (let asset of parameters.assets) {
+  const ftsoManager = await FtsoManager.at(contracts.getContractAddress(Contracts.FTSO_MANAGER));
+  const {0: firstEpochStartTs, 1: priceEpochDurationSeconds, 2: revealEpochDurationSeconds} = await ftsoManager.getPriceEpochConfiguration();
 
-    // Deploy an FTSO only for the new assets
-    if (!supportedSymbols.includes(asset.assetSymbol)) {
-      if (!quiet) {
-        console.error(`Deploying ${asset.assetSymbol}`);
-      }
-      const ftso = await Ftso.new(asset.assetSymbol, asset.ftsoDecimals, contracts.getContractAddress(Contracts.PRICE_SUBMITTER), contracts.getContractAddress(Contracts.WNAT), contracts.getContractAddress(Contracts.FTSO_MANAGER), startTs, parameters.priceEpochDurationSeconds, parameters.revealEpochDurationSeconds, asset.initialPriceUSDDec5, parameters.priceDeviationThresholdBIPS, parameters.priceEpochCyclicBufferSize);
+  // PChainStakeMirrorMultiSigVoting contract
+  const pChainStakeMirrorMultiSigVoting = await PChainStakeMirrorMultiSigVoting.new(
+    deployerAccount.address,
+    firstEpochStartTs,
+    priceEpochDurationSeconds,
+    parameters.pChainStakeMirrorVotingThreshold,
+    parameters.pChainStakeMirrorVoters
+  );
+  spewNewContractInfo(contracts, null, PChainStakeMirrorMultiSigVoting.contractName, `PChainStakeMirrorMultiSigVoting.sol`, pChainStakeMirrorMultiSigVoting.address, quiet);
 
-      spewNewContractInfo(contracts, null, `FTSO ${asset.assetSymbol}`, `Ftso.sol`, ftso.address, quiet);
-      ftsosToAdd.push(ftso.address);
-    }
-  }
+  // PChainStakeMirrorVerifier contract
+  const pChainStakeMirrorVerifier = await PChainStakeMirrorVerifier.new(
+    pChainStakeMirrorMultiSigVoting.address,
+    parameters.pChainStakeMirrorMinDurationDays * 60 * 60 * 24,
+    parameters.pChainStakeMirrorMaxDurationDays * 60 * 60 * 24,
+    BN(parameters.pChainStakeMirrorMinAmountNAT).mul(BN(10).pow(BN(9))),
+    BN(parameters.pChainStakeMirrorMaxAmountNAT).mul(BN(10).pow(BN(9)))
+  );
+  spewNewContractInfo(contracts, null, PChainStakeMirrorVerifier.contractName, `PChainStakeMirrorVerifier.sol`, pChainStakeMirrorVerifier.address, quiet);
 
-  console.error(`Deployed FTSOs ${ftsosToAdd}`);
+  // PChainStakeMirror contract
+  const pChainStakeMirror = await PChainStakeMirror.new(
+    deployerAccount.address,
+    contracts.getContractAddress(Contracts.FLARE_DAEMON),
+    deployerAccount.address, // temp addressUpdater
+    parameters.maxStakeEndsPerBlock
+  );
+  spewNewContractInfo(contracts, null, PChainStakeMirror.contractName, `PChainStakeMirror.sol`, pChainStakeMirror.address, quiet);
 
+  // CombinedNat contract
+  const combinedNat = await CombinedNat.new(
+    contracts.getContractAddress(Contracts.WNAT),
+    pChainStakeMirror.address
+  );
+  spewNewContractInfo(contracts, null, CombinedNat.contractName, `CombinedNat.sol`, combinedNat.address, quiet);
+
+  // GovernanceVotePower contract
+  const governanceVotePower = await GovernanceVotePower.new(
+    contracts.getContractAddress(Contracts.WNAT),
+    pChainStakeMirror.address
+  );
+  spewNewContractInfo(contracts, null, GovernanceVotePower.contractName, `GovernanceVotePower.sol`, governanceVotePower.address, quiet);
+
+  // set other contract addresses
+  await pChainStakeMirror.updateContractAddresses(
+    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.ADDRESS_BINDER, Contracts.GOVERNANCE_VOTE_POWER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.P_CHAIN_STAKE_MIRROR_VERIFIER]),
+    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), addressBinder.address, governanceVotePower.address, contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER), pChainStakeMirrorVerifier.address])
 
   // switch to production mode
+  await pChainStakeMirrorMultiSigVoting.switchToProductionMode();
+  await pChainStakeMirror.switchToProductionMode();
+
 
   if (!quiet) {
     console.error("Contracts in JSON:");
