@@ -281,7 +281,9 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     addressUpdater.address,
     BN(parameters.totalNativeSupplyNAT).mul(BN(10).pow(BN(18))),
     BN(parameters.totalExcludedSupplyNAT).mul(BN(10).pow(BN(18))),
-    []
+    [],
+    parameters.foundationAddresses,
+    "0x0000000000000000000000000000000000000000" // old supply
   );
   spewNewContractInfo(contracts, addressUpdaterContracts, Supply.contractName, `Supply.sol`, supply.address, quiet);
 
