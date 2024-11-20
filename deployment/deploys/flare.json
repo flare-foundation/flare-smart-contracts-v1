@@ -42,17 +42,17 @@
   {
     "name": "InflationAllocation",
     "contractName": "InflationAllocation.sol",
-    "address": "0x260371e0CF561887C6Da270CC3Be84C2FaB5444f"
+    "address": "0xe3b151a43b86c6b146a7dB0CdE22AbD8Beb01E2b"
   },
   {
     "name": "Inflation",
     "contractName": "Inflation.sol",
-    "address": "0xEfd7a680Db05F1dCD86EB5a074897F502C8601A0"
+    "address": "0x4d92ba6D90DF99f7F25dc5B53b1697957e02A02c"
   },
   {
     "name": "Supply",
     "contractName": "Supply.sol",
-    "address": "0x8577D2D50827bCE2EC1dc9Cf9F1199826781D5AF"
+    "address": "0x58c8235cd77152ff21E5fA90a9390a84d435F717"
   },
   {
     "name": "FtsoRewardManager",
