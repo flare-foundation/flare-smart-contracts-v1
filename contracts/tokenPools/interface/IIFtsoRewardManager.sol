@@ -3,9 +3,9 @@ pragma solidity >=0.7.6 <0.9;
 
 import "../../userInterfaces/IFtsoRewardManager.sol";
 import "../interface/IITokenPool.sol";
-import "../../inflation/interface/IIInflationReceiver.sol";
+import "../../inflation/interface/IIInflationReceiverV1.sol";
 
-interface IIFtsoRewardManager is IFtsoRewardManager, IIInflationReceiver, IITokenPool {
+interface IIFtsoRewardManager is IFtsoRewardManager, IIInflationReceiverV1, IITokenPool {
 
     event DailyAuthorizedInflationSet(uint256 authorizedAmountWei);
     event InflationReceived(uint256 amountReceivedWei);
