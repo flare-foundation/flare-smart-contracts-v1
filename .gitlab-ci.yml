@@ -184,7 +184,7 @@ test-linter:
   extends: .test-node-sc
   script:
     - yarn lint
-        
+
 test-contract-integration:
   extends: .test-node-sc
   script:
@@ -225,7 +225,7 @@ test-contract-end-to-end_2:
   extends:
     - .test-node-sc
   tags:
-    - flarenetwork-md
+    - flarenetwork-lg-cpu
   script:
     - yarn test_claim_topup_hardhat_fast
 
