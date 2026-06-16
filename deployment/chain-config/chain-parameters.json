@@ -396,6 +396,10 @@
             },
             "type": "array"
         },
+        "maxAnnualInflationNAT": {
+            "description": "Maximum annual inflation (hard cap), used to bound recognized inflation. In whole native units, not Wei.",
+            "type": "integer"
+        },
         "stateConnectorAddress": {
             "description": "State connector contract address. State connector is deployed in the genesis block at fixed address \"0x1000000000000000000000000000000000000001\".",
             "type": "string"
@@ -523,6 +527,7 @@
         "rewardEpochsStartDelayPriceEpochs",
         "rewardFeePercentageUpdateOffsetEpochs",
         "scheduledInflationPercentageBIPS",
+        "maxAnnualInflationNAT",
         "stateConnectorAddress",
         "systemStart",
         "thresholdConditionBIPS",

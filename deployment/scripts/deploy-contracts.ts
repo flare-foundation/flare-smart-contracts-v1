@@ -252,7 +252,8 @@ export async function deployContracts(hre: HardhatRuntimeEnvironment, parameters
     deployerAccount.address,
     flareDaemon.address,
     addressUpdater.address,
-    startTs.addn(parameters.inflationStartDelaySeconds)
+    startTs.addn(parameters.inflationStartDelaySeconds),
+    BN(parameters.maxAnnualInflationNAT).mul(BN(10).pow(BN(18)))
   );
   spewNewContractInfo(contracts, addressUpdaterContracts, Inflation.contractName, `Inflation.sol`, inflation.address, quiet);
 

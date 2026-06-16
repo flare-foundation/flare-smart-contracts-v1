@@ -36,7 +36,6 @@ library InflationTimeSlots {
     }
 
     uint256 internal constant BIPS100 = 1e4;                            // 100% in basis points
-    uint256 internal constant MAX_ANNUAL_INFLATION = 5000000000 ether;
     uint256 internal constant SECONDS_PER_DAY = 1 days;
 
     string internal constant ERR_NO_TIME_SLOT = "no time slot";
@@ -45,14 +44,16 @@ library InflationTimeSlots {
     /**
      * @notice Initialize a new time slot, add it to the time slot collection and set current time slot pointer.
      * @param _startTimeStamp                   The timestamp to start the time slot.
-     * @param _inflatableBalance                The balance to use when recognizing inflation for the time slot.
+     * @param _inflationBase                    The base amount to use when recognizing inflation for the time slot.
      * @param _timeSlotInflationPercentageBips  The inflation percentage in bips to use when recognizing inflation.
+     * @param _maxAnnualInflationWei            The maximum annual inflation cap used to bound recognized inflation.
      */
     function initializeNewTimeSlot(
         InflationTimeSlotsState storage _self,
         uint256 _startTimeStamp,
-        uint256 _inflatableBalance,
-        uint256 _timeSlotInflationPercentageBips
+        uint256 _inflationBase,
+        uint256 _timeSlotInflationPercentageBips,
+        uint256 _maxAnnualInflationWei
     )
         internal
         returns (InflationTimeSlot storage _inflationTimeSlot)
@@ -66,8 +67,9 @@ library InflationTimeSlots {
         // Initialize it with newly passed in time slot info
         _inflationTimeSlot.startTimeStamp = _startTimeStamp;
         _inflationTimeSlot.recognizedInflationWei = _computeRecognizedInflationWei(
-            _inflatableBalance,
-            _timeSlotInflationPercentageBips);
+            _inflationBase,
+            _timeSlotInflationPercentageBips,
+            _maxAnnualInflationWei);
         _inflationTimeSlot.endTimeStamp = _getTimeSlotEndsTs(_startTimeStamp);
         // Reposition index pointing to current timeSlot
         if (_self.inflationTimeSlots.length > 1) {
@@ -171,20 +173,22 @@ library InflationTimeSlots {
 
     /**
      * @notice Helper function to compute recognized inflation.
-     * @param _inflatableBalance                The balance used to recognize inflation.
+     * @param _inflationBase                    The base amount used to recognize inflation.
      * @param _timeSlotInflationPercentageBips  The time slot percentage used to recognize inflation.
+     * @param _maxAnnualInflationWei            The maximum annual inflation cap.
      * @return The computed recognized inflation.
      */
     function _computeRecognizedInflationWei(
-        uint256 _inflatableBalance,
-        uint256 _timeSlotInflationPercentageBips
+        uint256 _inflationBase,
+        uint256 _timeSlotInflationPercentageBips,
+        uint256 _maxAnnualInflationWei
     )
         private pure
         returns(uint256)
     {
         return Math.min(
-            _inflatableBalance.mulDiv(_timeSlotInflationPercentageBips, 12 * BIPS100),
-            MAX_ANNUAL_INFLATION.div(12)
+            _inflationBase.mulDiv(_timeSlotInflationPercentageBips, 12 * BIPS100),
+            _maxAnnualInflationWei.div(12)
         ); // monthly inflation
     }
 

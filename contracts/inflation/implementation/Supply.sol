@@ -234,6 +234,8 @@ contract Supply is IISupply, Governed, AddressUpdatable {
     /**
      * @notice Get total inflatable balance (initial genesis amount + total claimed - total excluded/locked amount)
      * @return _inflatableBalanceWei Return inflatable balance
+     * @dev DEPRECATED: no longer used by the Inflation contract, which now recognizes inflation against
+     *   circulating supply (see `getCirculatingSupplyAt`). Kept for backward compatibility.
     */
     function getInflatableBalance() external view override returns(uint256 _inflatableBalanceWei) {
         if (block.number < switchOverBlock) {

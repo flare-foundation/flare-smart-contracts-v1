@@ -206,6 +206,11 @@ export interface ChainParameters {
     scheduledInflationPercentageBIPS: integer[];
 
     /**
+     * Maximum annual inflation (hard cap), used to bound recognized inflation. In whole native units, not Wei.
+     */
+    maxAnnualInflationNAT: integer;
+
+    /**
      * List of contract names (strings) that are inflation receivers.
      */
     inflationReceivers: string[];
