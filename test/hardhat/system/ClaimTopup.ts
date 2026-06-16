@@ -435,9 +435,10 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     assert(inflatableBalanceWei.eq(initialGenesisAmountWei.sub(totalFoundationSupplyWei).sub(totalLockedWei)) && totalInflationAuthorizedWei.gtn(0), "Authorized inflation not distributed...");
 
     // Assert
-    // Recognized inflation should be correct
+    // Recognized inflation should be correct (based on circulating supply)
     const firstInflationTimeSlot = await inflation.getTimeSlot(0);
-    const firstTimeSlotInflationWei = initialGenesisAmountWei.sub(totalFoundationSupplyWei).sub(totalLockedWei).muln(inflationBips).divn(10000).divn(12); // 5 percent of circulating supply (monthly)
+    const circulatingSupplyWei = await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber());
+    const firstTimeSlotInflationWei = circulatingSupplyWei.muln(inflationBips).divn(10000).divn(12); // inflation percentage of circulating supply (monthly)
     assert.equal(firstInflationTimeSlot.recognizedInflationWei.toString(), firstTimeSlotInflationWei.toString());
   });
 
@@ -913,9 +914,9 @@ contract(`RewardManager.sol; ${getTestFile(__filename)}; Delegation, price submi
     // Second time slot should start later then the first
     assert.isTrue(firstTimeSlotStart.lt(BN(secondTimeSlot.startTimeStamp.toString())));
     
-    // Recognized inflation should be updated
-    const totalBurnedWei = (await getRewardTotals(ftsoRewardManager)).totalBurnedWei; // burned amount is part of inflatable balance
-    const secondTimeSlotInflationWei = initialGenesisAmountWei.sub(totalFoundationSupplyWei).sub(totalLockedWei).add(totalClaimedWei).add(totalBurnedWei).muln(inflationBips).divn(10000).divn(12); // 5 percent of circulating supply (monthly)
+    // Recognized inflation should be updated (based on circulating supply at the time the slot was initialized)
+    const circulatingSupplyWei = await supply.getCirculatingSupplyAt(await web3.eth.getBlockNumber());
+    const secondTimeSlotInflationWei = circulatingSupplyWei.muln(inflationBips).divn(10000).divn(12); // inflation percentage of circulating supply (monthly)
     assert.isTrue(totalClaimedWei.eq((await getRewardTotals(ftsoRewardManager)).totalClaimedWei));
     assert.equal(secondTimeSlot.recognizedInflationWei.toString(), secondTimeSlotInflationWei.toString());
       

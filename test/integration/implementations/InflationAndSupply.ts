@@ -68,7 +68,8 @@ contract(`Inflation.sol and Supply.sol and Escrow.sol; ${getTestFile(__filename)
       accounts[0],
       mockFlareDaemon.address,
       ADDRESS_UPDATER,
-      0
+      0,
+      BN(10).pow(BN(40))
     );
 
     // Wire up supply contract
