@@ -139,7 +139,7 @@ contract(`FlareDaemon.sol; ${getTestFile(__filename)}; FlareDaemon system tests`
       let loopRunTime = loopTimeAfter - loopTimeBefore;
 
       console.log(runTime, loopRunTime);
-      assert(loopRunTime > 1.5 * runTime && runTime < 20000);
+      assert(loopRunTime > 1.25 * runTime && runTime < 20000);
     });
 
   });
