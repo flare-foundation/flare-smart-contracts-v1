@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { ChainParameters } from '../chain-config/chain-parameters';
 import { Contracts } from "./Contracts";
 import { spewNewContractInfo, verifyParameters } from './deploy-utils';
-import { AddressBinderContract, CombinedNatContract, FtsoManagerContract, GovernanceVotePowerContract, PChainStakeMirrorContract, PChainStakeMirrorMultiSigVotingContract, PChainStakeMirrorVerifierContract } from '../../typechain-truffle';
+import { AddressBinderContract, CombinedNatContract, FtsoManagerContract, GovernanceVotePowerContract, InflationContract, PChainStakeMirrorContract, PChainStakeMirrorMultiSigVotingContract, PChainStakeMirrorVerifierContract } from '../../typechain-truffle';
 
 
 export async function redeployContracts(hre: HardhatRuntimeEnvironment, contracts: Contracts, parameters: ChainParameters, quiet: boolean = false) {
@@ -37,6 +37,7 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
   const PChainStakeMirror: PChainStakeMirrorContract = artifacts.require("PChainStakeMirror");
   const CombinedNat: CombinedNatContract = artifacts.require("CombinedNat");
   const GovernanceVotePower: GovernanceVotePowerContract = artifacts.require("GovernanceVotePower");
+  const Inflation: InflationContract = artifacts.require("Inflation");
 
 
   // AddressBinder contract
@@ -89,14 +90,31 @@ export async function redeployContracts(hre: HardhatRuntimeEnvironment, contract
   );
   spewNewContractInfo(contracts, null, GovernanceVotePower.contractName, `GovernanceVotePower.sol`, governanceVotePower.address, quiet);
 
+  // Inflation contract (reuse the existing reward epoch start so the new contract keeps the same start gate)
+  const oldInflation = await Inflation.at(contracts.getContractAddress(Contracts.INFLATION));
+  const rewardEpochStartTs = await oldInflation.rewardEpochStartTs();
+  const inflation = await Inflation.new(
+    deployerAccount.address,
+    contracts.getContractAddress(Contracts.FLARE_DAEMON),
+    deployerAccount.address, // temp addressUpdater
+    rewardEpochStartTs,
+    BN(parameters.maxAnnualInflationNAT).mul(BN(10).pow(BN(18)))
+  );
+  spewNewContractInfo(contracts, null, Inflation.contractName, `Inflation.sol`, inflation.address, quiet);
+
   // set other contract addresses
   await pChainStakeMirror.updateContractAddresses(
     encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.ADDRESS_BINDER, Contracts.GOVERNANCE_VOTE_POWER, Contracts.CLEANUP_BLOCK_NUMBER_MANAGER, Contracts.P_CHAIN_STAKE_MIRROR_VERIFIER]),
     [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), addressBinder.address, governanceVotePower.address, contracts.getContractAddress(Contracts.CLEANUP_BLOCK_NUMBER_MANAGER), pChainStakeMirrorVerifier.address])
 
+  await inflation.updateContractAddresses(
+    encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION]),
+    [contracts.getContractAddress(Contracts.ADDRESS_UPDATER), contracts.getContractAddress(Contracts.SUPPLY), contracts.getContractAddress(Contracts.INFLATION_ALLOCATION)])
+
   // switch to production mode
   await pChainStakeMirrorMultiSigVoting.switchToProductionMode();
   await pChainStakeMirror.switchToProductionMode();
+  await inflation.switchToProductionMode();
 
 
   if (!quiet) {
