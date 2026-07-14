@@ -9,14 +9,14 @@ Hardhat console is an interactive shell that enables interactive web3/truffle/et
 Several networks are defined in `hardhat.config.ts`, among which are `scdev` and `local`. 
 To work with `scdev` network, use nodes from [Flare repository](https://gitlab.com/flarenetwork/flare). Local network is hardhat network, that can be started by calling 
 ```
-yarn hardhat node
+pnpm hardhat node
 ```
 While these networks are considered as "external" (ran as local or remote standalone processes to which we can connect), there is also `hardhat` network which is "internal" (in-memory).
 
 Before running hardhat console connecting to external network, be sure that the relevant external network is running on relevant RPC.
 To run the hardhat console type (example for `scdev` network):
 ```
-yarn hardhat console --network scdev
+pnpm hardhat console --network scdev
 ```
 An interactive command line will get started. If network is not provided internal `hardhat` network is assumed.
 
