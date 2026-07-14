@@ -62,27 +62,27 @@ The air dropped native tokens will be distributed gradually through a dedicated 
 ## Getting started
 
 1. Clone this repo.
-2. Run `yarn`.
-3. Compile the solidity code: `yarn c`.
-4. Run basic tests `yarn testHH`.
+2. Run `pnpm install`.
+3. Compile the solidity code: `pnpm compile`.
+4. Run basic tests `pnpm testHH`.
 
 ## Testing
 
-Note: be sure to compile (`yarn c`) after any solidity code changes or if starting a clean project as Typescript stubs need to be generated as part of the compilation.
+Note: be sure to compile (`pnpm compile`) after any solidity code changes or if starting a clean project as Typescript stubs need to be generated as part of the compilation.
 
 Then one can run different types of tests.
 
-- `yarn testHH` - all tests in hardhat environment (includes next three types of tests).
-- `yarn test_unit_hh` - only unit tests in hardhat environment.
-- `yarn test_performance_hh` - only performance tests in hardhat environment.
-- `test_integration_hh` - only integration tests in hardhat environment.
+- `pnpm testHH` - all tests in hardhat environment (includes next three types of tests).
+- `pnpm test_unit_hh` - only unit tests in hardhat environment.
+- `pnpm test_performance_hh` - only performance tests in hardhat environment.
+- `pnpm test_integration_hh` - only integration tests in hardhat environment.
 
 Each of these calls can have additional parameters, namely paths to specific files with tests. Glob expressions can be used, but note that glob expressions are expanded in `bash` to a sequence of space separated paths. Keep in mind that glob expressions in bash containing `/**/` do not by default expand to all files, so one can switch on full expansion by setting `shopt -s globstar`, and if needed, later switch it off with `shopt -u globstar`.
 
 Some parts of the code can only be tested against a "real" Flare block chain which adds some special features on top of the regular EVM. Any test below that has `HH` in the script name will run against an auto-launched hardhat chain. Some tests can only run against a Flare chain.
 A few options exist for running a Flare chain, with the simplest one described above.
 
-To check test coverage run `yarn cov`.
+To check test coverage run `pnpm cov`.
 
 ## Running with Flare local chain
 

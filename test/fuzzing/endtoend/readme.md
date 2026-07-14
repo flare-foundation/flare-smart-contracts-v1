@@ -2,11 +2,11 @@
 
 Run end-to-end fuzzing with command
 
-    yarn test_fuzzing_endtoend
+    pnpm test_fuzzing_endtoend
     
 Parameters can be passed via environment variables (tests cannot take command line args, so this was simplest), e.g.
 
-    LOOPS=1000 yarn test_fuzzing_endtoend
+    LOOPS=1000 pnpm test_fuzzing_endtoend
     
 ## Parameters
 
