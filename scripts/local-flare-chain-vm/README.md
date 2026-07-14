@@ -6,13 +6,13 @@ On Mac OS use default virtualization driver `hyperkit`. It is possible to use `v
 
 ## Usage
 - Install multipass https://multipass.run/
-- Run `yarn vm_launch`. Wait for about 2 minutes.
-- Log onto VM shell: `yarn vm_shell`. Run `./launch.sh`. For the first time wait about 2 mins for GO files of Flare Network to compile and run. When 4 network nodes are run one cen use network. To stop network press any button. Keep this console (*console1*) open while testing. 
-- Testing. Open another VM shell: `yarn vm-shell`,  call this console *console2*. Move to `cd flare-smart-contracts`. This is the mounted GIT repo from the host, the same one as you are entering from into the VM shell. To run time shifted network tests run `yarn testTimeShift`. To run time waiting network tests run `yarn testTimeWait`
+- Run `pnpm vm_launch`. Wait for about 2 minutes.
+- Log onto VM shell: `pnpm vm_shell`. Run `./launch.sh`. For the first time wait about 2 mins for GO files of Flare Network to compile and run. When 4 network nodes are run one cen use network. To stop network press any button. Keep this console (*console1*) open while testing. 
+- Testing. Open another VM shell: `pnpm vm-shell`,  call this console *console2*. Move to `cd flare-smart-contracts`. This is the mounted GIT repo from the host, the same one as you are entering from into the VM shell. To run time shifted network tests run `pnpm testTimeShift`. To run time waiting network tests run `pnpm testTimeWait`
 - The adapted tests (e.g. FTSOMedian.ts) should work. Other tests will be adapted eventually.
-- To stop testing and exiting VM: `exit` *console2*. Then press any key in *console1* and `exit`. Upon the exit, run `yarn vm_stop` which shuts down the VM.
-- Later to work again with VM, just run `yarn vm_start` and repeate the steps for initializing *console1* and *console2*.
-- To delete VM from the system, first stop VM and then run `yarn vm_purge`.
+- To stop testing and exiting VM: `exit` *console2*. Then press any key in *console1* and `exit`. Upon the exit, run `pnpm vm_stop` which shuts down the VM.
+- Later to work again with VM, just run `pnpm vm_start` and repeate the steps for initializing *console1* and *console2*.
+- To delete VM from the system, first stop VM and then run `pnpm vm_purge`.
 
 ## Technical details
 For time shifts and testing on the real network two conditions have to be meet.
