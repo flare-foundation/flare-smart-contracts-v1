@@ -41,13 +41,13 @@ Calculations related to price epoch finalization and reward distribution are not
 
 ## Getting Started
 
-1. Install `npm` and `npx`.
-1. Initialize project in empty directory `npm init -y`.
-1. Install the package: `npm i @flarenetwork/ftso_price_provider_kick_off_package --save-dev`.
-1. Run `npx flare-cli` which overwrites current package with flare package data and contracts.
-1. Run: `yarn`.
-1. Compile the Solidity code: `yarn c`.
-1. Run basic tests: `yarn test`.
+1. Install `pnpm`.
+2. Initialize the project in an empty directory: `pnpm init`.
+3. Install the package: `pnpm add -D @flarenetwork/ftso_price_provider_kick_off_package`.
+4. Run `pnpm dlx flare-cli` which overwrites the current package with flare package data and contracts.
+5. Run: `pnpm install`.
+6. Compile the Solidity code: `pnpm compile`.
+7. Run basic tests: `pnpm test`.
 
 ## Package Structure
 
@@ -135,7 +135,7 @@ Underlying `FTSO` contract for this symbol might be upgraded with new functional
 ## Basic Tests
 
 Unit tests that showcase basic price provider workflow and possible errors are located in [test/unit/ftso/priceProviderMockContracts/priceProviderMockContracts.ts](test/unit/ftso/priceProviderMockContracts/priceProviderMockContracts.ts).
-Unit tests can be run with `yarn test`.
+Unit tests can be run with `pnpm test`.
 
 Unit tests test a few simple scenarios:
 
@@ -150,7 +150,7 @@ Price provider must first request whitelisting, then submit the price hash, wait
 
 ### Local Hardhat node
 
-Running `yarn hh_node` spins up a [Hardhat] node on localhost and deploys the mock contracts.
+Running `pnpm hh_node` spins up a [Hardhat] node on localhost and deploys the mock contracts.
 The setup outputs the address of deployed `PriceSubmitter` contract and keeps the node alive.
 Hardhat console can then be used to connect to the localhost network and interact with deployed contracts locally in real time.
 
@@ -161,7 +161,7 @@ It acts as a simple price provider and goes through whole process.
 - Whitelist current address
 - Submit and reveal prices in a loop
 
-Script can be run using `yarn starter`.
+Script can be run using `pnpm starter`.
 Currently the submitted prices are acquired randomly, but you are welcome to change
 `getPrice` function and implement more complicated logic.
 
@@ -169,7 +169,7 @@ Be careful local hardhat node can experience "time drift" relative to the comput
 
 ### Testing on [Remix]
 
-<!-- under construction Mock contracts in [contracts/ftso/priceProviderMockContracts/priceProviderMockFtso.sol](contracts/ftso/priceProviderMockContracts/priceProviderMockFtso.sol) can be flattened with `yarn flatten_mock_scripts`. -->
+<!-- under construction Mock contracts in [contracts/ftso/priceProviderMockContracts/priceProviderMockFtso.sol](contracts/ftso/priceProviderMockContracts/priceProviderMockFtso.sol) can be flattened with `pnpm flatten_mock_scripts`. -->
 Flattened contract in [flattened/contracts/ftso/priceProviderMockContracts/PriceProviderMockContracts.sol](flattened/contracts/ftso/priceProviderMockContracts/PriceProviderMockContracts.sol) can be deployed on Remix, or similar service, and tested.
 <!-- For testing on Remix enable optimization and remove multiple `pragma abicoder v2;` commands. -->
 

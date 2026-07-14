@@ -19,8 +19,8 @@ export WEB3_API=enabled
     --staking-tls-cert-file=./scripts/configs/local/NodeID-5dDZXn99LCkDoEi6t9gTitZuQmhokxQTc.crt \
     --staking-tls-key-file=./scripts/configs/local/NodeID-5dDZXn99LCkDoEi6t9gTitZuQmhokxQTc.key \
     --db-type=leveldb \
-    --log-level=debug 2>&1 > ./logs/node1/console.log &
-NODE_1_PID=`echo $!`
+    --log-level=debug > ./logs/node1/console.log 2>&1 &
+NODE_1_PID=$!
 sleep 3
 
 printf "Launching node 2 at 127.0.0.1:9660\n"
@@ -37,8 +37,8 @@ export WEB3_API=enabled
     --staking-tls-cert-file=./scripts/configs/local/NodeID-AQghDJTU3zuQj73itPtfTZz6CxsTQVD3R.crt \
     --staking-tls-key-file=./scripts/configs/local/NodeID-AQghDJTU3zuQj73itPtfTZz6CxsTQVD3R.key \
     --db-type=leveldb \
-    --log-level=debug 2>&1 > ./logs/node2/console.log &
-NODE_2_PID=`echo $!`
+    --log-level=debug > ./logs/node2/console.log 2>&1 &
+NODE_2_PID=$!
 sleep 3
 
 printf "Launching node 3 at 127.0.0.1:9670\n"
@@ -55,8 +55,8 @@ export WEB3_API=enabled
     --staking-tls-cert-file=./scripts/configs/local/NodeID-EkH8wyEshzEQBToAdR7Fexxcj9rrmEEHZ.crt \
     --staking-tls-key-file=./scripts/configs/local/NodeID-EkH8wyEshzEQBToAdR7Fexxcj9rrmEEHZ.key \
     --db-type=leveldb \
-    --log-level=debug 2>&1 > ./logs/node3/console.log &
-NODE_3_PID=`echo $!`
+    --log-level=debug > ./logs/node3/console.log 2>&1 &
+NODE_3_PID=$!
 sleep 3
 
 printf "Launching node 4 at 127.0.0.1:9680\n"
@@ -73,8 +73,8 @@ export WEB3_API=enabled
     --staking-tls-cert-file=./scripts/configs/local/NodeID-FPAwqHjs8Mw8Cuki5bkm3vSVisZr8t2Lu.crt \
     --staking-tls-key-file=./scripts/configs/local/NodeID-FPAwqHjs8Mw8Cuki5bkm3vSVisZr8t2Lu.key \
     --db-type=leveldb \
-    --log-level=debug 2>&1 > ./logs/node4/console.log &
-NODE_4_PID=`echo $!`
+    --log-level=debug > ./logs/node4/console.log 2>&1 &
+NODE_4_PID=$!
 sleep 3
 
 printf "Launching node 5 at 127.0.0.1:9690\n"
@@ -91,14 +91,14 @@ export WEB3_API=enabled
     --staking-tls-cert-file=./scripts/configs/local/NodeID-HaZ4HpanjndqSuN252chFsTysmdND5meA.crt \
     --staking-tls-key-file=./scripts/configs/local/NodeID-HaZ4HpanjndqSuN252chFsTysmdND5meA.key \
     --db-type=leveldb \
-    --log-level=debug 2>&1 > ./logs/node5/console.log &
-NODE_5_PID=`echo $!`
+    --log-level=debug > ./logs/node5/console.log 2>&1 &
+NODE_5_PID=$!
 sleep 3
 
 printf "\n"
-read -p "Press enter to kill all nodes"
-kill $NODE_1_PID
-kill $NODE_2_PID
-kill $NODE_3_PID
-kill $NODE_4_PID
-kill $NODE_5_PID
+read -r -p "Press enter to kill all nodes"
+kill "$NODE_1_PID"
+kill "$NODE_2_PID"
+kill "$NODE_3_PID"
+kill "$NODE_4_PID"
+kill "$NODE_5_PID"

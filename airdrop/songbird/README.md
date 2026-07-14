@@ -22,7 +22,7 @@ Run the pre-transaction verification script. With this we check
 
 
 Run the script with 
-`yarn test deployment/test/initialVerificationTest.ts`
+`pnpm test deployment/test/initialVerificationTest.ts`
 
 ## Step4: create unsigned transactions
 
@@ -31,7 +31,7 @@ Make sure .env file has all parameters you will need
 AIRDROP_PUBLIC_KEY="<public key of airdrop transaction sender address>"
 ```
 
-Run `yarn create_airdrop_transactions` script
+Run `pnpm create_airdrop_transactions` script
 
 ```
 Options:
@@ -120,7 +120,7 @@ AIRDROP_PRIVATE_KEY=<private key of airdrop transaction sender address>
 ```
 
 do this by running
-`yarn sign_airdrop_transactions`
+`pnpm sign_airdrop_transactions`
 
 ```
 Options:
@@ -144,7 +144,7 @@ WEB3_PROVIDER_URL=<link to web3 rpc endpoint>
 ```
 
 do this by running
-`yarn send_airdrop_transactions`
+`pnpm send_airdrop_transactions`
 
 ## Step7: Airdrop verification final tests
 
@@ -157,7 +157,7 @@ We run the verification script to check:
 
 
 this is done with
-`yarn test deployment/test/airdropDataTest.ts`
+`pnpm test deployment/test/airdropDataTest.ts`
 
 ## In case of fail
 If any step does not work, we nuke the network and start over

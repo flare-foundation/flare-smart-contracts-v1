@@ -650,13 +650,13 @@ export function checkVotePricesSort(result: EpochResult) {
 ////////////////////////////////////////////////////////////
 
 /**
- * Account generation from Node.js (usually we `yarn account n` is called from shell)
+ * Account generation from Node.js (usually we `pnpm account n` is called from shell)
  * @param n 
  * @returns 
  */
 export async function generateAccounts(n: number) {
     return new Promise((resolve: any, reject: any) => {
-        exec(`yarn accounts ${ n }`, (error: any, stdout: any, stderr: any) => {
+        exec(`pnpm accounts ${ n }`, (error: any, stdout: any, stderr: any) => {
             if (error) {
                 reject(error);
                 return;

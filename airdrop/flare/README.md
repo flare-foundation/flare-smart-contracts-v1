@@ -1,7 +1,7 @@
 # Airdrop process
 
 This process is run by:
-`yarn flare_airdrop` 
+`pnpm flare_airdrop` 
 ## Step 1: export.csv from Flare Foundation
 
 Towo labs provides into Flare SC repo into `airdrop/flare/data/` folder:
@@ -19,7 +19,7 @@ Run the pre-transaction verification script. With this we check
 - Genesis block hash is valid
 
 Run the test script with 
-`yarn test_initial_airdrop_state_mainnet`
+`pnpm test_initial_airdrop_state_mainnet`
 
 ## Step4: create unsigned transactions
 
@@ -30,7 +30,7 @@ DEPLOYER_PUBLIC_KEY=<DeployerPublicKey>
 WEB3_PROVIDER_URL=<link to web3 rpc endpoint>
 ```
 
-Run `yarn create_airdrop_transactions_mainnet` script
+Run `pnpm create_airdrop_transactions_mainnet` script
 
 ```
 Options:
@@ -111,7 +111,7 @@ Its recommended to do this on a secure machine
 
 
 do this by running
-`yarn sign_airdrop_transactions_mainnet`
+`pnpm sign_airdrop_transactions_mainnet`
 
 ```
 Options:
@@ -135,7 +135,7 @@ WEB3_PROVIDER_URL=<link to web3 rpc endpoint>
 ```
 
 do this by running
-`yarn send_airdrop_transactions_mainnet`
+`pnpm send_airdrop_transactions_mainnet`
 
 ## Step7: Airdrop verification final tests
 
@@ -148,7 +148,7 @@ We run the verification script to check:
 
 
 this is done with
-`yarn test_final_airdrop_state_mainnet`
+`pnpm test_final_airdrop_state_mainnet`
 
 ## In case of fail
 If any step does not work, we nuke the network and start over
