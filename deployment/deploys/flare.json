@@ -37,7 +37,7 @@
   {
     "name": "Inflation",
     "contractName": "Inflation.sol",
-    "address": "0x4d92ba6D90DF99f7F25dc5B53b1697957e02A02c"
+    "address": "0x5317e0ae67cdFE6039ad38b087dbFDa983acFCba"
   },
   {
     "name": "Supply",
@@ -132,7 +132,7 @@
   {
     "name": "PChainStakeMirrorVerifier",
     "contractName": "PChainStakeMirrorVerifier.sol",
-    "address": "0x004fb0fabEaF988EBec7098872031175301246a2"
+    "address": "0x65072543eEDcd859768f6221D0802491DCc26b9c"
   },
   {
     "name": "PChainStakeMirror",
