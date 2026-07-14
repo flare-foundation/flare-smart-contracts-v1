@@ -2,15 +2,15 @@
 
 Run VPToken fuzzing witch command
 
-    yarn test_fuzzing_token
+    pnpm test_fuzzing_token
     
 Parameters can be passed via environment variables (tests cannot take command line args, so this was simplest), e.g.
 
-    REPLAY=true yarn test_fuzzing_token
+    REPLAY=true pnpm test_fuzzing_token
     
 (replays the last test run) or
 
-    LENGTH=30000 yarn test_fuzzing_token
+    LENGTH=30000 pnpm test_fuzzing_token
     
 (sets the test run length i.e. the number of actions to run).
 

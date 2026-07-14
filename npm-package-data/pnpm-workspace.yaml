@@ -1,0 +1,25 @@
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+trustPolicyExclude:
+  - 'semver@5.7.2 || 6.3.1'
+  - 'detect-port@1.6.1'
+  - 'graphql@15.10.2'
+overrides:
+  "ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git": "0.6.8"
+allowBuilds:
+  '@apollo/protobufjs': false
+  bufferutil: false
+  core-js: false
+  core-js-pure: false
+  es5-ext: false
+  keccak: false
+  leveldown: false
+  node-hid: false
+  postinstall-postinstall: false
+  secp256k1: false
+  truffle: false
+  usb: false
+  utf-8-validate: false
+  web3: false
+  web3-bzz: false
+  web3-shh: false

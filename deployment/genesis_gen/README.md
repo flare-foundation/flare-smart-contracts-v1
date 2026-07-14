@@ -15,9 +15,9 @@ non-serialized C-chain genesis configuration. The tool takes the two files and t
 ## Preparing configurations
 
 - Set this repo to the branch on which you have the state of contracts that you want to test.
-- Run `yarn` and `yarn c` to compile the contracts.
+- Run `pnpm install` and `pnpm compile` to compile the contracts.
 - Check the relevant configurations in `deployment/genesis_gen/configs/<network_label>`.
-- `yarn genesis_json -n <network_label>`. Default network label is `scdev`.
+- `pnpm genesis_json -n <network_label>`. Default network label is `scdev`.
 
 The JSON file for genesis will be generated as `deployment/genesis_gen/generated/<network_label>.json`.
 
@@ -43,7 +43,7 @@ Below is an example for running custom JSON genesis config for the network `scde
 - Take care of killing the hanging node processes before running the network. Check the processes with `ps aux | grep build/flare`. You can also check if processes are runing on port by using `lsof -i :9650`
 - When nodes are running, check the health of the first node by using `curl http://127.0.0.1:9650/ext/health`
 - One can test genesis contract for example as follows (for `scdev` network):
-  - first run `yarn hardhat console --network scdev`,
+  - first run `pnpm hardhat console --network scdev`,
   - then run the following code snippets:
 ```
 const FlareDaemon = artifacts.require("FlareDaemon");

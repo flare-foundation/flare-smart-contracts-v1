@@ -1,6 +1,6 @@
 // For use with hardhat console
 // Run hardhat console with:
-// yarn hardhat console --network staging
+// pnpm hardhat console --network staging
 
 // Helper functions
 
