@@ -75,16 +75,17 @@ build-smart-contracts:
       - typechain-web3
     expire_in: 1 week
 
-# todo: migrate to pnpm
 test-scdev-daemon:
   extends: .test
   image: timivesel/flare-scdev:1.3
   before_script:
-    - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-    - apt-get update
-    - apt-get install -y git
+    - rm -f /etc/apt/sources.list.d/yarn.list
+    - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
+    - apt-get install -y git nodejs
+    - corepack enable
+    - pnpm install --frozen-lockfile
   script:
-    - yarn hardhat test --network scdev test/scdev/system/FlareDaemon.ts
+    - pnpm hardhat test --network scdev test/scdev/system/FlareDaemon.ts
 
 test-unit:
   extends: .test
