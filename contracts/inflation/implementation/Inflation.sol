@@ -12,7 +12,6 @@ import "../lib/InflationRewardServices.sol";
 import "../interface/IIPreInflationCalculation.sol";
 import "../interface/IIInflationAllocation.sol";
 import "../interface/IISupply.sol";
-import "../interface/IIInflationV1.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../utils/implementation/SafePct.sol";
 
@@ -50,12 +49,13 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
     /// The last time inflation was authorized.
     uint256 public lastAuthorizationTs;
     // A topup configuration for a contract receiving inflation.
-    mapping(IIInflationReceiver => TopupConfiguration)
-        internal topupConfigurations;
+    mapping(IIInflationReceiver => TopupConfiguration) internal topupConfigurations;
     /// Do not start inflation time slots before this, in seconds after UNIX epoch.
     uint256 immutable public rewardEpochStartTs;
     /// When the first reward epoch was started, in seconds after UNIX epoch.
     uint256 public rewardEpochStartedTs;
+    /// The maximum annual inflation, used to cap recognized inflation. Settable by governance.
+    uint256 public maxAnnualInflationWei;
 
     // Constants
     string internal constant ERR_IS_ZERO = "address is 0";
@@ -79,6 +79,8 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
     event InflationRewardServiceTopupRequestReceived(IIInflationReceiver inflationReceiver, uint256 amountWei);
     event SupplySet(IISupply oldSupply, IISupply newSupply);
     event TopupConfigurationSet(TopupConfiguration topupConfiguration);
+    event MaxAnnualInflationSet(uint256 maxAnnualInflationWei);
+    event InitialDataSet(address oldInflation);
     event NewTimeSlotInitialized(
         uint256 startTimeStamp,
         uint256 endTimeStamp,
@@ -95,67 +97,84 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         address _governance,
         FlareDaemon _flareDaemon,
         address _addressUpdater,
-        uint256 _rewardEpochStartTs
+        uint256 _rewardEpochStartTs,
+        uint256 _maxAnnualInflationWei
     )
         GovernedAndFlareDaemonized(_governance, _flareDaemon)
         AddressUpdatable(_addressUpdater)
     {
         rewardEpochStartTs = _rewardEpochStartTs;
+        _setMaxAnnualInflation(_maxAnnualInflationWei);
     }
 
     /**
-     * Used to copy data from old inflation contract.
+     * Set the maximum annual inflation used to cap recognized inflation.
      *
      * Only governance can call.
-     * @param _oldInflation Address of old inflation.
-     * @param _noOfAnnums Number of annums in old inflation.
+     * @param _maxAnnualInflationWei The maximum annual inflation in wei.
+     */
+    function setMaxAnnualInflation(uint256 _maxAnnualInflationWei) external onlyGovernance {
+        _setMaxAnnualInflation(_maxAnnualInflationWei);
+    }
+
+    /**
+     * Used to copy data from the (currently deployed) old inflation contract.
+     *
+     * Only governance can call.
+     * @param _oldInflation Address of the old inflation contract.
      */
     function setInitialData(
-        IIInflationV1 _oldInflation,
-        uint256 _noOfAnnums
+        Inflation _oldInflation
     )
         external
         onlyImmediateGovernance
     {
         require(lastAuthorizationTs == 0, "already initialized");
+        // the new contract must continue from the same reward epoch start, otherwise daemonize
+        // would skip processing (block.timestamp < rewardEpochStartTs) and inflation would halt
+        require(rewardEpochStartTs == _oldInflation.rewardEpochStartTs(), "reward epoch start mismatch");
         lastAuthorizationTs = _oldInflation.lastAuthorizationTs();
         rewardEpochStartedTs = _oldInflation.rewardEpochStartedTs();
 
-        uint256 totalAuthorizedInflationWeiTemp = 0;
-        uint256 totalInflationTopupRequestedWeiTemp = 0;
-        uint256 totalInflationTopupDistributedWeiTemp = 0;
-        for (uint256 i = 0; i < _noOfAnnums; i++) {
-            IIInflationV1.InflationAnnumState memory annum = _oldInflation.getAnnum(i);
-            for (uint256 j = 0; j < annum.rewardServices.rewardServices.length; j++) {
-                IIInflationV1.RewardServiceState memory oldRewardService = annum.rewardServices.rewardServices[j];
-                (bool found, uint256 index) = rewardServices.findRewardService(oldRewardService.inflationReceiver);
-                InflationRewardServices.RewardService storage rewardService;
-                if (found) { // Get the existing reward service
-                    rewardService = rewardServices.rewardServices[index];
-                } else { // Initialize a new reward service
-                    rewardService = rewardServices.rewardServices.push();
-                    rewardService.initialize(oldRewardService.inflationReceiver);
-                }
-                rewardService.lastDailyAuthorizedInflationWei = oldRewardService.lastDailyAuthorizedInflationWei;
-                rewardService.authorizedInflationWei += oldRewardService.authorizedInflationWei;
-                rewardService.inflationTopupRequestedWei += oldRewardService.inflationTopupRequestedWei;
-                rewardService.inflationTopupDistributedWei += oldRewardService.inflationTopupReceivedWei;
+        // Copy totals across all time slots.
+        (
+            totalAuthorizedInflationWei,
+            totalInflationTopupRequestedWei,
+            totalInflationTopupDistributedWei,
+            totalRecognizedInflationWei
+        ) = _oldInflation.getTotals();
 
-                totalAuthorizedInflationWeiTemp += oldRewardService.authorizedInflationWei;
-                totalInflationTopupRequestedWeiTemp += oldRewardService.inflationTopupRequestedWei;
-                totalInflationTopupDistributedWeiTemp += oldRewardService.inflationTopupReceivedWei;
+        // Copy reward services and their topup configurations.
+        InflationRewardServices.RewardService[] memory oldRewardServices = _oldInflation.getRewardServices();
+        for (uint256 i = 0; i < oldRewardServices.length; i++) {
+            IIInflationReceiver inflationReceiver = oldRewardServices[i].inflationReceiver;
+            InflationRewardServices.RewardService storage rewardService = rewardServices.rewardServices.push();
+            rewardService.inflationReceiver = inflationReceiver;
+            rewardService.authorizedInflationWei = oldRewardServices[i].authorizedInflationWei;
+            rewardService.lastDailyAuthorizedInflationWei = oldRewardServices[i].lastDailyAuthorizedInflationWei;
+            rewardService.inflationTopupRequestedWei = oldRewardServices[i].inflationTopupRequestedWei;
+            rewardService.inflationTopupDistributedWei = oldRewardServices[i].inflationTopupDistributedWei;
+
+            // Copy the topup configuration if it was explicitly configured (otherwise the default applies).
+            TopupConfiguration memory topupConfiguration = _oldInflation.getTopupConfiguration(inflationReceiver);
+            if (topupConfiguration.configured) {
+                topupConfigurations[inflationReceiver] = topupConfiguration;
             }
         }
-        totalAuthorizedInflationWei = totalAuthorizedInflationWeiTemp;
-        totalInflationTopupRequestedWei = totalInflationTopupRequestedWeiTemp;
-        totalInflationTopupDistributedWei = totalInflationTopupDistributedWeiTemp;
-        totalRecognizedInflationWei = totalAuthorizedInflationWeiTemp;
 
-        // add cumulative time slot
-        InflationTimeSlots.InflationTimeSlot storage inflationTimeSlot = inflationTimeSlots.inflationTimeSlots.push();
-        inflationTimeSlot.startTimeStamp = rewardEpochStartedTs;
-        inflationTimeSlot.recognizedInflationWei = totalAuthorizedInflationWeiTemp;
-        inflationTimeSlot.endTimeStamp = lastAuthorizationTs + AUTHORIZE_TIME_FRAME_SEC - 1;
+        // Copy all time slots, preserving the current time slot pointer.
+        uint256 currentTimeSlotId = _oldInflation.getCurrentTimeSlotId();
+        for (uint256 i = 0; i <= currentTimeSlotId; i++) {
+            InflationTimeSlots.InflationTimeSlot memory oldTimeSlot = _oldInflation.getTimeSlot(i);
+            InflationTimeSlots.InflationTimeSlot storage inflationTimeSlot =
+                inflationTimeSlots.inflationTimeSlots.push();
+            inflationTimeSlot.startTimeStamp = oldTimeSlot.startTimeStamp;
+            inflationTimeSlot.recognizedInflationWei = oldTimeSlot.recognizedInflationWei;
+            inflationTimeSlot.endTimeStamp = oldTimeSlot.endTimeStamp;
+        }
+        inflationTimeSlots.currentTimeSlot = currentTimeSlotId;
+
+        emit InitialDataSet(address(_oldInflation));
     }
 
     /**
@@ -447,15 +466,22 @@ contract Inflation is IInflationGenesis, GovernedAndFlareDaemonized, IFlareDaemo
         emit InflationAllocationSet(inflationAllocation);
     }
 
+    function _setMaxAnnualInflation(uint256 _maxAnnualInflationWei) internal {
+        require(_maxAnnualInflationWei > 0, "max annual inflation zero");
+        maxAnnualInflationWei = _maxAnnualInflationWei;
+        emit MaxAnnualInflationSet(_maxAnnualInflationWei);
+    }
+
     function _initNewTimeSlot(uint256 startTs) internal {
         supply.updateCirculatingSupply();
-        uint256 inflatableSupply = supply.getInflatableBalance();
+        uint256 inflatableSupply = supply.getCirculatingSupplyAt(block.number);
 
         // slither-disable-start uninitialized-local
         //slither-disable-next-line unused-return
         try inflationAllocation.getTimeSlotPercentageBips() returns(uint256 timeSlotPercentBips) {
             InflationTimeSlots.InflationTimeSlot memory inflationTimeSlot =
-                inflationTimeSlots.initializeNewTimeSlot(startTs, inflatableSupply, timeSlotPercentBips);
+                inflationTimeSlots.initializeNewTimeSlot(
+                    startTs, inflatableSupply, timeSlotPercentBips, maxAnnualInflationWei);
 
             // Accumulate total recognized inflation across time slots
             totalRecognizedInflationWei = totalRecognizedInflationWei.add(inflationTimeSlot.recognizedInflationWei);

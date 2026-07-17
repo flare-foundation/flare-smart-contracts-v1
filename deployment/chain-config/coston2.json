@@ -29,6 +29,7 @@
     "incentivePoolWei": "20 000 000 000 000 000 000 000 000 000",
     "distributionTotalEntitlementWei": "1 100 000 000 000 000 000 000 000 000",
     "scheduledInflationPercentageBIPS": [1],
+    "maxAnnualInflationNAT": 3000000000,
     "rewardEpochDurationSeconds": 3600,
     "revealEpochDurationSeconds": 90,
     "priceEpochDurationSeconds": 180,
