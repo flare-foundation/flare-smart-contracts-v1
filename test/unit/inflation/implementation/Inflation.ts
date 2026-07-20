@@ -51,6 +51,8 @@ enum TopupType { FACTOROFDAILYAUTHORIZED, ALLAUTHORIZED }
 const DEFAULT_TOPUP_FACTOR_X100 = 120;
 
 const BN = web3.utils.toBN;
+// large cap so recognized inflation is never capped, unless a test overrides it
+const MAX_ANNUAL_INFLATION = BN(10).pow(BN(40));
 const getExpectedBalance = web3.utils.sha3("getExpectedBalance()")!.slice(0, 10); // first 4 bytes is function selector
 
 contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, async accounts => {
@@ -131,30 +133,33 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, asyn
     // Get the timestamp for the just mined block
     startTs = await time.latest();
 
-    const getInflatableBalance = web3.utils.sha3("getInflatableBalance()")!.slice(0, 10); // first 4 bytes is function selector
+    const getCirculatingSupplyAt = web3.utils.sha3("getCirculatingSupplyAt(uint256)")!.slice(0, 10); // first 4 bytes is function selector
     const getTimeSlotPercentageBips = web3.utils.sha3("getTimeSlotPercentageBips()")!.slice(0, 10);
-    await mockSupply.givenMethodReturnUint(getInflatableBalance, supply);
+    await mockSupply.givenMethodReturnUint(getCirculatingSupplyAt, supply);
     await mockInflationPercentageProvider.givenMethodReturnUint(getTimeSlotPercentageBips, inflationBips);
 
     inflation = await Inflation.new(
       accounts[0],
       mockFlareDaemon.address,
       ADDRESS_UPDATER,
-      0
+      0,
+      MAX_ANNUAL_INFLATION
     );
 
     inflation1 = await Inflation.new(
       accounts[0],
       mockFlareDaemon1.address,
       ADDRESS_UPDATER,
-      0
+      0,
+      MAX_ANNUAL_INFLATION
     );
 
     inflation2 = await Inflation.new(
       accounts[0],
       mockFlareDaemon2.address,
       ADDRESS_UPDATER,
-      0
+      0,
+      MAX_ANNUAL_INFLATION
     );
 
     inflationAllocation = await InflationAllocation.new(
@@ -225,69 +230,147 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, asyn
       await oldInflation.givenMethodReturnUint(inflation.contract.methods.lastAuthorizationTs().encodeABI(), lastAuthorizationTs);
       await oldInflation.givenMethodReturnUint(inflation.contract.methods.rewardEpochStartedTs().encodeABI(), rewardEpochStartedTs);
 
+      // getTotals() => (authorized, topupRequested, topupDistributed, recognized)
+      const totals = web3.eth.abi.encodeParameters(
+        ["uint256", "uint256", "uint256", "uint256"], [27, 18, 17, 30]);
+      await oldInflation.givenMethodReturn(inflation.contract.methods.getTotals().encodeABI(), totals);
+
+      // getRewardServices() => RewardService[] (inflationReceiver, authorized, lastDailyAuthorized, topupRequested, topupDistributed)
       const receiver1 = await MockContract.new();
       const receiver2 = await MockContract.new();
-      const receiver3 = await MockContract.new();
-      const annum0 = web3.eth.abi.encodeParameters(
-        [ "uint256", "uint256", "uint256", "tuple(tuple(address, uint256, uint256, uint256, uint256, uint256)[], uint256, uint256, uint256, uint256)"],
-        [ 0, 0, 0, [[[receiver1.address, 5, 2, 4, 4, 4], [receiver2.address, 6, 1, 5, 5, 5]], 0, 0, 0, 0] ]);
-      await oldInflation.givenCalldataReturn(web3.eth.abi.encodeFunctionCall({type: "function", name: "getAnnum", inputs: [{name: "_index", type: "uint256"}]} as AbiItem, ["0"]), annum0);
-      const annum1 = web3.eth.abi.encodeParameters(
-        [ "uint256", "uint256", "uint256", "tuple(tuple(address, uint256, uint256, uint256, uint256, uint256)[], uint256, uint256, uint256, uint256)"],
-        [ 0, 0, 0, [[[receiver2.address, 9, 2, 6, 6, 6], [receiver3.address, 7, 3, 3, 2, 2]], 0, 0, 0, 0] ]);
-      await oldInflation.givenCalldataReturn(web3.eth.abi.encodeFunctionCall({type: "function", name: "getAnnum", inputs: [{name: "_index", type: "uint256"}]} as AbiItem, ["1"]), annum1);
+      const rewardServices = web3.eth.abi.encodeParameters(
+        ["tuple(address,uint256,uint256,uint256,uint256)[]"],
+        [[[receiver1.address, 5, 2, 4, 4], [receiver2.address, 15, 2, 11, 11]]]);
+      await oldInflation.givenMethodReturn(inflation.contract.methods.getRewardServices().encodeABI(), rewardServices);
+
+      // getTopupConfiguration(receiver) => (topupType, topupFactorX100, configured)
+      // receiver1 has an explicitly configured topup configuration, receiver2 does not (defaults apply)
+      const topupConfig1 = web3.eth.abi.encodeParameters(
+        ["tuple(uint8,uint256,bool)"], [[TopupType.ALLAUTHORIZED, 0, true]]);
+      await oldInflation.givenCalldataReturn(inflation.contract.methods.getTopupConfiguration(receiver1.address).encodeABI(), topupConfig1);
+      const topupConfig2 = web3.eth.abi.encodeParameters(
+        ["tuple(uint8,uint256,bool)"], [[TopupType.FACTOROFDAILYAUTHORIZED, 0, false]]);
+      await oldInflation.givenCalldataReturn(inflation.contract.methods.getTopupConfiguration(receiver2.address).encodeABI(), topupConfig2);
+
+      // getCurrentTimeSlotId() => 1 (two time slots, indices 0 and 1)
+      await oldInflation.givenMethodReturnUint(inflation.contract.methods.getCurrentTimeSlotId().encodeABI(), 1);
+
+      // getTimeSlot(i) => (recognizedInflationWei, startTimeStamp, endTimeStamp)
+      const slot0End = now.subn(500);
+      const slot1Start = now.subn(499);
+      const slot1End = lastAuthorizationTs.addn(24 * 3600 - 1);
+      const timeSlot0 = web3.eth.abi.encodeParameters(
+        ["tuple(uint256,uint256,uint256)"], [[10, rewardEpochStartedTs.toString(), slot0End.toString()]]);
+      await oldInflation.givenCalldataReturn(inflation.contract.methods.getTimeSlot(0).encodeABI(), timeSlot0);
+      const timeSlot1 = web3.eth.abi.encodeParameters(
+        ["tuple(uint256,uint256,uint256)"], [[20, slot1Start.toString(), slot1End.toString()]]);
+      await oldInflation.givenCalldataReturn(inflation.contract.methods.getTimeSlot(1).encodeABI(), timeSlot1);
 
       // Act
-      await inflation.setInitialData(oldInflation.address, 2);
+      const tx = await inflation.setInitialData(oldInflation.address);
       // Assert
+      expectEvent(tx, "InitialDataSet", { oldInflation: oldInflation.address });
       const { 0: totalAuthorizedInflation, 1: totalInflationTopupRequested, 2: totalInflationTopupDistributed, 3: totalRecognizedInflationWei } = await inflation.getTotals();
       assert.equal(totalAuthorizedInflation.toNumber(), 27);
       assert.equal(totalInflationTopupRequested.toNumber(), 18);
       assert.equal(totalInflationTopupDistributed.toNumber(), 17);
-      assert.equal(totalRecognizedInflationWei.toNumber(), 27);
+      assert.equal(totalRecognizedInflationWei.toNumber(), 30);
 
       const rewardServicesState = await inflation.getRewardServices() as any;
-      assert.equal(rewardServicesState.length, 3);
+      assert.equal(rewardServicesState.length, 2);
 
-      // only in first annum
       assert.equal(rewardServicesState[0].inflationReceiver, receiver1.address);
       assert.equal(rewardServicesState[0].authorizedInflationWei, 5);
       assert.equal(rewardServicesState[0].lastDailyAuthorizedInflationWei, 2);
       assert.equal(rewardServicesState[0].inflationTopupRequestedWei, 4);
       assert.equal(rewardServicesState[0].inflationTopupDistributedWei, 4);
 
-      // in both annums
       assert.equal(rewardServicesState[1].inflationReceiver, receiver2.address);
       assert.equal(rewardServicesState[1].authorizedInflationWei, 15);
       assert.equal(rewardServicesState[1].lastDailyAuthorizedInflationWei, 2);
       assert.equal(rewardServicesState[1].inflationTopupRequestedWei, 11);
       assert.equal(rewardServicesState[1].inflationTopupDistributedWei, 11);
 
-      // only in second annum
-      assert.equal(rewardServicesState[2].inflationReceiver, receiver3.address);
-      assert.equal(rewardServicesState[2].authorizedInflationWei, 7);
-      assert.equal(rewardServicesState[2].lastDailyAuthorizedInflationWei, 3);
-      assert.equal(rewardServicesState[2].inflationTopupRequestedWei, 3);
-      assert.equal(rewardServicesState[2].inflationTopupDistributedWei, 2);
+      // configured topup configuration is copied
+      const topupConfiguration1 = await inflation.getTopupConfiguration(receiver1.address);
+      assert.equal(topupConfiguration1.topupType.toString(), TopupType.ALLAUTHORIZED.toString());
+      assert.equal(topupConfiguration1.topupFactorX100.toString(), "0");
+      assert.equal(topupConfiguration1.configured, true);
+      // unconfigured receiver falls back to the default topup configuration
+      const topupConfiguration2 = await inflation.getTopupConfiguration(receiver2.address);
+      assert.equal(topupConfiguration2.topupType.toString(), TopupType.FACTOROFDAILYAUTHORIZED.toString());
+      assert.equal(topupConfiguration2.topupFactorX100.toString(), DEFAULT_TOPUP_FACTOR_X100.toString());
+      assert.equal(topupConfiguration2.configured, false);
 
-      await expectRevert(inflation.setInitialData(oldInflation.address, 2, { from: accounts[2] }), ONLY_GOVERNANCE_MSG);
-      await expectRevert(inflation.setInitialData(oldInflation.address, 2), "already initialized");
+      await expectRevert(inflation.setInitialData(oldInflation.address, { from: accounts[2] }), ONLY_GOVERNANCE_MSG);
+      await expectRevert(inflation.setInitialData(oldInflation.address), "already initialized");
 
+      // All time slots are copied with the current time slot pointer preserved
       const currentTimeSlotId = await inflation.getCurrentTimeSlotId();
-      assert.equal(currentTimeSlotId.toNumber(), 0);
-      const timeSlot = await inflation.getTimeSlot(currentTimeSlotId);
+      assert.equal(currentTimeSlotId.toNumber(), 1);
+      const slot0 = await inflation.getTimeSlot(0);
+      assert.equal(slot0.recognizedInflationWei.toString(), "10");
+      assert.equal(slot0.startTimeStamp.toString(), rewardEpochStartedTs.toString());
+      assert.equal(slot0.endTimeStamp.toString(), slot0End.toString());
+
       const currentTimeSlot = await inflation.getCurrentTimeSlot();
+      assert.equal(currentTimeSlot.recognizedInflationWei.toString(), "20");
+      assert.equal(currentTimeSlot.startTimeStamp.toString(), slot1Start.toString());
+      assert.equal(currentTimeSlot.endTimeStamp.toString(), slot1End.toString());
 
-      assert.equal(timeSlot.recognizedInflationWei.toString(), "27");
-      assert.equal(currentTimeSlot.recognizedInflationWei.toString(), "27");
-      assert.equal(currentTimeSlot.startTimeStamp.toString(), rewardEpochStartedTs.toString());
-      assert.equal(currentTimeSlot.endTimeStamp.toString(), lastAuthorizationTs.addn(24 * 3600 - 1).toString());
-
-      await time.increaseTo(lastAuthorizationTs.addn(24 * 3600 - 2));
-      await mockFlareDaemon.trigger();
-      assert.equal((await inflation.getCurrentTimeSlotId()).toNumber(), 0);
+      // Before the current time slot ends: no new time slot is recognized
+      await time.increaseTo(slot1End.subn(100));
       await mockFlareDaemon.trigger();
       assert.equal((await inflation.getCurrentTimeSlotId()).toNumber(), 1);
+      // After the current time slot ends: a new time slot is recognized
+      await time.increaseTo(slot1End.addn(1));
+      await mockFlareDaemon.trigger();
+      assert.equal((await inflation.getCurrentTimeSlotId()).toNumber(), 2);
+    });
+
+    it("Should revert setting initial data if reward epoch start mismatch", async () => {
+      // Assemble - inflation is deployed with rewardEpochStartTs = 0, mock old to return a different value
+      const oldInflation = await MockContract.new();
+      await oldInflation.givenMethodReturnUint(inflation.contract.methods.rewardEpochStartTs().encodeABI(), 5);
+      // Act + Assert
+      await expectRevert(inflation.setInitialData(oldInflation.address), "reward epoch start mismatch");
+    });
+  });
+
+  describe("max annual inflation", async () => {
+    it("Should not allow zero max annual inflation in constructor", async () => {
+      await expectRevert(Inflation.new(accounts[0], mockFlareDaemon.address, ADDRESS_UPDATER, 0, 0),
+        "max annual inflation zero");
+    });
+
+    it("Should allow governance to set max annual inflation", async () => {
+      const tx = await inflation.setMaxAnnualInflation(123456);
+      assert.equal((await inflation.maxAnnualInflationWei()).toString(), "123456");
+      expectEvent(tx, "MaxAnnualInflationSet", { maxAnnualInflationWei: "123456" });
+    });
+
+    it("Should not allow non-governance to set max annual inflation", async () => {
+      await expectRevert(inflation.setMaxAnnualInflation(123456, { from: accounts[2] }), ONLY_GOVERNANCE_MSG);
+    });
+
+    it("Should not allow governance to set zero max annual inflation", async () => {
+      await expectRevert(inflation.setMaxAnnualInflation(0), "max annual inflation zero");
+    });
+
+    it("Should cap recognized inflation at max annual inflation / 12", async () => {
+      // Assemble - deploy a fresh inflation with a small cap so the cap binds
+      const mockFlareDaemonCap = await FlareDaemonMock.new();
+      const cappedInflation = await Inflation.new(accounts[0], mockFlareDaemonCap.address, ADDRESS_UPDATER, 0, 12000);
+      await cappedInflation.updateContractAddresses(
+        encodeContractNames([Contracts.ADDRESS_UPDATER, Contracts.SUPPLY, Contracts.INFLATION_ALLOCATION]),
+        [ADDRESS_UPDATER, mockSupply.address, mockInflationPercentageProvider.address], { from: ADDRESS_UPDATER });
+      await mockFlareDaemonCap.registerToDaemonize(cappedInflation.address);
+      await mockFlareDaemonCap.givenMethodReturnUint(mockFlareDaemonInterface.contract.methods.maxMintingRequestWei().encodeABI(), maxMint);
+      // Act
+      await mockFlareDaemonCap.trigger();
+      // Assert - uncapped would be supply * bips / 12 / 10000 = 8333, capped = 12000 / 12 = 1000
+      const { 3: recognizedInflation } = await cappedInflation.getTotals();
+      assert.equal(recognizedInflation.toNumber(), 1000);
     });
   });
 
@@ -1243,9 +1326,9 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, asyn
       mockInflationPercentageProvider = await MockContract.new();
       mockFlareDaemon = await FlareDaemonMock.new();
 
-      const getInflatableBalance = web3.utils.sha3("getInflatableBalance()")!.slice(0, 10); // first 4 bytes is function selector
+      const getCirculatingSupplyAt = web3.utils.sha3("getCirculatingSupplyAt(uint256)")!.slice(0, 10); // first 4 bytes is function selector
       const getTimeSlotPercentageBips = web3.utils.sha3("getTimeSlotPercentageBips()")!.slice(0, 10);
-      await mockSupply.givenMethodReturnUint(getInflatableBalance, supply);
+      await mockSupply.givenMethodReturnUint(getCirculatingSupplyAt, supply);
       await mockInflationPercentageProvider.givenMethodReturnUint(getTimeSlotPercentageBips, inflationBips);
 
       await time.advanceBlock();
@@ -1255,7 +1338,8 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, asyn
         accounts[0],
         mockFlareDaemon.address,
         ADDRESS_UPDATER,
-        latest.toNumber() + 2 * 86400 // Set time sometime after now, but at least two days to trigger new inflation if not exiting preemptively
+        latest.toNumber() + 2 * 86400, // Set time sometime after now, but at least two days to trigger new inflation if not exiting preemptively
+        MAX_ANNUAL_INFLATION
       );
 
       const tx = await inflation.updateContractAddresses(
@@ -1398,9 +1482,9 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, asyn
       mockInflationPercentageProvider = await MockContract.new();
       mockFlareDaemon = await FlareDaemonMock.new();
 
-      const getInflatableBalance = web3.utils.sha3("getInflatableBalance()")!.slice(0, 10); // first 4 bytes is function selector
+      const getCirculatingSupplyAt = web3.utils.sha3("getCirculatingSupplyAt(uint256)")!.slice(0, 10); // first 4 bytes is function selector
       const getTimeSlotPercentageBips = web3.utils.sha3("getTimeSlotPercentageBips()")!.slice(0, 10);
-      await mockSupply.givenMethodReturnUint(getInflatableBalance, supply);
+      await mockSupply.givenMethodReturnUint(getCirculatingSupplyAt, supply);
       await mockInflationPercentageProvider.givenMethodReturnUint(getTimeSlotPercentageBips, inflationBips);
 
       await time.advanceBlock();
@@ -1409,7 +1493,8 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; Inflation unit tests`, asyn
         accounts[0],
         mockFlareDaemon.address,
         ADDRESS_UPDATER,
-        latest // Set time to now
+        latest, // Set time to now
+        MAX_ANNUAL_INFLATION
       );
 
       await inflation.updateContractAddresses(

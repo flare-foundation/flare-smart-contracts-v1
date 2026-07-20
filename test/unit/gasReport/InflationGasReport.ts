@@ -152,7 +152,7 @@ contract(`Inflation.sol; ${getTestFile(__filename)}; gas consumption tests`, asy
 
       startTs = (await time.latest()).addn(500);
       // create inflation
-      inflation = await Inflation.new(governance, flareDaemon.address, ADDRESS_UPDATER, startTs);
+      inflation = await Inflation.new(governance, flareDaemon.address, ADDRESS_UPDATER, startTs, BN(10).pow(BN(40)));
       
       // Supply contract
       supply = await Supply.new(
