@@ -78,10 +78,11 @@ build-smart-contracts:
 test-scdev-daemon:
   extends: .test
   image:
-    name: flarefoundation/flare-scdev:1.3
+    # This branch's genesis FlareDaemon predates the 1.3 scdev image; 1.0.1 matches it.
+    name: flarefoundation/flare-scdev:1.0.1
     entrypoint: [""]
   before_script:
-    - nohup bash -c 'cd /flare && exec ./cmd/single-docker.sh' > /tmp/scdev.log 2>&1 &
+    - nohup bash -c 'cd /flare && exec bash scdev.sh' > /tmp/scdev.log 2>&1 &
     - rm -f /etc/apt/sources.list.d/yarn.list
     - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
     - apt-get install -y git nodejs
