@@ -1,100 +1,102 @@
-![coverage](https://gitlab.com/flarenetwork/flare-smart-contracts/badges/master/coverage.svg?job=coverage:on-schedule)
-![pipeline](https://gitlab.com/flarenetwork/flare-smart-contracts/badges/master/pipeline.svg)
+<img src="https://content.flare.network/Flare-2.svg" width="300" alt="Flare Logo" />
 
-![licence](https://img.shields.io/badge/Licence-MIT-green?style=plastic)
+# Flare Smart Contracts v1
 
-# Testing report
-![Slither_badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fbadges.aflabs.org%2Fapi%2F0%2Fbadges%2Fgetlatest%3Fbadge_name%3DFlareSCSlither)
-![Linter_badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fbadges.aflabs.org%2Fapi%2F0%2Fbadges%2Fgetlatest%3Fbadge_name%3DFlareSCSolhint)
-![Fuzzer_token](https://img.shields.io/endpoint?url=https%3A%2F%2Fbadges.aflabs.org%2Fapi%2F0%2Fbadges%2Fgetlatest%3Fbadge_name%3DFlareSCFuzzerToken)
-![Fuzzer_e2e](https://img.shields.io/endpoint?url=https%3A%2F%2Fbadges.aflabs.org%2Fapi%2F0%2Fbadges%2Fgetlatest%3Fbadge_name%3DFlareSCE2EFuzzer)
+[![pipeline status](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/badges/main/pipeline.svg)](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/pipelines)
 
-## Deployed contracts per chain
-Smart Contracts from this repository are deployed on 4 different chains. Per chain, contract versions are slightly different. Use the links below to view the deployed contracts source code and addresses.
-- [Flare branch](https://gitlab.com/flarenetwork/flare-smart-contracts/-/tree/flare_network_deployed_code), [Flare Addresses](https://gitlab.com/flarenetwork/flare-smart-contracts/-/blob/flare_network_deployed_code/deployment/deploys/flare.json)
-- [Songbird branch](https://gitlab.com/flarenetwork/flare-smart-contracts/-/tree/songbird_network_deployed_code), [Songbird addresses](https://gitlab.com/flarenetwork/flare-smart-contracts/-/blob/songbird_network_deployed_code/deployment/deploys/songbird.json)
-- [Coston branch](https://gitlab.com/flarenetwork/flare-smart-contracts/-/tree/coston_network_deployed_code), [Coston addresses](https://gitlab.com/flarenetwork/flare-smart-contracts/-/blob/coston_network_deployed_code/deployment/deploys/coston.json)
-- [Coston 2 branch](https://gitlab.com/flarenetwork/flare-smart-contracts/-/tree/coston2_network_deployed_code), [Coston 2 addresses](https://gitlab.com/flarenetwork/flare-smart-contracts/-/blob/coston2_network_deployed_code/deployment/deploys/coston2.json)
+[About](#about) | [Deployed contracts](#deployed-contracts) | [Development](#development) | [Contributing](./CONTRIBUTING.md)
 
-# Flare Network smart contracts repository
+## About
 
-Contracts cover the following *Flare network* building blocks:
-- [Token](contracts/token/implementation) contracts.
-- [FTSO](contracts/ftso/implementation/Ftso.sol) (Flare time series oracle).
-- [FTSO Manager](contracts/ftso/implementation/FtsoManager.sol).
-- Token pools for reward.
-   - [FTSO Reward manager](contracts/tokenPools/implementation/FtsoRewardManager.sol).
-- [Flare Daemon](contracts/genesis/implementation/FlareDaemon.sol), a special system trigger contract.
-- [Flare Inflation](contracts/inflation/implementation/Inflation.sol) tracking and [allocation](contracts/inflation/implementation/InflationAllocation.sol).
-- [Supply accounting system](contracts/inflation/implementation/Supply.sol) of FLR tokens.
+This repository contains the first-generation Solidity smart contracts used by Flare networks. The contracts implement core protocol, governance, token, reward, inflation, and system functionality, including:
 
-## Token contracts
+- [Flare Time Series Oracle (FTSO)](./contracts/ftso/)
+- [tokens and vote-power delegation](./contracts/token/)
+- [inflation and supply accounting](./contracts/inflation/)
+- [reward and distribution pools](./contracts/tokenPools/)
+- [governance](./contracts/governance/) and [address updates](./contracts/addressUpdater/)
+- [genesis and system contracts](./contracts/genesis/), including FlareDaemon, PriceSubmitter, and StateConnector
+- [claiming](./contracts/claiming/) and supporting utilities
 
-Are used for wrapped native tokens ([WNAT](contracts/token/implementation/WNat.sol)) and [xAssets](contracts/token/implementation/VPToken.sol) minted on *Flare network*. These tokens expose delegate API and query votePower API. Vote power is checkpointed, meaning votePower for previous blocks can be queried.
+A diagram covering the v1 and v2 smart-contract systems is available [here](https://content.flare.network/flare-smart-contracts-v1-v2-all_with_background.svg).
 
-## FTSO system
+For current developer documentation, visit the [Flare Developer Hub](https://dev.flare.network/). For questions and community support, join the [Flare Discord](https://discord.com/invite/flarenetwork).
 
-Enables price providers to supply USD prices for a list of assets. The FTSO determines the vote power (weight) of each address by calling vote power API on the token contract. Each asset price feed is handled by a separate FTSO contract. All FTSO contracts are managed by FTSO Manager contract. See further information for details [here](docs/specs/FTSOManagerAndRewardManagerCodeFlows.md).
+## Deployed contracts
 
-## Reward contracts
+The network branches capture different deployed versions of the contracts. Use the branch and address file for the network you are inspecting:
 
-Enable claiming of native token rewards.
-Users will be eligible to claim tokens through the following methods:
-- by supplying FTSO price feeds ([FTSO Reward manager](contract/tokenPools/implementation/FtsoRewardManager.sol)),
-- Providing external chain data (data availability proofs)
+| Network | Source branch | Contract addresses |
+| --- | --- | --- |
+| Flare | [`flare_network_deployed_code`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/tree/flare_network_deployed_code) | [`deployment/deploys/flare.json`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/blob/flare_network_deployed_code/deployment/deploys/flare.json) |
+| Songbird | [`songbird_network_deployed_code`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/tree/songbird_network_deployed_code) | [`deployment/deploys/songbird.json`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/blob/songbird_network_deployed_code/deployment/deploys/songbird.json) |
+| Coston | [`coston_network_deployed_code`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/tree/coston_network_deployed_code) | [`deployment/deploys/coston.json`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/blob/coston_network_deployed_code/deployment/deploys/coston.json) |
+| Coston2 | [`coston2_network_deployed_code`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/tree/coston2_network_deployed_code) | [`deployment/deploys/coston2.json`](https://gitlab.com/flarenetwork/FSP/flare-smart-contracts-v1/-/blob/coston2_network_deployed_code/deployment/deploys/coston2.json) |
 
-## Inflation
+Always select the appropriate network branch before auditing deployed source code or using an address file.
 
-Native token inflation will be distributed according to decisions made by governance. A large part of the inflation will flow to FTSO price providers who provide "good" price feeds. Inflation will be awarded per price epoch. Inflation will be minted on demand subject to preceeding approvals.
+## Repository layout
 
-## Supply accounting
+| Path | Contents |
+| --- | --- |
+| [`contracts/`](./contracts/) | Solidity contracts, interfaces, libraries, and mocks |
+| [`test/`](./test/) | Unit, integration, performance, fuzzing, and system tests |
+| [`deployment/`](./deployment/) | Chain configuration, deployment scripts, genesis generation, and deployment tests |
+| [`scripts/`](./scripts/) | Development, reporting, and test utilities |
+| [`npm-package-data/`](./npm-package-data/) | Files used to prepare the published contract package |
 
-The supply accounting system monitors circulating native token supply. During the first period after launch, much of the native tokens will be locked in pools such as the incentive pool. Native token distribution is done in phases, and native tokens that have been earned are considered locked until they are distributed. The Supply keeps track of these amounts.
+## Development
 
-## xAsset
+### Requirements
 
-These contract(s) will handle both the process of minting and the redemption of assets, checking collateral levels and liquidating (auctioning) defaulting agents with lower collateral levels. Will be implemented in a separate repository.
+- Node.js 24
+- Corepack, included with Node.js 24
+- Git
+- Docker for tests that run against a local Flare validator
 
-## Distribution contracts
+Hardhat downloads the configured Solidity 0.7.6 and 0.6.12 compilers when needed.
 
-The air dropped native tokens will be distributed gradually through a dedicated contract(s).
+### Setup
 
-## Getting started
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm compile
+```
 
-1. Clone this repo.
-2. Run `yarn`.
-3. Compile the solidity code: `yarn c`.
-4. Run basic tests `yarn testHH`.
+### Common commands
 
-## Testing
+| Command | Purpose |
+| --- | --- |
+| `pnpm compile` | Compile contracts and generate TypeChain bindings |
+| `pnpm testHH` | Run the primary Hardhat suites (unit, integration, performance, and end-to-end) |
+| `pnpm test_unit_hh` | Run unit tests |
+| `pnpm test_integration_hh` | Run integration tests |
+| `pnpm test_performance_hh` | Run performance tests |
+| `pnpm test_endtoend_hardhat` | Run end-to-end tests against a local Hardhat node |
+| `pnpm cov` | Generate the unit-test coverage report |
+| `pnpm lint` | Run Solhint on Solidity contracts |
+| `pnpm eslint` | Run ESLint on TypeScript files |
+| `pnpm slither` | Run Slither static analysis |
 
-Note: be sure to compile (`yarn c`) after any solidity code changes or if starting a clean project as Typescript stubs need to be generated as part of the compilation.
+Run a specific Hardhat test with:
 
-Then one can run different types of tests.
+```bash
+pnpm hardhat test --network hardhat path/to/Test.ts
+```
 
-- `yarn testHH` - all tests in hardhat environment (includes next three types of tests).
-- `yarn test_unit_hh` - only unit tests in hardhat environment.
-- `yarn test_performance_hh` - only performance tests in hardhat environment.
-- `test_integration_hh` - only integration tests in hardhat environment.
+See [`test/README.md`](./test/README.md) for the test-directory layout and CI test-sharding guidance.
 
-Each of these calls can have additional parameters, namely paths to specific files with tests. Glob expressions can be used, but note that glob expressions are expanded in `bash` to a sequence of space separated paths. Keep in mind that glob expressions in bash containing `/**/` do not by default expand to all files, so one can switch on full expansion by setting `shopt -s globstar`, and if needed, later switch it off with `shopt -u globstar`.
+### Local Flare validator
 
-Some parts of the code can only be tested against a "real" Flare block chain which adds some special features on top of the regular EVM. Any test below that has `HH` in the script name will run against an auto-launched hardhat chain. Some tests can only run against a Flare chain.
-A few options exist for running a Flare chain, with the simplest one described above.
+The scdev system tests require Docker and bind a local validator to `127.0.0.1:9650`:
 
-To check test coverage run `yarn cov`.
+```bash
+pnpm test_system_scdev
+```
 
-## Running with Flare local chain
+Additional scdev, deployment, and network-specific commands are defined in [`package.json`](./package.json). Treat production deployment and governance commands as privileged operations: verify the selected network, configuration, account, and generated transaction data before execution.
 
-For running tests against a local Flare chain.
-- clone [Flare repository](https://gitlab.com/flarenetwork/flare)
-- choose one of the following launch scripts:
-   - `scdev1.sh` - Recommended; smart contract dev chain, 1 validator node.
-   - `scdev.sh` - smart contract dev chain, 4 validator nodes.
-   - others are less relevant.
+## Contributing
 
-## Deployment of smart contracts on `scdev` network
-
-see [deployment](deployment/README.md)
-
-
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, required checks, and merge-request expectations.

@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////
 /// This file contains functions and code examples, that can be used
-/// when using `yarn hardhat console --network some_network`
+/// when using `pnpm hardhat console --network some_network`
 /// NOTE: Javascript is used in console, not Typescript
 /// Examples can be pasted to console.
 /// First example can be run on local network. In one terminal run:
-/// yarn hardhat node
+/// pnpm hardhat node
 /// and then in other terminal run
-/// yarn hardhat console --network local
+/// pnpm hardhat console --network local
 ////////////////////////////////////////////////////////
 
 const { hrtime } = require("process");
