@@ -8,7 +8,7 @@ Based on the distribution of funds to the accounts on protected spreadsheet the 
 ## Generate account info
 
 ```
-yarn generate_genesis_coston2
+pnpm generate_genesis_coston2
 ```
 
 The result will appear `deployment/genesis/coston2/outputs`
@@ -20,7 +20,7 @@ You can use `coston2.csv`, open it in Excel (import it and set delimiter to comm
 ## Generate genesis config
 
 ```
-yarn genesis_json_coston2
+pnpm genesis_json_coston2
 ```
 
 The result will appear in `deployment/genesis_gen/generated/coston2.json`.

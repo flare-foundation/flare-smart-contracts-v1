@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////
 /// This file contains functions that can be used
-/// when using `yarn hardhat console --network some_network`
+/// when using `pnpm hardhat console --network some_network`
 /// NOTE: Javascript is used in console, not Typescript, but
 /// functions are added to hardhat environment as 
 /// Typescript methods using require

@@ -16,7 +16,8 @@
     "hardhat.config.ts",
     "hardhatSetup.config.ts",
     "tsconfig.json",
-    "yarn.lock",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
     "test-1020-accounts.json",
 
     "CHANGELOG.md",
@@ -67,17 +68,17 @@
   ],
   "scripts": {
     "---------TEST---SCRIPTS": "",
-    "test": "yarn hardhat test",
+    "test": "pnpm hardhat test",
     "----------HH-NODE--SCRIPTS": "",
-    "hh_node": "yarn c && yarn concurrently \"yarn hardhat node > nul\" \"wait-on http://127.0.0.1:8545 && env CHAIN_CONFIG=scdev yarn --silent hardhat run ./deployment/scripts/deploy-mock-price-submitter.ts --network localhost\"",
-    "starter": "env CHAIN_CONFIG=scdev yarn --silent hardhat run ./deployment/scripts/mock-price-provider.ts --network localhost",
+    "hh_node": "pnpm compile && pnpm concurrently \"pnpm hardhat node > nul\" \"wait-on http://127.0.0.1:8545 && env CHAIN_CONFIG=scdev pnpm --silent hardhat run ./deployment/scripts/deploy-mock-price-submitter.ts --network localhost\"",
+    "starter": "env CHAIN_CONFIG=scdev pnpm --silent hardhat run ./deployment/scripts/mock-price-provider.ts --network localhost",
     "---------FLATTEN---SCRIPTS": "",
     "flatten": "./scripts/flatten.sh contracts/ftso/priceProviderMockContracts/priceProviderMockContracts.sol",
     "---------COMPILE---SCRIPTS": "",
-    "compile": "yarn hardhat compile && yarn typechain-ethers-v5 && yarn typechain-truffle-v5",
-    "c": "yarn compile",
-    "typechain-ethers-v5": "yarn typechain --target=ethers-v5 --out-dir typechain \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
-    "typechain-truffle-v5": "yarn typechain --target=truffle-v5 --out-dir typechain-truffle \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
+    "compile": "pnpm hardhat compile && pnpm typechain-ethers-v5 && pnpm typechain-truffle-v5",
+    "c": "pnpm compile",
+    "typechain-ethers-v5": "pnpm typechain --target=ethers-v5 --out-dir typechain \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
+    "typechain-truffle-v5": "pnpm typechain --target=truffle-v5 --out-dir typechain-truffle \"artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json\" 1> nul",
     "self-update": "npm update @flarenetwork/ftso_price_provider_kick_off_package --save-dev"
   },
   "bin": {
@@ -131,7 +132,6 @@
     "ts-node": "10.0.0",
     "typechain": "5.0.0",
     "typescript": "4.3.2",
-    "wait-on": "5.3.0",
-    "yarn-audit-fix": "6.2.2"
+    "wait-on": "5.3.0"
   }
 }

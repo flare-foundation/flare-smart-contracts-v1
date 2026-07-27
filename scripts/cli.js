@@ -14,7 +14,8 @@ async function copyData(){
     await fse.copy(path.join(dir, "hardhatSetup.config.ts"), "hardhatSetup.config.ts", {overwrite: true});
     await fse.copy(path.join(dir, "package.json"), "package.json", {overwrite: true});
     await fse.copy(path.join(dir, "test-1020-accounts.json"), "test-1020-accounts.json", {overwrite: true});
-    await fse.copy(path.join(dir, "yarn.lock"), "yarn.lock", {overwrite: true});
+    await fse.copy(path.join(dir, "pnpm-lock.yaml"), "pnpm-lock.yaml", {overwrite: true});
+    await fse.copy(path.join(dir, "pnpm-workspace.yaml"), "pnpm-workspace.yaml", {overwrite: true});
 }
 
 async function main() {

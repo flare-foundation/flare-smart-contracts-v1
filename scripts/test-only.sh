@@ -8,20 +8,20 @@ NC='\033[0m'
 
 echo "${YELLOW}[.only] test${NC}: ${PWD}"
 
-cd test/unit
+cd test/unit || exit 1
 
-if grep -q -R --include *.ts "it.only" ; then
+if grep -q -R --include "*.ts" "it.only" ; then
     echo "${RED}Error [it.only] found${NC}${CYAN}"
-    grep -R -n --include *.ts "it.only"
+    grep -R -n --include "*.ts" "it.only"
     echo "${NC}"
 	exit 1
 else
     echo "${GREEN}OK no [it.only] found${NC}"
 fi
 
-if grep -q -R --include *.ts "describe.only" ; then
+if grep -q -R --include "*.ts" "describe.only" ; then
     echo "${RED}Error [describe.only] found${NC}${CYAN}"
-    grep -R -n --include *.ts "describe.only"
+    grep -R -n --include "*.ts" "describe.only"
     echo "${NC}"
 	exit 1
 else

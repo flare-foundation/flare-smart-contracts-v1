@@ -47,7 +47,7 @@ async function main() {
 
     // Initialize data
     
-    // Price submitter is at a fixed address, change this to the address reported by `yarn hh_node`.
+    // Price submitter is at a fixed address, change this to the address reported by `pnpm hh_node`.
     const priceSubmitter: IPriceSubmitterInstance = await MockPriceSubmitter.at("0x7c2C195CD6D34B8F845992d380aADB2730bB9C6F");
 
     const ftsoRegistry: IFtsoRegistryInstance = await MockFtsoRegistry.at(await priceSubmitter.getFtsoRegistry());

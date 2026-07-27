@@ -27,7 +27,7 @@ The jobs for running tests in CI/CD are defined in the file `.gitlab-ci.yml`. Th
     ...
     script:
         ...
-        - env TEST_PATH=./test/unit/ftso/lib yarn hardhat test --network hardhat
+        - env TEST_PATH=./test/unit/ftso/lib pnpm hardhat test --network hardhat
 ```
 
 The folder to be run is definde as relative path in variable `TEST_PATH`.
@@ -38,7 +38,7 @@ Sometimes single files run long. Such files should be either broken into several
     ...
     script:
         ...
-        - yarn hardhat test --network hardhat test/unit/ftso/implementation/FtsoManager.ts
+        - pnpm hardhat test --network hardhat test/unit/ftso/implementation/FtsoManager.ts
 ```
 
 IMPORTANT: If you add a test file in some new folder not covered by jobs, please update jobs. If necessary, create new jobs (copy existing one, rename it and use the above syntax to configure runs).
