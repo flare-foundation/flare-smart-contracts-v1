@@ -21,7 +21,7 @@ The compilation result for these contracts resides in `artifacts/contracts/genes
 ## Usage
 
 - Have `flare-smart-contracts` repo and `flare` repo in same folder, go to correct branches, that are compatible.
-- Have contracts compiled on `flare-smart-contracts` repo (`yarn c`).
+- Have contracts compiled on `flare-smart-contracts` repo (`pnpm compile`).
 - Use the list `songbirdGenesisAccountDefinitions` in `deployment/genesis/songbird/songbird-genesis-accounts-definitions.ts` to define the accounts and balances. Also `TARGET_TOTAL_SUPPLY` is defined there (15 billion SGB).
 - Each account is defined by the following fields
   - `id` - row number in Google docs table (number, required).
@@ -30,7 +30,7 @@ The compilation result for these contracts resides in `artifacts/contracts/genes
   - `initialEntryWei` - account balance entered in Wei. Should be entered as a string. Decimal point can (and should) be used if it is followed by exactly 18 digits to the end. Comma or one space as a thousands separator should be used to avoid errors (string, optional). If both `initialEntryNat` and `initialEntryWei` are given, `initialEntryWei` is used (string, optional).
 - NOTE: in `songbirdGenesisAccountDefinitions` keep values `id` in increasing order and matching to line number in the Google sheets.
 - Accounts with `id` 2 and 3 should not have values `initialEntryNat` nor `initialEntryWei` provided. All other accounts must have one of them provided.
-- Run `yarn generate_genesis_songbird`. This prints out the account data and generates some files in `deployment/genesis/songbird/outputs` folder:
+- Run `pnpm generate_genesis_songbird`. This prints out the account data and generates some files in `deployment/genesis/songbird/outputs` folder:
   - `songbird.txt` - formatted printout for reviewing the accounts.
   - `songbird-genesis.txt` - extract of code representing accounts with balances in genesis file.
   - `songbird.csv` - CSV file that can be opened in Excel or Google Sheets and has lines distributed according to value of `id`. This can be used to paste calculated values back to Google sheets spreadsheet.
@@ -42,12 +42,12 @@ The compilation result for these contracts resides in `artifacts/contracts/genes
 - On Flare Network repo compile the node by running `./compile.sh genesis_songbird.go`
 - Run the node: `./cmd/local.sh`
 - Check the health by running `curl http://127.0.0.1:9650/ext/health | jq .healthy`. It should return `true` after some time (can take even 50s)
-- Run the test by `yarn test_genesis_accounts_scdev`
+- Run the test by `pnpm test_genesis_accounts_scdev`
 
 # Miscelanious
 
 To generate account (private key) and obtain address for test purposes use the following:
-- In `flare-smart-contracts` repo open a terminal and run `yarn hardhat console`. 
+- In `flare-smart-contracts` repo open a terminal and run `pnpm hardhat console`. 
 - When console is started paste the following code
 ```
 let wallet = web3.eth.accounts.create()

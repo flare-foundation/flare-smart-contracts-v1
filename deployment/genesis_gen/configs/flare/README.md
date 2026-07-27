@@ -8,7 +8,7 @@ Based on the distribution of funds to the accounts on protected spreadsheet the 
 ## Generate account info
 
 ```
-yarn generate_genesis_flare
+pnpm generate_genesis_flare
 ```
 
 The result will appear `deployment/genesis/flare/outputs`
@@ -20,7 +20,7 @@ You can use `flare.csv`, open it in Excel (import it and set delimiter to comma)
 ## Generate genesis config
 
 ```
-yarn genesis_json_flare
+pnpm genesis_json_flare
 ```
 
 The result will appear in `deployment/genesis_gen/generated/flare.json`.
