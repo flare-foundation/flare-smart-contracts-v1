@@ -83,8 +83,11 @@ test-scdev-daemon:
   before_script:
     - nohup bash -c 'cd /flare && exec ./cmd/single-docker.sh' > /tmp/scdev.log 2>&1 &
     - rm -f /etc/apt/sources.list.d/yarn.list
+    # bullseye-security packages moved to archive.debian.org (the image is Debian 11)
+    - grep -rl 'security.debian.org' /etc/apt/ | xargs -r sed -i 's|security.debian.org/debian-security|archive.debian.org/debian-security|g'
     - curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
     - apt-get install -y git nodejs
+    - 'node --version | grep -q "^v24\." || { echo "expected Node 24, got $(node --version)"; exit 1; }'
     - corepack enable
     - pnpm install --frozen-lockfile
     - 'pnpm wait-on -d 2000 -t 120000 tcp:127.0.0.1:9650 || { cat /tmp/scdev.log; exit 1; }'

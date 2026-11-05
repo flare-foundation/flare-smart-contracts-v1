@@ -74,7 +74,7 @@
         "0xf81C1C123160f8844A41D6086FF19Cb036303536"
     ],
     "pChainStakeMirrorVotingThreshold": 2,
-    "pChainStakeMirrorMinDurationDays": 14,
+    "pChainStakeMirrorMinDurationDays": 1,
     "pChainStakeMirrorMaxDurationDays": 365,
     "pChainStakeMirrorMinAmountNAT": 50000,
     "pChainStakeMirrorMaxAmountNAT": 200000000,
